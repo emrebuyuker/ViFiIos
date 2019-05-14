@@ -1,0 +1,496 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		38DE9E45228959F800F6FF11 /* UniversityViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E44228959F800F6FF11 /* UniversityViewController.swift */; };
+		38DE9E4822898E2400F6FF11 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 38DE9E4722898E2400F6FF11 /* GoogleService-Info.plist */; };
+		38DE9E51228ACD2A00F6FF11 /* UniversityTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */; };
+		38DEE2A022801BF0002BC59D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DEE29F22801BF0002BC59D /* AppDelegate.swift */; };
+		38DEE2A222801BF0002BC59D /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DEE2A122801BF0002BC59D /* ViewController.swift */; };
+		38DEE2A522801BF0002BC59D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 38DEE2A322801BF0002BC59D /* Main.storyboard */; };
+		38DEE2A722801BF2002BC59D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 38DEE2A622801BF2002BC59D /* Assets.xcassets */; };
+		38DEE2AA22801BF2002BC59D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 38DEE2A822801BF2002BC59D /* LaunchScreen.storyboard */; };
+		DE5EADD64B12D83D07161B0A /* Pods_ViFi.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DB6263FC6EC9C96801E91FA /* Pods_ViFi.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		17ACBF58F698970DD94C2DA4 /* Pods-ViFi.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ViFi.release.xcconfig"; path = "Target Support Files/Pods-ViFi/Pods-ViFi.release.xcconfig"; sourceTree = "<group>"; };
+		38DE9E44228959F800F6FF11 /* UniversityViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversityViewController.swift; sourceTree = "<group>"; };
+		38DE9E4722898E2400F6FF11 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversityTableViewCell.swift; sourceTree = "<group>"; };
+		38DEE29C22801BF0002BC59D /* ViFi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ViFi.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		38DEE29F22801BF0002BC59D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		38DEE2A122801BF0002BC59D /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		38DEE2A422801BF0002BC59D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		38DEE2A622801BF2002BC59D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		38DEE2A922801BF2002BC59D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		38DEE2AB22801BF2002BC59D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4DB6263FC6EC9C96801E91FA /* Pods_ViFi.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ViFi.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		732842A922BA18B35FBF3595 /* Pods-ViFi.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ViFi.debug.xcconfig"; path = "Target Support Files/Pods-ViFi/Pods-ViFi.debug.xcconfig"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		38DEE29922801BF0002BC59D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DE5EADD64B12D83D07161B0A /* Pods_ViFi.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		38DE9E4622895A0700F6FF11 /* ViewControllers */ = {
+			isa = PBXGroup;
+			children = (
+				38DE9E44228959F800F6FF11 /* UniversityViewController.swift */,
+			);
+			path = ViewControllers;
+			sourceTree = "<group>";
+		};
+		38DE9E492289B71800F6FF11 /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				38DEE2A322801BF0002BC59D /* Main.storyboard */,
+			);
+			path = Home;
+			sourceTree = "<group>";
+		};
+		38DE9E4A2289B85800F6FF11 /* Application */ = {
+			isa = PBXGroup;
+			children = (
+				38DE9E4B2289B87500F6FF11 /* Delegate */,
+			);
+			path = Application;
+			sourceTree = "<group>";
+		};
+		38DE9E4B2289B87500F6FF11 /* Delegate */ = {
+			isa = PBXGroup;
+			children = (
+				38DEE29F22801BF0002BC59D /* AppDelegate.swift */,
+			);
+			path = Delegate;
+			sourceTree = "<group>";
+		};
+		38DE9E4C2289B8BD00F6FF11 /* Business */ = {
+			isa = PBXGroup;
+			children = (
+				38DE9E4D2289B8CE00F6FF11 /* Services */,
+			);
+			path = Business;
+			sourceTree = "<group>";
+		};
+		38DE9E4D2289B8CE00F6FF11 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				38DE9E4722898E2400F6FF11 /* GoogleService-Info.plist */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		38DE9E4E2289B90600F6FF11 /* Screens */ = {
+			isa = PBXGroup;
+			children = (
+				38DE9E4F228ACCD000F6FF11 /* TableViewCells */,
+				38DE9E4622895A0700F6FF11 /* ViewControllers */,
+			);
+			path = Screens;
+			sourceTree = "<group>";
+		};
+		38DE9E4F228ACCD000F6FF11 /* TableViewCells */ = {
+			isa = PBXGroup;
+			children = (
+				38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */,
+			);
+			path = TableViewCells;
+			sourceTree = "<group>";
+		};
+		38DEE29322801BF0002BC59D = {
+			isa = PBXGroup;
+			children = (
+				38DEE29E22801BF0002BC59D /* ViFi */,
+				38DEE29D22801BF0002BC59D /* Products */,
+				7B282F403B1EADB198AB855F /* Pods */,
+				68E1B3824F7B346760F9A473 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		38DEE29D22801BF0002BC59D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				38DEE29C22801BF0002BC59D /* ViFi.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		38DEE29E22801BF0002BC59D /* ViFi */ = {
+			isa = PBXGroup;
+			children = (
+				38DE9E4E2289B90600F6FF11 /* Screens */,
+				38DE9E4C2289B8BD00F6FF11 /* Business */,
+				38DE9E4A2289B85800F6FF11 /* Application */,
+				38DE9E492289B71800F6FF11 /* Home */,
+				38DEE2A122801BF0002BC59D /* ViewController.swift */,
+				38DEE2A622801BF2002BC59D /* Assets.xcassets */,
+				38DEE2A822801BF2002BC59D /* LaunchScreen.storyboard */,
+				38DEE2AB22801BF2002BC59D /* Info.plist */,
+			);
+			path = ViFi;
+			sourceTree = "<group>";
+		};
+		68E1B3824F7B346760F9A473 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				4DB6263FC6EC9C96801E91FA /* Pods_ViFi.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		7B282F403B1EADB198AB855F /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				732842A922BA18B35FBF3595 /* Pods-ViFi.debug.xcconfig */,
+				17ACBF58F698970DD94C2DA4 /* Pods-ViFi.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		38DEE29B22801BF0002BC59D /* ViFi */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 38DEE2AE22801BF2002BC59D /* Build configuration list for PBXNativeTarget "ViFi" */;
+			buildPhases = (
+				227109C323A66B999D620F8D /* [CP] Check Pods Manifest.lock */,
+				38DEE29822801BF0002BC59D /* Sources */,
+				38DEE29922801BF0002BC59D /* Frameworks */,
+				38DEE29A22801BF0002BC59D /* Resources */,
+				18C6719D43053A86A68B901E /* [CP] Embed Pods Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ViFi;
+			productName = ViFi;
+			productReference = 38DEE29C22801BF0002BC59D /* ViFi.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		38DEE29422801BF0002BC59D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1020;
+				LastUpgradeCheck = 1020;
+				ORGANIZATIONNAME = "Emre BÜYÜKER";
+				TargetAttributes = {
+					38DEE29B22801BF0002BC59D = {
+						CreatedOnToolsVersion = 10.2.1;
+					};
+				};
+			};
+			buildConfigurationList = 38DEE29722801BF0002BC59D /* Build configuration list for PBXProject "ViFi" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 38DEE29322801BF0002BC59D;
+			productRefGroup = 38DEE29D22801BF0002BC59D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				38DEE29B22801BF0002BC59D /* ViFi */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		38DEE29A22801BF0002BC59D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				38DEE2AA22801BF2002BC59D /* LaunchScreen.storyboard in Resources */,
+				38DE9E4822898E2400F6FF11 /* GoogleService-Info.plist in Resources */,
+				38DEE2A722801BF2002BC59D /* Assets.xcassets in Resources */,
+				38DEE2A522801BF0002BC59D /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		18C6719D43053A86A68B901E /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-ViFi/Pods-ViFi-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/GTMSessionFetcher/GTMSessionFetcher.framework",
+				"${BUILT_PRODUCTS_DIR}/GoogleUtilities/GoogleUtilities.framework",
+				"${BUILT_PRODUCTS_DIR}/leveldb-library/leveldb.framework",
+				"${BUILT_PRODUCTS_DIR}/nanopb/nanopb.framework",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GTMSessionFetcher.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GoogleUtilities.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/leveldb.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/nanopb.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ViFi/Pods-ViFi-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		227109C323A66B999D620F8D /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-ViFi-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		38DEE29822801BF0002BC59D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				38DEE2A222801BF0002BC59D /* ViewController.swift in Sources */,
+				38DE9E51228ACD2A00F6FF11 /* UniversityTableViewCell.swift in Sources */,
+				38DE9E45228959F800F6FF11 /* UniversityViewController.swift in Sources */,
+				38DEE2A022801BF0002BC59D /* AppDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		38DEE2A322801BF0002BC59D /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				38DEE2A422801BF0002BC59D /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		38DEE2A822801BF2002BC59D /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				38DEE2A922801BF2002BC59D /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		38DEE2AC22801BF2002BC59D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.2;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		38DEE2AD22801BF2002BC59D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		38DEE2AF22801BF2002BC59D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 732842A922BA18B35FBF3595 /* Pods-ViFi.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = ViFi/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.BuyukerYazilim.ViFi;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		38DEE2B022801BF2002BC59D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 17ACBF58F698970DD94C2DA4 /* Pods-ViFi.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				INFOPLIST_FILE = ViFi/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.BuyukerYazilim.ViFi;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		38DEE29722801BF0002BC59D /* Build configuration list for PBXProject "ViFi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				38DEE2AC22801BF2002BC59D /* Debug */,
+				38DEE2AD22801BF2002BC59D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		38DEE2AE22801BF2002BC59D /* Build configuration list for PBXNativeTarget "ViFi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				38DEE2AF22801BF2002BC59D /* Debug */,
+				38DEE2B022801BF2002BC59D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 38DEE29422801BF0002BC59D /* Project object */;
+}
