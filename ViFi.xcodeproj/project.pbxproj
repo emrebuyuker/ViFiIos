@@ -10,6 +10,11 @@
 		38DE9E45228959F800F6FF11 /* UniversityViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E44228959F800F6FF11 /* UniversityViewController.swift */; };
 		38DE9E4822898E2400F6FF11 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 38DE9E4722898E2400F6FF11 /* GoogleService-Info.plist */; };
 		38DE9E51228ACD2A00F6FF11 /* UniversityTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */; };
+		38DE9E99228C46F900F6FF11 /* BaseTabbarVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E98228C46F900F6FF11 /* BaseTabbarVC.swift */; };
+		38DE9E9B228C478900F6FF11 /* FacultyViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E9A228C478900F6FF11 /* FacultyViewController.swift */; };
+		38DE9E9D228C537900F6FF11 /* FacultyTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E9C228C537800F6FF11 /* FacultyTableViewCell.swift */; };
+		38DE9EA1228C57AA00F6FF11 /* DepartmentViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9EA0228C57AA00F6FF11 /* DepartmentViewController.swift */; };
+		38DE9EA3228C585100F6FF11 /* DepartmentTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9EA2228C585100F6FF11 /* DepartmentTableViewCell.swift */; };
 		38DEE2A022801BF0002BC59D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DEE29F22801BF0002BC59D /* AppDelegate.swift */; };
 		38DEE2A222801BF0002BC59D /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DEE2A122801BF0002BC59D /* ViewController.swift */; };
 		38DEE2A522801BF0002BC59D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 38DEE2A322801BF0002BC59D /* Main.storyboard */; };
@@ -23,6 +28,11 @@
 		38DE9E44228959F800F6FF11 /* UniversityViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversityViewController.swift; sourceTree = "<group>"; };
 		38DE9E4722898E2400F6FF11 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversityTableViewCell.swift; sourceTree = "<group>"; };
+		38DE9E98228C46F900F6FF11 /* BaseTabbarVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseTabbarVC.swift; sourceTree = "<group>"; };
+		38DE9E9A228C478900F6FF11 /* FacultyViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FacultyViewController.swift; sourceTree = "<group>"; };
+		38DE9E9C228C537800F6FF11 /* FacultyTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FacultyTableViewCell.swift; sourceTree = "<group>"; };
+		38DE9EA0228C57AA00F6FF11 /* DepartmentViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DepartmentViewController.swift; sourceTree = "<group>"; };
+		38DE9EA2228C585100F6FF11 /* DepartmentTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DepartmentTableViewCell.swift; sourceTree = "<group>"; };
 		38DEE29C22801BF0002BC59D /* ViFi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ViFi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		38DEE29F22801BF0002BC59D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		38DEE2A122801BF0002BC59D /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -50,6 +60,8 @@
 			isa = PBXGroup;
 			children = (
 				38DE9E44228959F800F6FF11 /* UniversityViewController.swift */,
+				38DE9E9A228C478900F6FF11 /* FacultyViewController.swift */,
+				38DE9EA0228C57AA00F6FF11 /* DepartmentViewController.swift */,
 			);
 			path = ViewControllers;
 			sourceTree = "<group>";
@@ -99,6 +111,7 @@
 			children = (
 				38DE9E4F228ACCD000F6FF11 /* TableViewCells */,
 				38DE9E4622895A0700F6FF11 /* ViewControllers */,
+				38DE9E98228C46F900F6FF11 /* BaseTabbarVC.swift */,
 			);
 			path = Screens;
 			sourceTree = "<group>";
@@ -107,6 +120,8 @@
 			isa = PBXGroup;
 			children = (
 				38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */,
+				38DE9E9C228C537800F6FF11 /* FacultyTableViewCell.swift */,
+				38DE9EA2228C585100F6FF11 /* DepartmentTableViewCell.swift */,
 			);
 			path = TableViewCells;
 			sourceTree = "<group>";
@@ -289,7 +304,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				38DEE2A222801BF0002BC59D /* ViewController.swift in Sources */,
+				38DE9E9B228C478900F6FF11 /* FacultyViewController.swift in Sources */,
+				38DE9E9D228C537900F6FF11 /* FacultyTableViewCell.swift in Sources */,
+				38DE9E99228C46F900F6FF11 /* BaseTabbarVC.swift in Sources */,
+				38DE9EA1228C57AA00F6FF11 /* DepartmentViewController.swift in Sources */,
 				38DE9E51228ACD2A00F6FF11 /* UniversityTableViewCell.swift in Sources */,
+				38DE9EA3228C585100F6FF11 /* DepartmentTableViewCell.swift in Sources */,
 				38DE9E45228959F800F6FF11 /* UniversityViewController.swift in Sources */,
 				38DEE2A022801BF0002BC59D /* AppDelegate.swift in Sources */,
 			);

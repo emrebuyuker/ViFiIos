@@ -31,7 +31,6 @@ class UniversityViewController: UIViewController, UITableViewDataSource, UITable
         
         dataBaseRefence.child("Universities").observe(DataEventType.childAdded) { (snapshot) in
             self.universitiesNameArray.append(snapshot.key)
-            print(self.universitiesNameArray)
             self.universityTableView.reloadData()
         }
     }
@@ -45,5 +44,12 @@ class UniversityViewController: UIViewController, UITableViewDataSource, UITable
         let cell = universityTableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as! UniversityTableViewCell
         cell.universityLabel.text = universitiesNameArray[indexPath.row]
         return cell
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let uniName = universitiesNameArray[indexPath.row]
+        let tabBar = tabBarController as! BaseTabbarVC
+        tabBar.uniNameVariable = uniName
+        self.tabBarController?.selectedIndex = 1
     }
 }
