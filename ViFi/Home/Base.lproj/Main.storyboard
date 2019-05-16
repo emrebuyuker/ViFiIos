@@ -152,17 +152,72 @@
             </objects>
             <point key="canvasLocation" x="1821.7391304347827" y="1260.9375"/>
         </scene>
-        <!--View Controller-->
+        <!--Lesson View Controller-->
         <scene sceneID="Vy1-jD-gTV">
             <objects>
-                <viewController id="yNu-5u-gvO" sceneMemberID="viewController">
+                <viewController id="yNu-5u-gvO" customClass="LessonViewController" customModule="ViFi" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="3P4-iz-vDd">
                         <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="28" sectionFooterHeight="28" translatesAutoresizingMaskIntoConstraints="NO" id="EeU-yJ-hPz">
+                                <rect key="frame" x="0.0" y="0.0" width="414" height="813"/>
+                                <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <prototypes>
+                                    <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" reuseIdentifier="Cell" rowHeight="61" id="jpO-sc-Gfx" customClass="LessonTableViewCell" customModule="ViFi" customModuleProvider="target">
+                                        <rect key="frame" x="0.0" y="28" width="414" height="61"/>
+                                        <autoresizingMask key="autoresizingMask"/>
+                                        <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="jpO-sc-Gfx" id="1uH-ed-lVT">
+                                            <rect key="frame" x="0.0" y="0.0" width="414" height="60.5"/>
+                                            <autoresizingMask key="autoresizingMask"/>
+                                            <subviews>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Label" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="E1h-PJ-XYx">
+                                                    <rect key="frame" x="40" y="21" width="334" height="29"/>
+                                                    <color key="tintColor" red="0.93725490570000003" green="0.93725490570000003" blue="0.95686274770000002" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                                    <fontDescription key="fontDescription" type="system" pointSize="18"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="Fvm-1v-nif">
+                                                    <rect key="frame" x="0.0" y="0.0" width="414" height="10"/>
+                                                    <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                                    <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                                    <nil key="textColor"/>
+                                                    <nil key="highlightedColor"/>
+                                                </label>
+                                            </subviews>
+                                            <color key="backgroundColor" red="0.83741801979999997" green="0.83743780850000005" blue="0.83742713930000001" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                            <constraints>
+                                                <constraint firstItem="E1h-PJ-XYx" firstAttribute="top" secondItem="Fvm-1v-nif" secondAttribute="bottom" constant="11" id="0Ih-JF-si6"/>
+                                                <constraint firstAttribute="trailingMargin" secondItem="E1h-PJ-XYx" secondAttribute="trailing" constant="20" id="8Y5-4r-BaV"/>
+                                                <constraint firstAttribute="bottomMargin" secondItem="E1h-PJ-XYx" secondAttribute="bottom" id="Rsm-sC-3gj"/>
+                                                <constraint firstItem="Fvm-1v-nif" firstAttribute="leading" secondItem="1uH-ed-lVT" secondAttribute="leading" id="des-MX-bnC"/>
+                                                <constraint firstItem="E1h-PJ-XYx" firstAttribute="top" secondItem="1uH-ed-lVT" secondAttribute="topMargin" constant="10" id="iNi-ZD-DK8"/>
+                                                <constraint firstItem="Fvm-1v-nif" firstAttribute="top" secondItem="1uH-ed-lVT" secondAttribute="top" id="n35-Op-Miv"/>
+                                                <constraint firstAttribute="trailing" secondItem="Fvm-1v-nif" secondAttribute="trailing" id="rGc-Jr-5PJ"/>
+                                                <constraint firstItem="E1h-PJ-XYx" firstAttribute="leading" secondItem="1uH-ed-lVT" secondAttribute="leadingMargin" constant="20" id="zWT-Hy-pyW"/>
+                                            </constraints>
+                                        </tableViewCellContentView>
+                                        <connections>
+                                            <outlet property="lessonNameLabel" destination="E1h-PJ-XYx" id="p1T-2I-J12"/>
+                                        </connections>
+                                    </tableViewCell>
+                                </prototypes>
+                            </tableView>
+                        </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                        <constraints>
+                            <constraint firstItem="DhH-o2-DRA" firstAttribute="bottom" secondItem="EeU-yJ-hPz" secondAttribute="bottom" id="AlS-DA-2uo"/>
+                            <constraint firstItem="EeU-yJ-hPz" firstAttribute="top" secondItem="3P4-iz-vDd" secondAttribute="top" id="GwI-KF-ri5"/>
+                            <constraint firstItem="EeU-yJ-hPz" firstAttribute="trailing" secondItem="DhH-o2-DRA" secondAttribute="trailing" id="Pjw-6x-1bW"/>
+                            <constraint firstItem="EeU-yJ-hPz" firstAttribute="leading" secondItem="DhH-o2-DRA" secondAttribute="leading" id="hFF-kb-9md"/>
+                        </constraints>
                         <viewLayoutGuide key="safeArea" id="DhH-o2-DRA"/>
                     </view>
                     <navigationItem key="navigationItem" id="CPv-1H-qZo"/>
+                    <connections>
+                        <outlet property="lessonTableView" destination="EeU-yJ-hPz" id="fRa-u9-Okl"/>
+                    </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="DLQ-sE-w5v" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
