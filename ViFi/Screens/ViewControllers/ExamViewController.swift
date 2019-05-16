@@ -93,7 +93,9 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "toJPGVC" {
             let destinationVC = segue.destination as! JPGViewController
+            destinationVC.lessonName = self.lessonName
             destinationVC.examName = self.examName
+            destinationVC.examType = self.examType
         }
         if segue.identifier == "toPDFVC" {
             let destinationVC = segue.destination as! PDFViewController

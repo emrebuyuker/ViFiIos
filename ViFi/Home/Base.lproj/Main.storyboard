@@ -224,7 +224,7 @@
             </objects>
             <point key="canvasLocation" x="1802.8985507246377" y="1972.7678571428571"/>
         </scene>
-        <!--View Controller-->
+        <!--Title-->
         <scene sceneID="dH1-gN-YKf">
             <objects>
                 <viewController id="EAw-8a-nz0" customClass="PDFViewController" customModule="ViFi" customModuleProvider="target" sceneMemberID="viewController">
@@ -234,6 +234,7 @@
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <viewLayoutGuide key="safeArea" id="j89-kY-DAB"/>
                     </view>
+                    <navigationItem key="navigationItem" title="Title" id="bBW-AM-2BO"/>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="Xf6-Wj-2op" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
@@ -311,7 +312,7 @@
             </objects>
             <point key="canvasLocation" x="2641" y="1973"/>
         </scene>
-        <!--View Controller-->
+        <!--Title-->
         <scene sceneID="aVg-1r-jJg">
             <objects>
                 <viewController id="Afs-EW-XIu" customClass="JPGViewController" customModule="ViFi" customModuleProvider="target" sceneMemberID="viewController">
@@ -321,6 +322,7 @@
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <viewLayoutGuide key="safeArea" id="6Zw-2g-lqJ"/>
                     </view>
+                    <navigationItem key="navigationItem" title="Title" id="Awn-bq-6xy"/>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="GcR-6C-k4O" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
