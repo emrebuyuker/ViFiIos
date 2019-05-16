@@ -15,6 +15,7 @@ class LessonViewController: UIViewController, UITableViewDataSource, UITableView
     var uniName = String()
     var facName = String()
     var depName = String()
+    var lessonName = String()
     var lessonsNameArray = [String]()
     
     @IBOutlet weak var lessonTableView: UITableView!
@@ -65,9 +66,14 @@ class LessonViewController: UIViewController, UITableViewDataSource, UITableView
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        let depName = lessonsNameArray[indexPath.row]
-        let tabBar = tabBarController as! BaseTabbarVC
-        tabBar.depNameVariable = depName
-        //self.tabBarController?.selectedIndex = 3
+        lessonName = lessonsNameArray[indexPath.row]
+        performSegue(withIdentifier: "toExamVC", sender: nil)
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "toExamVC" {
+            let destinationVC = segue.destination as! ExamViewController
+            destinationVC.lessonName = self.lessonName
+        }
     }
 }

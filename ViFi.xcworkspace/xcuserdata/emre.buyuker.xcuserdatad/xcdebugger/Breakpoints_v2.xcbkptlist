@@ -9,46 +9,14 @@
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "ViFi/Screens/ViewControllers/LessonViewController.swift"
-            timestampString = "579683798.867785"
+            filePath = "ViFi/Screens/ViewControllers/JPGViewController.swift"
+            timestampString = "579697647.669894"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "47"
-            endingLineNumber = "47"
-            landmarkName = "getDataFromFireBase()"
+            startingLineNumber = "18"
+            endingLineNumber = "18"
+            landmarkName = "viewDidLoad()"
             landmarkType = "7">
-            <Locations>
-               <Location
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "ViFi.LessonViewController.getDataFromFireBase() -&gt; ()"
-                  moduleName = "ViFi"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/emre.buyuker/Desktop/xCodeProjects/ViFi/ViFi/Screens/ViewControllers/LessonViewController.swift"
-                  timestampString = "579683681.629692"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "47"
-                  endingLineNumber = "47"
-                  offsetFromSymbolStart = "108">
-               </Location>
-               <Location
-                  shouldBeEnabled = "Yes"
-                  ignoreCount = "0"
-                  continueAfterRunningActions = "No"
-                  symbolName = "closure #1 (__C.FIRDataSnapshot) -&gt; () in ViFi.LessonViewController.getDataFromFireBase() -&gt; ()"
-                  moduleName = "ViFi"
-                  usesParentBreakpointCondition = "Yes"
-                  urlString = "file:///Users/emre.buyuker/Desktop/xCodeProjects/ViFi/ViFi/Screens/ViewControllers/LessonViewController.swift"
-                  timestampString = "579683681.634714"
-                  startingColumnNumber = "9223372036854775807"
-                  endingColumnNumber = "9223372036854775807"
-                  startingLineNumber = "48"
-                  endingLineNumber = "48"
-                  offsetFromSymbolStart = "86">
-               </Location>
-            </Locations>
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -57,13 +25,13 @@
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "ViFi/Screens/ViewControllers/DepartmentViewController.swift"
-            timestampString = "579683798.868252"
+            filePath = "ViFi/Screens/ViewControllers/PDFViewController.swift"
+            timestampString = "579697647.6699719"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "67"
-            endingLineNumber = "67"
-            landmarkName = "tableView(_:didSelectRowAt:)"
+            startingLineNumber = "18"
+            endingLineNumber = "18"
+            landmarkName = "viewDidLoad()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
