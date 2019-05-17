@@ -238,7 +238,7 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="Xf6-Wj-2op" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="3641" y="1724"/>
+            <point key="canvasLocation" x="3628" y="1633"/>
         </scene>
         <!--Exam View Controller-->
         <scene sceneID="L5q-cx-gew">
@@ -365,7 +365,7 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="GcR-6C-k4O" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="3551" y="2444"/>
+            <point key="canvasLocation" x="3628" y="2349"/>
         </scene>
         <!--University View Controller-->
         <scene sceneID="YgE-Gt-Jki">
@@ -458,6 +458,7 @@
                         <color key="selectedImageTintColor" cocoaTouchSystemColor="tableCellGroupedBackgroundColor"/>
                     </tabBar>
                     <connections>
+                        <outlet property="tabbarItem" destination="dZd-Jn-b4d" id="1O9-BG-5Rd"/>
                         <segue destination="24C-Ik-67d" kind="relationship" relationship="viewControllers" id="GI7-Eb-rHw"/>
                         <segue destination="Sll-l2-xuV" kind="relationship" relationship="viewControllers" id="taL-YH-uEz"/>
                         <segue destination="rij-Tf-Egl" kind="relationship" relationship="viewControllers" id="YRZ-dM-oXe"/>

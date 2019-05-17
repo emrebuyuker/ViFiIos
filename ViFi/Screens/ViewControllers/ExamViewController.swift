@@ -99,6 +99,7 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
         }
         if segue.identifier == "toPDFVC" {
             let destinationVC = segue.destination as! PDFViewController
+            destinationVC.lessonName = self.lessonName
             destinationVC.examName = self.examName
         }
     }

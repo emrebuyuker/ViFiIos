@@ -15,9 +15,11 @@ class BaseTabbarVC: UITabBarController {
     var depNameVariable: String = ""
     var lessonNameVariable: String = ""
     
+    @IBOutlet weak var tabbarItem: UITabBar!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-
         
+        tabbarItem.isUserInteractionEnabled = false
     }
 }

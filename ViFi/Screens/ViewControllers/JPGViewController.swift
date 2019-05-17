@@ -38,6 +38,8 @@ class JPGViewController: UIViewController, UITableViewDataSource, UITableViewDel
         facName = tabBar.facNameVariable
         depName = tabBar.depNameVariable
         
+        tabBar.tabBar.isUserInteractionEnabled = false
+        
         getDataFromFireBase()
     }
     
@@ -46,6 +48,8 @@ class JPGViewController: UIViewController, UITableViewDataSource, UITableViewDel
         uniName = tabBar.uniNameVariable
         facName = tabBar.facNameVariable
         depName = tabBar.depNameVariable
+        
+        tabBar.tabbarItem.isUserInteractionEnabled = false
     }
     
     func getDataFromFireBase() {
@@ -69,7 +73,6 @@ class JPGViewController: UIViewController, UITableViewDataSource, UITableViewDel
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = JPGTableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as! JPGTableViewCell
-//        cell.imageView?.sd_setImage(with: URL(string: imageURLArray[indexPath.item]), placeholderImage: nil)
         cell.imegeView?.sd_setImage(with: URL(string: imageURLArray[indexPath.item]), placeholderImage: nil)
         return cell
     }
