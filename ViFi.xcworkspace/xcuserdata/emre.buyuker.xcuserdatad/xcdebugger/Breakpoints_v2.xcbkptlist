@@ -10,11 +10,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "ViFi/Screens/ViewControllers/JPGViewController.swift"
-            timestampString = "579709666.718273"
+            timestampString = "579771238.032447"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "54"
-            endingLineNumber = "54"
+            startingLineNumber = "61"
+            endingLineNumber = "61"
             landmarkName = "getDataFromFireBase()"
             landmarkType = "7">
          </BreakpointContent>

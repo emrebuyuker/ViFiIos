@@ -9,8 +9,9 @@
 import UIKit
 import Firebase
 import FirebaseDatabase
+import SDWebImage
 
-class JPGViewController: UIViewController {
+class JPGViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
 
     var uniName = String()
     var facName = String()
@@ -19,11 +20,18 @@ class JPGViewController: UIViewController {
     var examName = String()
     var examType = String()
     var imageURLArray = [String]()
+    var info = 0
+    
+    @IBOutlet weak var JPGTableView: UITableView!
     
     override func viewDidLoad() {
         super.viewDidLoad()
 
         navigationItem.title = examName
+        
+        self.JPGTableView.delegate = self
+        self.JPGTableView.dataSource = self
+        self.JPGTableView.rowHeight = self.JPGTableView.bounds.height
         
         let tabBar = tabBarController as! BaseTabbarVC
         uniName = tabBar.uniNameVariable
@@ -42,20 +50,27 @@ class JPGViewController: UIViewController {
     
     func getDataFromFireBase() {
         let dataBaseRefence = Database.database().reference()
-        dataBaseRefence.child("Universities").child(uniName).child(facName).child(depName).child(lessonName).child(examName).child(examType).observe(DataEventType.childAdded) { (snapshot) in
+        dataBaseRefence.child("Universities").child(uniName).child(facName).child(depName).child(lessonName).child(examName).observe(DataEventType.childAdded) { (snapshot) in
             
-            if (snapshot.key != "type") {
-                
-                let dataBaseRefence2 = Database.database().reference()
-                dataBaseRefence2.child("Universities").child(self.uniName).child(self.facName).child(self.depName).child(self.lessonName).child(self.examName).child(self.examType).child(snapshot.key).observe(DataEventType.childAdded) { (snapshot) in
-                    
-                    if (snapshot.key != "type") {
-                        if let value = snapshot.value as? String {
-                            self.imageURLArray.append(value)
-                        }
-                    }
+            for child in snapshot.children {
+                if let childSnapshot = child as? DataSnapshot,
+                    let value = childSnapshot.childSnapshot(forPath: "downloadURL").value as? String {
+                    self.imageURLArray.append(value)
                 }
             }
+            self.JPGTableView.reloadData()
         }
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        print(imageURLArray)
+        return self.imageURLArray.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = JPGTableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as! JPGTableViewCell
+//        cell.imageView?.sd_setImage(with: URL(string: imageURLArray[indexPath.item]), placeholderImage: nil)
+        cell.imegeView?.sd_setImage(with: URL(string: imageURLArray[indexPath.item]), placeholderImage: nil)
+        return cell
     }
 }

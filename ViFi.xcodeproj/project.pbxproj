@@ -21,6 +21,7 @@
 		38DE9EBA228D4E4D00F6FF11 /* JPGViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9EB9228D4E4D00F6FF11 /* JPGViewController.swift */; };
 		38DE9EBC228D555300F6FF11 /* ExamViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9EBB228D555300F6FF11 /* ExamViewController.swift */; };
 		38DE9EBE228D557F00F6FF11 /* ExamTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9EBD228D557F00F6FF11 /* ExamTableViewCell.swift */; };
+		38DE9EC0228DAD9800F6FF11 /* JPGTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9EBF228DAD9800F6FF11 /* JPGTableViewCell.swift */; };
 		38DEE2A022801BF0002BC59D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DEE29F22801BF0002BC59D /* AppDelegate.swift */; };
 		38DEE2A222801BF0002BC59D /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DEE2A122801BF0002BC59D /* ViewController.swift */; };
 		38DEE2A522801BF0002BC59D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 38DEE2A322801BF0002BC59D /* Main.storyboard */; };
@@ -45,6 +46,7 @@
 		38DE9EB9228D4E4D00F6FF11 /* JPGViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JPGViewController.swift; sourceTree = "<group>"; };
 		38DE9EBB228D555300F6FF11 /* ExamViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExamViewController.swift; sourceTree = "<group>"; };
 		38DE9EBD228D557F00F6FF11 /* ExamTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExamTableViewCell.swift; sourceTree = "<group>"; };
+		38DE9EBF228DAD9800F6FF11 /* JPGTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JPGTableViewCell.swift; sourceTree = "<group>"; };
 		38DEE29C22801BF0002BC59D /* ViFi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ViFi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		38DEE29F22801BF0002BC59D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		38DEE2A122801BF0002BC59D /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -140,6 +142,7 @@
 				38DE9EA2228C585100F6FF11 /* DepartmentTableViewCell.swift */,
 				38DE9EB1228D425B00F6FF11 /* LessonTableViewCell.swift */,
 				38DE9EBD228D557F00F6FF11 /* ExamTableViewCell.swift */,
+				38DE9EBF228DAD9800F6FF11 /* JPGTableViewCell.swift */,
 			);
 			path = TableViewCells;
 			sourceTree = "<group>";
@@ -275,6 +278,7 @@
 				"${PODS_ROOT}/Target Support Files/Pods-ViFi/Pods-ViFi-frameworks.sh",
 				"${BUILT_PRODUCTS_DIR}/GTMSessionFetcher/GTMSessionFetcher.framework",
 				"${BUILT_PRODUCTS_DIR}/GoogleUtilities/GoogleUtilities.framework",
+				"${BUILT_PRODUCTS_DIR}/SDWebImage/SDWebImage.framework",
 				"${BUILT_PRODUCTS_DIR}/leveldb-library/leveldb.framework",
 				"${BUILT_PRODUCTS_DIR}/nanopb/nanopb.framework",
 			);
@@ -284,6 +288,7 @@
 			outputPaths = (
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GTMSessionFetcher.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GoogleUtilities.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/SDWebImage.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/leveldb.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/nanopb.framework",
 			);
@@ -326,6 +331,7 @@
 				38DE9E9D228C537900F6FF11 /* FacultyTableViewCell.swift in Sources */,
 				38DE9EBE228D557F00F6FF11 /* ExamTableViewCell.swift in Sources */,
 				38DE9EBC228D555300F6FF11 /* ExamViewController.swift in Sources */,
+				38DE9EC0228DAD9800F6FF11 /* JPGTableViewCell.swift in Sources */,
 				38DE9EBA228D4E4D00F6FF11 /* JPGViewController.swift in Sources */,
 				38DE9EB8228D4E3700F6FF11 /* PDFViewController.swift in Sources */,
 				38DE9EB2228D425B00F6FF11 /* LessonTableViewCell.swift in Sources */,

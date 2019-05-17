@@ -8,6 +8,7 @@ target 'ViFi' do
 pod 'Firebase/Core'
 pod 'Firebase/Database'
 pod 'Firebase/Storage'
+pod 'SDWebImage'
 
   # Pods for ViFi
 
