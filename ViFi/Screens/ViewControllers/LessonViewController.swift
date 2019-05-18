@@ -40,6 +40,8 @@ class LessonViewController: UIViewController, UITableViewDataSource, UITableView
         uniName = tabBar.uniNameVariable
         facName = tabBar.facNameVariable
         depName = tabBar.depNameVariable
+        
+        tabBar.tabbarItem.isUserInteractionEnabled = false
     }
     
     func getDataFromFireBase() {
@@ -49,7 +51,6 @@ class LessonViewController: UIViewController, UITableViewDataSource, UITableView
             if (snapshot.key != "bolname" ) {
                 self.lessonsNameArray.append(snapshot.key)
             }
-            print(self.lessonsNameArray)
             self.lessonTableView.reloadData()
         }
     }

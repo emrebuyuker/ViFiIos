@@ -41,7 +41,6 @@ class FacultyViewController: UIViewController, UITableViewDataSource, UITableVie
             if (snapshot.key != "uniname" ) {
                 self.facultiesNameArray.append(snapshot.key)
             }
-            print(self.facultiesNameArray)
             self.facultyTableView.reloadData()
         }
     }

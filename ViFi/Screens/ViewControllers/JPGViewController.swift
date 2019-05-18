@@ -68,7 +68,6 @@ class JPGViewController: UIViewController, UITableViewDataSource, UITableViewDel
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        print(imageURLArray)
         return self.imageURLArray.count
     }
     

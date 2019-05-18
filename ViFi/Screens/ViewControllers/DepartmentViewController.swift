@@ -45,7 +45,6 @@ class DepartmentViewController: UIViewController, UITableViewDataSource, UITable
             if (snapshot.key != "fakname" ) {
                 self.departmentsNameArray.append(snapshot.key)
             }
-            print(self.departmentsNameArray)
             self.departmentTableView.reloadData()
         }
     }

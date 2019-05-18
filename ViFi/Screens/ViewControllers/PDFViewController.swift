@@ -50,7 +50,6 @@ class PDFViewController: UIViewController, SFSafariViewControllerDelegate {
                     self.pdfURLArray.append(value)
                 }
             }
-            print(self.pdfURLArray[0])
             let safariVC = SFSafariViewController(url: (NSURL(string: self.pdfURLArray[0])! as NSURL) as URL)
             self.present(safariVC, animated: true, completion: nil)
             safariVC.delegate = self

@@ -36,7 +36,6 @@ class UniversityViewController: UIViewController, UITableViewDataSource, UITable
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        print(self.universitiesNameArray)
         return self.universitiesNameArray.count
     }
     
