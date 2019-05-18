@@ -20,6 +20,7 @@ class JPGViewController: UIViewController, UITableViewDataSource, UITableViewDel
     var examName = String()
     var examType = String()
     var imageURLArray = [String]()
+    var imageURL = String()
     var info = 0
     
     @IBOutlet weak var JPGTableView: UITableView!
@@ -75,5 +76,17 @@ class JPGViewController: UIViewController, UITableViewDataSource, UITableViewDel
         let cell = JPGTableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as! JPGTableViewCell
         cell.imegeView?.sd_setImage(with: URL(string: imageURLArray[indexPath.item]), placeholderImage: nil)
         return cell
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        imageURL = imageURLArray[indexPath.item]
+        performSegue(withIdentifier: "toZoomView", sender: nil)
+    }
+    
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "toZoomView" {
+            let destinationVC = segue.destination as! ViewController
+            destinationVC.imageURL = self.imageURL
+        }
     }
 }

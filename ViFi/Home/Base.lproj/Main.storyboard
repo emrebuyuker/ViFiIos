@@ -361,6 +361,7 @@
                     <navigationItem key="navigationItem" title="Title" id="Awn-bq-6xy"/>
                     <connections>
                         <outlet property="JPGTableView" destination="CKz-E3-Ki2" id="JaU-fF-dhc"/>
+                        <segue destination="byl-Mi-K36" kind="show" identifier="toZoomView" id="8rh-Cv-gVr"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="GcR-6C-k4O" userLabel="First Responder" sceneMemberID="firstResponder"/>
@@ -546,6 +547,48 @@
                 <placeholder placeholderIdentifier="IBFirstResponder" id="xI7-f8-a49" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="892.75362318840587" y="1972.7678571428571"/>
+        </scene>
+        <!--View Controller-->
+        <scene sceneID="J89-qM-lST">
+            <objects>
+                <viewController id="byl-Mi-K36" customClass="ViewController" customModule="EFImageViewZoom" customModuleProvider="target" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="snK-Vi-xCk"/>
+                        <viewControllerLayoutGuide type="bottom" id="SnX-fN-XrW"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="Eye-67-qcY">
+                        <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="E4x-Gt-2m1" customClass="EFImageViewZoom" customModule="EFImageViewZoom" customModuleProvider="target">
+                                <rect key="frame" x="0.0" y="0.0" width="414" height="813"/>
+                                <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                <userDefinedRuntimeAttributes>
+                                    <userDefinedRuntimeAttribute type="number" keyPath="_maximumZoomScale">
+                                        <real key="value" value="10"/>
+                                    </userDefinedRuntimeAttribute>
+                                    <userDefinedRuntimeAttribute type="number" keyPath="_minimumZoomScale">
+                                        <real key="value" value="1"/>
+                                    </userDefinedRuntimeAttribute>
+                                </userDefinedRuntimeAttributes>
+                            </view>
+                        </subviews>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                        <constraints>
+                            <constraint firstItem="E4x-Gt-2m1" firstAttribute="leading" secondItem="Eye-67-qcY" secondAttribute="leading" id="GI7-cW-CrV"/>
+                            <constraint firstItem="E4x-Gt-2m1" firstAttribute="top" secondItem="Eye-67-qcY" secondAttribute="top" id="akn-3Z-uIE"/>
+                            <constraint firstAttribute="trailing" secondItem="E4x-Gt-2m1" secondAttribute="trailing" id="xEV-JG-B4k"/>
+                            <constraint firstItem="SnX-fN-XrW" firstAttribute="top" secondItem="E4x-Gt-2m1" secondAttribute="bottom" id="xls-Lh-OiV"/>
+                        </constraints>
+                        <viewLayoutGuide key="safeArea" id="hXY-D0-BtD"/>
+                    </view>
+                    <connections>
+                        <outlet property="imageViewZoom" destination="E4x-Gt-2m1" id="Kqq-5U-Vp0"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="MYD-0g-gtp" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="4485.507246376812" y="2347.0982142857142"/>
         </scene>
     </scenes>
     <resources>
