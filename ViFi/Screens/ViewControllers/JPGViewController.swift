@@ -84,7 +84,7 @@ class JPGViewController: UIViewController, UITableViewDataSource, UITableViewDel
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "toZoomView" {
-            let destinationVC = segue.destination as! ViewController
+            let destinationVC = segue.destination as! JPGZoomViewController
             destinationVC.imageURL = self.imageURL
         }
     }

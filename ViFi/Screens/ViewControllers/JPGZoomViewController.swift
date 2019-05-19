@@ -9,7 +9,7 @@
 import UIKit
 import SDWebImage
 
-class ViewController: UIViewController, EFImageViewZoomDelegate {
+class JPGZoomViewController: UIViewController, EFImageViewZoomDelegate {
     
     @IBOutlet weak var imageViewZoom: EFImageViewZoom!
     
