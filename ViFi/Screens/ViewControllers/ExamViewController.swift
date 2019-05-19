@@ -42,6 +42,7 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
         facName = tabBar.facNameVariable
         depName = tabBar.depNameVariable
         
+        tabBar.tabbarItem.isHidden = true
     }
     
     func getDataFromFireBase() {
