@@ -77,15 +77,15 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
             
             if (snapshot.key != "imagename" ) {
                 self.examType = snapshot.key
+                
+                if (self.examType == "PDF") {
+                    self.performSegue(withIdentifier: "toPDFVC", sender: nil)
+                }
+                
+                if (self.examType == "JPG") {
+                    self.performSegue(withIdentifier: "toJPGVC", sender: nil)
+                }
             }
-        }
-        
-        if (self.examType == "PDF") {
-            performSegue(withIdentifier: "toPDFVC", sender: nil)
-        }
-        
-        if (self.examType == "JPG") {
-            performSegue(withIdentifier: "toJPGVC", sender: nil)
         }
     }
     

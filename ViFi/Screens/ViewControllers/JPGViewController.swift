@@ -39,8 +39,6 @@ class JPGViewController: UIViewController, UITableViewDataSource, UITableViewDel
         facName = tabBar.facNameVariable
         depName = tabBar.depNameVariable
         
-        tabBar.tabBar.isUserInteractionEnabled = false
-        
         getDataFromFireBase()
     }
     
@@ -49,8 +47,6 @@ class JPGViewController: UIViewController, UITableViewDataSource, UITableViewDel
         uniName = tabBar.uniNameVariable
         facName = tabBar.facNameVariable
         depName = tabBar.depNameVariable
-        
-        tabBar.tabbarItem.isUserInteractionEnabled = false
     }
     
     func getDataFromFireBase() {
