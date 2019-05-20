@@ -32,8 +32,6 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
         uniName = tabBar.uniNameVariable
         facName = tabBar.facNameVariable
         depName = tabBar.depNameVariable
-        
-        getDataFromFireBase()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -43,6 +41,10 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
         depName = tabBar.depNameVariable
         
         tabBar.tabbarItem.isHidden = true
+        
+        examsNameArray.removeAll()
+        
+        getDataFromFireBase()
     }
     
     func getDataFromFireBase() {
@@ -61,7 +63,9 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = examTableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as! ExamTableViewCell
-        cell.examNameLabel.text = examsNameArray[indexPath.row]
+        if examsNameArray.count != 0 {
+            cell.examNameLabel.text = examsNameArray[indexPath.row]
+        }
         return cell
     }
     

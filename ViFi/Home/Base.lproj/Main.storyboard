@@ -214,7 +214,14 @@
                         </constraints>
                         <viewLayoutGuide key="safeArea" id="DhH-o2-DRA"/>
                     </view>
-                    <navigationItem key="navigationItem" id="CPv-1H-qZo"/>
+                    <navigationItem key="navigationItem" id="CPv-1H-qZo">
+                        <barButtonItem key="rightBarButtonItem" title="Home" image="home" id="gao-Nq-LxJ">
+                            <color key="tintColor" red="0.43529411759999997" green="0.4431372549" blue="0.47450980390000003" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                            <connections>
+                                <action selector="HomaButtonClick:" destination="yNu-5u-gvO" id="7Jr-dQ-GFo"/>
+                            </connections>
+                        </barButtonItem>
+                    </navigationItem>
                     <connections>
                         <outlet property="lessonTableView" destination="EeU-yJ-hPz" id="fRa-u9-Okl"/>
                         <segue destination="Mn0-1Q-Pdy" kind="show" identifier="toExamVC" id="z3p-Vs-cSV"/>
@@ -559,11 +566,11 @@
                         <viewControllerLayoutGuide type="bottom" id="SnX-fN-XrW"/>
                     </layoutGuides>
                     <view key="view" contentMode="scaleToFill" id="Eye-67-qcY">
-                        <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
+                        <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="E4x-Gt-2m1" customClass="EFImageViewZoom" customModule="ViFi" customModuleProvider="target">
-                                <rect key="frame" x="0.0" y="0.0" width="600" height="551"/>
+                                <rect key="frame" x="0.0" y="0.0" width="414" height="813"/>
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                                 <userDefinedRuntimeAttributes>
                                     <userDefinedRuntimeAttribute type="number" keyPath="_maximumZoomScale">
@@ -596,6 +603,7 @@
     <resources>
         <image name="departmentItemIcon" width="30" height="30"/>
         <image name="facultiyItemIcon" width="30" height="30"/>
+        <image name="home" width="30" height="30"/>
         <image name="lessonItemIcon" width="30" height="30"/>
         <image name="universityItemIcon" width="30" height="30"/>
     </resources>

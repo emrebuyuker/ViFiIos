@@ -38,8 +38,6 @@ class JPGViewController: UIViewController, UITableViewDataSource, UITableViewDel
         uniName = tabBar.uniNameVariable
         facName = tabBar.facNameVariable
         depName = tabBar.depNameVariable
-        
-        getDataFromFireBase()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -47,6 +45,10 @@ class JPGViewController: UIViewController, UITableViewDataSource, UITableViewDel
         uniName = tabBar.uniNameVariable
         facName = tabBar.facNameVariable
         depName = tabBar.depNameVariable
+        
+        tabBar.tabbarItem.isHidden = true
+        
+        getDataFromFireBase()
     }
     
     func getDataFromFireBase() {

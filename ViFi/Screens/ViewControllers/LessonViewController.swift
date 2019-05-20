@@ -30,9 +30,6 @@ class LessonViewController: UIViewController, UITableViewDataSource, UITableView
         uniName = tabBar.uniNameVariable
         facName = tabBar.facNameVariable
         depName = tabBar.depNameVariable
-        
-        getDataFromFireBase()
-
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -41,7 +38,13 @@ class LessonViewController: UIViewController, UITableViewDataSource, UITableView
         facName = tabBar.facNameVariable
         depName = tabBar.depNameVariable
         
-        tabBar.tabbarItem.isUserInteractionEnabled = false
+        lessonsNameArray.removeAll()
+        
+        getDataFromFireBase()
+    }
+    
+    @IBAction func HomaButtonClick(_ sender: Any) {
+        self.tabBarController?.selectedIndex = 0
     }
     
     func getDataFromFireBase() {
@@ -61,7 +64,9 @@ class LessonViewController: UIViewController, UITableViewDataSource, UITableView
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = lessonTableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as! LessonTableViewCell
-        cell.lessonNameLabel.text = lessonsNameArray[indexPath.row]
+        if lessonsNameArray.count != 0 {
+            cell.lessonNameLabel.text = lessonsNameArray[indexPath.row]
+        }
         return cell
     }
     

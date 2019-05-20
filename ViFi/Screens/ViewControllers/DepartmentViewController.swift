@@ -27,15 +27,16 @@ class DepartmentViewController: UIViewController, UITableViewDataSource, UITable
         let tabBar = tabBarController as! BaseTabbarVC
         uniName = tabBar.uniNameVariable
         facName = tabBar.facNameVariable
-        
-        getDataFromFireBase()
-
     }
     
     override func viewWillAppear(_ animated: Bool) {
         let tabBar = tabBarController as! BaseTabbarVC
         uniName = tabBar.uniNameVariable
         facName = tabBar.facNameVariable
+        
+        departmentsNameArray.removeAll()
+        
+        getDataFromFireBase()
     }
     
     func getDataFromFireBase() {

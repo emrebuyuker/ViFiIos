@@ -21,7 +21,13 @@ class UniversityViewController: UIViewController, UITableViewDataSource, UITable
         
         self.universityTableView.delegate = self
         self.universityTableView.dataSource = self
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        let tabBar = tabBarController as! BaseTabbarVC
+        tabBar.tabbarItem.isHidden = false
         
+        universitiesNameArray.removeAll()
         getDataFromFireBase()
     }
     

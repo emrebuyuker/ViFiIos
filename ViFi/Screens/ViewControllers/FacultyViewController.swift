@@ -25,13 +25,15 @@ class FacultyViewController: UIViewController, UITableViewDataSource, UITableVie
 
         let tabBar = tabBarController as! BaseTabbarVC
         uniName = tabBar.uniNameVariable
-        
-        getDataFromFireBase()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         let tabBar = tabBarController as! BaseTabbarVC
         uniName = tabBar.uniNameVariable
+        
+        facultiesNameArray.removeAll()
+        
+        getDataFromFireBase()
     }
     
     func getDataFromFireBase() {
