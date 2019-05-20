@@ -18,7 +18,10 @@ class PDFViewController: UIViewController, SFSafariViewControllerDelegate {
     var depName = String()
     var lessonName = String()
     var examName = String()
+    
     var pdfURLArray = [String]()
+    
+    var isInfoShow: Bool = false
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -29,8 +32,6 @@ class PDFViewController: UIViewController, SFSafariViewControllerDelegate {
         depName = tabBar.depNameVariable
 
         navigationItem.title = examName
-        
-        getDataFromFireBase()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -38,6 +39,13 @@ class PDFViewController: UIViewController, SFSafariViewControllerDelegate {
         uniName = tabBar.uniNameVariable
         facName = tabBar.facNameVariable
         depName = tabBar.depNameVariable
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        if !self.isInfoShow {
+            getDataFromFireBase()
+            self.isInfoShow = true
+        }
     }
     
     func getDataFromFireBase() {
