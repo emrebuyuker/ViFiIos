@@ -26,8 +26,6 @@ class LessonViewController: UIViewController, UITableViewDataSource, UITableView
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        
-        
         self.lessonTableView.delegate = self
         self.lessonTableView.dataSource = self
         

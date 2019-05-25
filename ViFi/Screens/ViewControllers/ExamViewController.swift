@@ -9,6 +9,7 @@
 import UIKit
 import Firebase
 import FirebaseDatabase
+import GoogleMobileAds
 
 class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
     
@@ -19,6 +20,8 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
     var examName = String()
     var examType = String()
     var examsNameArray = [String]()
+    
+    var interstitial: GADInterstitial!
 
     @IBOutlet weak var examTableView: UITableView!
     
@@ -35,6 +38,12 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
     }
     
     override func viewWillAppear(_ animated: Bool) {
+        
+        // test id ca-app-pub-3940256099942544/8691691433
+        interstitial = GADInterstitial(adUnitID: "ca-app-pub-3940256099942544/8691691433") // id değeri atandı.
+        let request = GADRequest() // request olusturma
+        interstitial.load(request) // reklamı yüklemek için isteği ekledik.
+        
         let tabBar = tabBarController as! BaseTabbarVC
         uniName = tabBar.uniNameVariable
         facName = tabBar.facNameVariable
@@ -104,6 +113,12 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
             let destinationVC = segue.destination as! PDFViewController
             destinationVC.lessonName = self.lessonName
             destinationVC.examName = self.examName
+        }
+        
+        if interstitial.isReady{ // reklam hazır
+            interstitial.present(fromRootViewController: self) // reklamı aynı ekranda göster.
+        }else{ // reklam hazır değilse
+            print("Reklam hazır değil") // consol'da mesaj bastırılacak.
         }
     }
 }
