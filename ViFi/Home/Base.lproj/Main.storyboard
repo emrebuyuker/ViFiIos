@@ -443,13 +443,6 @@
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="5wc-jC-PId" userLabel="First Responder" sceneMemberID="firstResponder"/>
-                <navigationBar contentMode="scaleToFill" id="hDr-eF-hbN">
-                    <rect key="frame" x="0.0" y="0.0" width="414" height="44"/>
-                    <autoresizingMask key="autoresizingMask" widthSizable="YES" flexibleMaxY="YES"/>
-                    <items>
-                        <navigationItem title="Title" id="aGr-ga-HeJ"/>
-                    </items>
-                </navigationBar>
             </objects>
             <point key="canvasLocation" x="1821.7391304347827" y="-74.330357142857139"/>
         </scene>
