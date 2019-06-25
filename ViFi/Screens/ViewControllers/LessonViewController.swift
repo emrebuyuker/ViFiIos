@@ -86,7 +86,6 @@ class LessonViewController: UIViewController, UITableViewDataSource, UITableView
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "toExamVC" {
-            
             let destinationVC = segue.destination as! ExamViewController
             destinationVC.lessonName = self.lessonName
             
