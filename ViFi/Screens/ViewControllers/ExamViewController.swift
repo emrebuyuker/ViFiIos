@@ -40,7 +40,7 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
     override func viewWillAppear(_ animated: Bool) {
         
         // test id ca-app-pub-3940256099942544/8691691433
-        interstitial = GADInterstitial(adUnitID: "ca-app-pub-3940256099942544/8691691433") // id değeri atandı.
+        interstitial = GADInterstitial(adUnitID: "ca-app-pub-9037305793844471/3698836274") // id değeri atandı.
         let request = GADRequest() // request olusturma
         interstitial.load(request) // reklamı yüklemek için isteği ekledik.
         
