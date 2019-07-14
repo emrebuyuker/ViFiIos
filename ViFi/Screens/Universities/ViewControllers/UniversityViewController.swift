@@ -31,7 +31,6 @@ class UniversityViewController: UIViewController, UITableViewDataSource, UITable
         getDataFromFireBase()
     }
     
-    
     func getDataFromFireBase() {
         let dataBaseRefence = Database.database().reference()
         

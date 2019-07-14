@@ -72,10 +72,34 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		38DE9E4622895A0700F6FF11 /* ViewControllers */ = {
+		38DAFADE22DB431700B589AA /* Universities */ = {
+			isa = PBXGroup;
+			children = (
+				38DAFAE022DB439A00B589AA /* View */,
+				38DAFADF22DB434500B589AA /* ViewControllers */,
+			);
+			path = Universities;
+			sourceTree = "<group>";
+		};
+		38DAFADF22DB434500B589AA /* ViewControllers */ = {
 			isa = PBXGroup;
 			children = (
 				38DE9E44228959F800F6FF11 /* UniversityViewController.swift */,
+			);
+			path = ViewControllers;
+			sourceTree = "<group>";
+		};
+		38DAFAE022DB439A00B589AA /* View */ = {
+			isa = PBXGroup;
+			children = (
+				38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */,
+			);
+			path = View;
+			sourceTree = "<group>";
+		};
+		38DE9E4622895A0700F6FF11 /* ViewControllers */ = {
+			isa = PBXGroup;
+			children = (
 				38DE9E9A228C478900F6FF11 /* FacultyViewController.swift */,
 				38DE9EA0228C57AA00F6FF11 /* DepartmentViewController.swift */,
 				38DE9EB3228D435900F6FF11 /* LessonViewController.swift */,
@@ -130,6 +154,7 @@
 		38DE9E4E2289B90600F6FF11 /* Screens */ = {
 			isa = PBXGroup;
 			children = (
+				38DAFADE22DB431700B589AA /* Universities */,
 				38DE9E4F228ACCD000F6FF11 /* TableViewCells */,
 				38DE9E4622895A0700F6FF11 /* ViewControllers */,
 				38DE9E98228C46F900F6FF11 /* BaseTabbarVC.swift */,
@@ -141,7 +166,6 @@
 		38DE9E4F228ACCD000F6FF11 /* TableViewCells */ = {
 			isa = PBXGroup;
 			children = (
-				38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */,
 				38DE9E9C228C537800F6FF11 /* FacultyTableViewCell.swift */,
 				38DE9EA2228C585100F6FF11 /* DepartmentTableViewCell.swift */,
 				38DE9EB1228D425B00F6FF11 /* LessonTableViewCell.swift */,
