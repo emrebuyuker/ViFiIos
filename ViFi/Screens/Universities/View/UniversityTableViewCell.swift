@@ -9,18 +9,20 @@
 import UIKit
 
 class UniversityTableViewCell: UITableViewCell {
+    
+    // MARK - Outles
 
     @IBOutlet weak var universityLabel: UILabel!
     
+    // MARK - View Life Cycle
+    
     override func awakeFromNib() {
         super.awakeFromNib()
-        // Initialization code
     }
+    
+    // MARK - Helpers Methods
 
     override func setSelected(_ selected: Bool, animated: Bool) {
         super.setSelected(selected, animated: animated)
-
-        // Configure the view for the selected state
     }
-
 }

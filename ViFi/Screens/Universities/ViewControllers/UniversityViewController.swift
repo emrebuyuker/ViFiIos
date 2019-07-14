@@ -12,9 +12,15 @@ import FirebaseDatabase
 
 class UniversityViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
     
+    // MARK - Outles
+    
     @IBOutlet weak var universityTableView: UITableView!
     
-    var universitiesNameArray = [String]()
+    // MARK - Public
+    
+    public var universitiesNameArray = [String]()
+    
+    // MARK - Life Cycles
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -31,6 +37,8 @@ class UniversityViewController: UIViewController, UITableViewDataSource, UITable
         getDataFromFireBase()
     }
     
+    // MARK - Helpers Methods
+    
     func getDataFromFireBase() {
         let dataBaseRefence = Database.database().reference()
         
@@ -39,6 +47,8 @@ class UniversityViewController: UIViewController, UITableViewDataSource, UITable
             self.universityTableView.reloadData()
         }
     }
+    
+    // MARK - Table View Methods
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return self.universitiesNameArray.count
