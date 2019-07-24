@@ -75,8 +75,9 @@
 		38DAFADE22DB431700B589AA /* Universities */ = {
 			isa = PBXGroup;
 			children = (
-				38DAFAE022DB439A00B589AA /* View */,
 				38DAFADF22DB434500B589AA /* ViewControllers */,
+				38DAFAE922E5C22A00B589AA /* ViewModels */,
+				38DAFAE022DB439A00B589AA /* Views */,
 			);
 			path = Universities;
 			sourceTree = "<group>";
@@ -89,12 +90,19 @@
 			path = ViewControllers;
 			sourceTree = "<group>";
 		};
-		38DAFAE022DB439A00B589AA /* View */ = {
+		38DAFAE022DB439A00B589AA /* Views */ = {
 			isa = PBXGroup;
 			children = (
 				38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */,
 			);
-			path = View;
+			path = Views;
+			sourceTree = "<group>";
+		};
+		38DAFAE922E5C22A00B589AA /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = ViewModels;
 			sourceTree = "<group>";
 		};
 		38DE9E4622895A0700F6FF11 /* ViewControllers */ = {
