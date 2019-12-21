@@ -42,7 +42,7 @@ class UniversityViewController: UIViewController, UITableViewDataSource, UITable
     func getDataFromFireBase() {
         let dataBaseRefence = Database.database().reference()
         
-        dataBaseRefence.child("Universities").observe(DataEventType.childAdded) { (snapshot) in
+        dataBaseRefence.child("Universitiess").observe(DataEventType.childAdded) { (snapshot) in
             self.universitiesNameArray.append(snapshot.key)
             self.universityTableView.reloadData()
         }

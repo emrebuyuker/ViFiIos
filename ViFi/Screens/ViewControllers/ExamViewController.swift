@@ -58,7 +58,7 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
     
     func getDataFromFireBase() {
         let dataBaseRefence = Database.database().reference()
-        dataBaseRefence.child("Universities").child(uniName).child(facName).child(depName).child(lessonName).observe(DataEventType.childAdded) { (snapshot) in
+        dataBaseRefence.child("Universitiess").child(uniName).child(facName).child(depName).child(lessonName).observe(DataEventType.childAdded) { (snapshot) in
             if (snapshot.key != "lessonname" ) {
                 self.examsNameArray.append(snapshot.key)
             }
@@ -86,7 +86,7 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
     
     func getDataFromFireBaseExamType() {
         let dataBaseRefence = Database.database().reference()
-        dataBaseRefence.child("Universities").child(uniName).child(facName).child(depName).child(lessonName).child(examName).observe(DataEventType.childAdded) { (snapshot) in
+        dataBaseRefence.child("Universitiess").child(uniName).child(facName).child(depName).child(lessonName).child(examName).observe(DataEventType.childAdded) { (snapshot) in
             
             if (snapshot.key != "imagename" ) {
                 self.examType = snapshot.key

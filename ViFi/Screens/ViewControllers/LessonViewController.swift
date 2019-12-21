@@ -59,7 +59,7 @@ class LessonViewController: UIViewController, UITableViewDataSource, UITableView
     func getDataFromFireBase() {
         let dataBaseRefence = Database.database().reference()
         
-        dataBaseRefence.child("Universities").child(uniName).child(facName).child(depName).observe(DataEventType.childAdded) { (snapshot) in
+        dataBaseRefence.child("Universitiess").child(uniName).child(facName).child(depName).observe(DataEventType.childAdded) { (snapshot) in
             if (snapshot.key != "bolname" ) {
                 self.lessonsNameArray.append(snapshot.key)
             }

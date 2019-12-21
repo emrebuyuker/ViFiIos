@@ -42,7 +42,7 @@ class DepartmentViewController: UIViewController, UITableViewDataSource, UITable
     func getDataFromFireBase() {
         let dataBaseRefence = Database.database().reference()
         
-        dataBaseRefence.child("Universities").child(uniName).child(facName).observe(DataEventType.childAdded) { (snapshot) in
+        dataBaseRefence.child("Universitiess").child(uniName).child(facName).observe(DataEventType.childAdded) { (snapshot) in
             if (snapshot.key != "fakname" ) {
                 self.departmentsNameArray.append(snapshot.key)
             }

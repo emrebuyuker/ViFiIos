@@ -53,7 +53,7 @@ class JPGViewController: UIViewController, UITableViewDataSource, UITableViewDel
     
     func getDataFromFireBase() {
         let dataBaseRefence = Database.database().reference()
-        dataBaseRefence.child("Universities").child(uniName).child(facName).child(depName).child(lessonName).child(examName).observe(DataEventType.childAdded) { (snapshot) in
+        dataBaseRefence.child("Universitiess").child(uniName).child(facName).child(depName).child(lessonName).child(examName).observe(DataEventType.childAdded) { (snapshot) in
             
             for child in snapshot.children {
                 if let childSnapshot = child as? DataSnapshot,
