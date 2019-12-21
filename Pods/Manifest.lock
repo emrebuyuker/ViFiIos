@@ -1,4 +1,5 @@
 PODS:
+  - Alamofire (4.9.1)
   - Firebase/Core (6.0.0):
     - Firebase/CoreOnly
     - FirebaseAnalytics (= 6.0.0)
@@ -73,6 +74,7 @@ PODS:
   - SDWebImage/Core (5.0.3)
 
 DEPENDENCIES:
+  - Alamofire
   - Firebase/Core
   - Firebase/Database
   - Firebase/Storage
@@ -80,7 +82,7 @@ DEPENDENCIES:
   - SDWebImage
 
 SPEC REPOS:
-  https://github.com/cocoapods/specs.git:
+  https://github.com/CocoaPods/Specs.git:
     - Firebase
     - FirebaseAnalytics
     - FirebaseAuthInterop
@@ -95,8 +97,11 @@ SPEC REPOS:
     - leveldb-library
     - nanopb
     - SDWebImage
+  trunk:
+    - Alamofire
 
 SPEC CHECKSUMS:
+  Alamofire: 85e8a02c69d6020a0d734f6054870d7ecb75cf18
   Firebase: fa80b9d987ca014a1ba9357496ef2a0178b28b12
   FirebaseAnalytics: 1743c5f4de3687d0745709dfdc4b1dea1484f44c
   FirebaseAuthInterop: 0ffa57668be100582bb7643d4fcb7615496c41fc
@@ -112,6 +117,6 @@ SPEC CHECKSUMS:
   nanopb: 2901f78ea1b7b4015c860c2fdd1ea2fee1a18d48
   SDWebImage: d4f87d7d36c8a4d9f9459dc282e0caa057fdf935
 
-PODFILE CHECKSUM: 287bf1869e9e24b2cee696294af4fd0e58155adc
+PODFILE CHECKSUM: 4047e72547e94002063479692dfb1c654b023499
 
-COCOAPODS: 1.6.2
+COCOAPODS: 1.8.4

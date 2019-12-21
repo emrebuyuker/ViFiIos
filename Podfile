@@ -10,6 +10,7 @@ pod 'Firebase/Database'
 pod 'Firebase/Storage'
 pod 'SDWebImage'
 pod 'Google-Mobile-Ads-SDK'
+pod 'Alamofire'
 
   # Pods for ViFi
 

@@ -3,11 +3,12 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 51;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		386B2A5C228EDE2000B683E0 /* EFImageViewZoom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 386B2A5B228EDE2000B683E0 /* EFImageViewZoom.swift */; };
+		38D4DC7823AE8CC70041F2F6 /* VersionCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38D4DC7723AE8CC70041F2F6 /* VersionCheck.swift */; };
 		38DE9E45228959F800F6FF11 /* UniversityViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E44228959F800F6FF11 /* UniversityViewController.swift */; };
 		38DE9E4822898E2400F6FF11 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 38DE9E4722898E2400F6FF11 /* GoogleService-Info.plist */; };
 		38DE9E51228ACD2A00F6FF11 /* UniversityTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */; };
@@ -34,6 +35,7 @@
 /* Begin PBXFileReference section */
 		17ACBF58F698970DD94C2DA4 /* Pods-ViFi.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ViFi.release.xcconfig"; path = "Target Support Files/Pods-ViFi/Pods-ViFi.release.xcconfig"; sourceTree = "<group>"; };
 		386B2A5B228EDE2000B683E0 /* EFImageViewZoom.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EFImageViewZoom.swift; sourceTree = "<group>"; };
+		38D4DC7723AE8CC70041F2F6 /* VersionCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionCheck.swift; sourceTree = "<group>"; };
 		38DE9E44228959F800F6FF11 /* UniversityViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversityViewController.swift; sourceTree = "<group>"; };
 		38DE9E4722898E2400F6FF11 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversityTableViewCell.swift; sourceTree = "<group>"; };
@@ -167,6 +169,7 @@
 				38DE9E4622895A0700F6FF11 /* ViewControllers */,
 				38DE9E98228C46F900F6FF11 /* BaseTabbarVC.swift */,
 				386B2A5B228EDE2000B683E0 /* EFImageViewZoom.swift */,
+				38D4DC7723AE8CC70041F2F6 /* VersionCheck.swift */,
 			);
 			path = Screens;
 			sourceTree = "<group>";
@@ -308,24 +311,11 @@
 			files = (
 			);
 			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-ViFi/Pods-ViFi-frameworks.sh",
-				"${BUILT_PRODUCTS_DIR}/GTMSessionFetcher/GTMSessionFetcher.framework",
-				"${BUILT_PRODUCTS_DIR}/GoogleUtilities/GoogleUtilities.framework",
-				"${BUILT_PRODUCTS_DIR}/SDWebImage/SDWebImage.framework",
-				"${BUILT_PRODUCTS_DIR}/leveldb-library/leveldb.framework",
-				"${BUILT_PRODUCTS_DIR}/nanopb/nanopb.framework",
+				"${PODS_ROOT}/Target Support Files/Pods-ViFi/Pods-ViFi-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
-			);
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GTMSessionFetcher.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/GoogleUtilities.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/SDWebImage.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/leveldb.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/nanopb.framework",
+				"${PODS_ROOT}/Target Support Files/Pods-ViFi/Pods-ViFi-frameworks-${CONFIGURATION}-output-files.xcfilelist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -368,6 +358,7 @@
 				38DE9EBC228D555300F6FF11 /* ExamViewController.swift in Sources */,
 				38DE9EC0228DAD9800F6FF11 /* JPGTableViewCell.swift in Sources */,
 				38DE9EBA228D4E4D00F6FF11 /* JPGViewController.swift in Sources */,
+				38D4DC7823AE8CC70041F2F6 /* VersionCheck.swift in Sources */,
 				386B2A5C228EDE2000B683E0 /* EFImageViewZoom.swift in Sources */,
 				38DE9EB8228D4E3700F6FF11 /* PDFViewController.swift in Sources */,
 				38DE9EB2228D425B00F6FF11 /* LessonTableViewCell.swift in Sources */,
@@ -533,6 +524,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.BuyukerYazilim.ViFi2;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "ViFi Distribution";
@@ -555,6 +547,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.BuyukerYazilim.ViFi2;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "ViFi Distribution";
