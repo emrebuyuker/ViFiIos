@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>441043948320-tlsqcgudl3f4ncd8t2i683emkjqhjv3j.apps.googleusercontent.com</string>
+	<string>441043948320-8o7b30434vf773r51h5fon4jb2gf1gl7.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.441043948320-tlsqcgudl3f4ncd8t2i683emkjqhjv3j</string>
+	<string>com.googleusercontent.apps.441043948320-8o7b30434vf773r51h5fon4jb2gf1gl7</string>
 	<key>ANDROID_CLIENT_ID</key>
 	<string>441043948320-msq79eeogrh4vj3k8i89mmg2il91592e.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
@@ -15,23 +15,23 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.BuyukerYazilim.ViFi</string>
+	<string>com.BuyukerYazilim.ViFi2</string>
 	<key>PROJECT_ID</key>
 	<string>vifi-831a8</string>
 	<key>STORAGE_BUCKET</key>
 	<string>vifi-831a8.appspot.com</string>
 	<key>IS_ADS_ENABLED</key>
-	<false/>
+	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
-	<false/>
+	<false></false>
 	<key>IS_APPINVITE_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>IS_GCM_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>IS_SIGNIN_ENABLED</key>
-	<true/>
+	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:441043948320:ios:d64c3ee5b5ffb02e</string>
+	<string>1:441043948320:ios:05fac6c5c1ec991258bd45</string>
 	<key>DATABASE_URL</key>
 	<string>https://vifi-831a8.firebaseio.com</string>
 </dict>

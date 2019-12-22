@@ -9,8 +9,8 @@
 /* Begin PBXBuildFile section */
 		386B2A5C228EDE2000B683E0 /* EFImageViewZoom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 386B2A5B228EDE2000B683E0 /* EFImageViewZoom.swift */; };
 		38D4DC7823AE8CC70041F2F6 /* VersionCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38D4DC7723AE8CC70041F2F6 /* VersionCheck.swift */; };
+		38D4DC7F23AF9F660041F2F6 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 38D4DC7E23AF9F660041F2F6 /* GoogleService-Info.plist */; };
 		38DE9E45228959F800F6FF11 /* UniversityViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E44228959F800F6FF11 /* UniversityViewController.swift */; };
-		38DE9E4822898E2400F6FF11 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 38DE9E4722898E2400F6FF11 /* GoogleService-Info.plist */; };
 		38DE9E51228ACD2A00F6FF11 /* UniversityTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */; };
 		38DE9E99228C46F900F6FF11 /* BaseTabbarVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E98228C46F900F6FF11 /* BaseTabbarVC.swift */; };
 		38DE9E9B228C478900F6FF11 /* FacultyViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E9A228C478900F6FF11 /* FacultyViewController.swift */; };
@@ -36,8 +36,10 @@
 		17ACBF58F698970DD94C2DA4 /* Pods-ViFi.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ViFi.release.xcconfig"; path = "Target Support Files/Pods-ViFi/Pods-ViFi.release.xcconfig"; sourceTree = "<group>"; };
 		386B2A5B228EDE2000B683E0 /* EFImageViewZoom.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EFImageViewZoom.swift; sourceTree = "<group>"; };
 		38D4DC7723AE8CC70041F2F6 /* VersionCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionCheck.swift; sourceTree = "<group>"; };
+		38D4DC7E23AF9F660041F2F6 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		38D4DC8023AFA2300041F2F6 /* ViFiRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ViFiRelease.entitlements; sourceTree = "<group>"; };
+		38D4DC8123AFA2430041F2F6 /* ViFi.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ViFi.entitlements; sourceTree = "<group>"; };
 		38DE9E44228959F800F6FF11 /* UniversityViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversityViewController.swift; sourceTree = "<group>"; };
-		38DE9E4722898E2400F6FF11 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversityTableViewCell.swift; sourceTree = "<group>"; };
 		38DE9E98228C46F900F6FF11 /* BaseTabbarVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseTabbarVC.swift; sourceTree = "<group>"; };
 		38DE9E9A228C478900F6FF11 /* FacultyViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FacultyViewController.swift; sourceTree = "<group>"; };
@@ -156,7 +158,7 @@
 		38DE9E4D2289B8CE00F6FF11 /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				38DE9E4722898E2400F6FF11 /* GoogleService-Info.plist */,
+				38D4DC7E23AF9F660041F2F6 /* GoogleService-Info.plist */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -207,6 +209,8 @@
 		38DEE29E22801BF0002BC59D /* ViFi */ = {
 			isa = PBXGroup;
 			children = (
+				38D4DC8123AFA2430041F2F6 /* ViFi.entitlements */,
+				38D4DC8023AFA2300041F2F6 /* ViFiRelease.entitlements */,
 				38DE9E4E2289B90600F6FF11 /* Screens */,
 				38DE9E4C2289B8BD00F6FF11 /* Business */,
 				38DE9E4A2289B85800F6FF11 /* Application */,
@@ -296,7 +300,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				38DEE2AA22801BF2002BC59D /* LaunchScreen.storyboard in Resources */,
-				38DE9E4822898E2400F6FF11 /* GoogleService-Info.plist in Resources */,
+				38D4DC7F23AF9F660041F2F6 /* GoogleService-Info.plist in Resources */,
 				38DEE2A722801BF2002BC59D /* Assets.xcassets in Resources */,
 				38DEE2A522801BF0002BC59D /* Main.storyboard in Resources */,
 			);
@@ -515,7 +519,8 @@
 			baseConfigurationReference = 732842A922BA18B35FBF3595 /* Pods-ViFi.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				CODE_SIGN_ENTITLEMENTS = ViFi/ViFi.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = A9ZTFRX9B5;
 				INFOPLIST_FILE = ViFi/Info.plist;
@@ -527,7 +532,7 @@
 				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.BuyukerYazilim.ViFi2;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "ViFi Distribution";
+				PROVISIONING_PROFILE_SPECIFIER = "Vifi Development";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -538,7 +543,8 @@
 			baseConfigurationReference = 17ACBF58F698970DD94C2DA4 /* Pods-ViFi.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				CODE_SIGN_ENTITLEMENTS = ViFi/ViFiRelease.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				DEVELOPMENT_TEAM = A9ZTFRX9B5;
 				INFOPLIST_FILE = ViFi/Info.plist;
@@ -550,7 +556,7 @@
 				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.BuyukerYazilim.ViFi2;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "ViFi Distribution";
+				PROVISIONING_PROFILE_SPECIFIER = "Vifi Development";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
