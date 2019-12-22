@@ -11,7 +11,7 @@ import Firebase
 import FirebaseDatabase
 import GoogleMobileAds
 
-class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, GADRewardedAdDelegate {
     
     var uniName = String()
     var facName = String()
@@ -20,8 +20,10 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
     var examName = String()
     var examType = String()
     var examsNameArray = [String]()
+	var isAdvertising = Bool()
     
     var interstitial: GADInterstitial!
+	var rewardedAd: GADRewardedAd?
 
     @IBOutlet weak var examTableView: UITableView!
     
@@ -38,6 +40,8 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
     }
     
     override func viewWillAppear(_ animated: Bool) {
+		
+		self.rewardedAd = createAndLoadRewardedAd()
         
         // test id ca-app-pub-3940256099942544/8691691433
         interstitial = GADInterstitial(adUnitID: "ca-app-pub-9037305793844471/3698836274") // id değeri atandı.
@@ -55,6 +59,18 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
         
         getDataFromFireBase()
     }
+	
+	func createAndLoadRewardedAd() -> GADRewardedAd {
+		self.rewardedAd = GADRewardedAd(adUnitID: "ca-app-pub-9037305793844471/3856324039")
+		self.rewardedAd?.load(GADRequest()) { error in
+		if let error = error {
+		  print("Loading failed: \(error)")
+		} else {
+		  print("Loading Succeeded")
+		}
+	  }
+		return self.rewardedAd!
+	}
     
     func getDataFromFireBase() {
         let dataBaseRefence = Database.database().reference()
@@ -71,17 +87,31 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = examTableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as! ExamTableViewCell
-        if examsNameArray.count != 0 {
-            cell.examNameLabel.text = examsNameArray[indexPath.row]
-        }
-        return cell
+		if (indexPath.row < 3) {
+			let cell = examTableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as! ExamTableViewCell
+			if examsNameArray.count != 0 {
+				cell.examNameLabel.text = "Görmek için lütfen reklamı izleyiniz."
+			}
+			return cell
+		} else {
+			let cell = examTableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as! ExamTableViewCell
+			if examsNameArray.count != 0 {
+				cell.examNameLabel.text = examsNameArray[indexPath.row]
+			}
+			return cell
+		}
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        examName = examsNameArray[indexPath.row]
-
-        getDataFromFireBaseExamType()
+		if (indexPath.row < 3) {
+			self.isAdvertising = true
+			examName = examsNameArray[indexPath.row]
+			self.advertisingRewardedAdMethod()
+		} else {
+			self.isAdvertising = false
+			examName = examsNameArray[indexPath.row]
+			getDataFromFireBaseExamType()
+		}
     }
     
     func getDataFromFireBaseExamType() {
@@ -114,11 +144,38 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
             destinationVC.lessonName = self.lessonName
             destinationVC.examName = self.examName
         }
-        
-        if interstitial.isReady{ // reklam hazır
-            interstitial.present(fromRootViewController: self) // reklamı aynı ekranda göster.
-        }else{ // reklam hazır değilse
-            print("Reklam hazır değil") // consol'da mesaj bastırılacak.
-        }
+		self.advertisingMethod()
     }
+	
+	func advertisingMethod() {
+		if (!isAdvertising) {
+			if interstitial.isReady{ // reklam hazır
+				interstitial.present(fromRootViewController: self) // reklamı aynı ekranda göster.
+			} else { // reklam hazır değilse
+				print("Reklam hazır değil") // consol'da mesaj bastırılacak.
+			}
+		}
+	}
+	
+	func advertisingRewardedAdMethod() {
+		if rewardedAd?.isReady == true {
+			rewardedAd?.present(fromRootViewController: self, delegate:self)
+		} else {
+			self.rewardedAd = createAndLoadRewardedAd()
+		}
+	}
+	
+	func rewardedAd(_ rewardedAd: GADRewardedAd, userDidEarn reward: GADAdReward) {
+		getDataFromFireBaseExamType()
+	}
+	
+	func rewardedAdDidDismiss(_ rewardedAd: GADRewardedAd) {
+		self.rewardedAd = createAndLoadRewardedAd()
+	}
+	
+	func rewardedAd(_ rewardedAd: GADRewardedAd, didFailToPresentWithError error: Error) {
+		print("Rewarded ad failed to present.")
+		self.rewardedAd = createAndLoadRewardedAd()
+		self.advertisingRewardedAdMethod()
+	}
 }
