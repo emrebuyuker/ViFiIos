@@ -27,7 +27,7 @@ class VersionCheck {
 				let appVersion = entry["version"] as? String,
 				let ourVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
 			{
-				isNew = ourVersion != appVersion
+				isNew = ourVersion >= appVersion
 				versionStr = appVersion
 			}
 			

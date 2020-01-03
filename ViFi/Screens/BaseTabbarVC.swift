@@ -24,7 +24,7 @@ class BaseTabbarVC: UITabBarController {
 		
 		VersionCheck.shared.checkAppStore() { isNew, version in
 			print("IS NEW VERSION AVAILABLE: \(String(describing: isNew)), APP STORE VERSION: \(String(describing: version))")
-			if ((isNew ?? false)) {
+			if (!(isNew ?? false)) {
 				let alert = UIAlertController(title: "Error", message: "Uygulama en güncel sürüme sahip değil lütfen uygulamayı güncelleyiniz.", preferredStyle: .alert)
 				self.present(alert, animated: true)
 			}
