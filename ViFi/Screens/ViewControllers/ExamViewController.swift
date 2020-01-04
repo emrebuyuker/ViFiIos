@@ -21,7 +21,8 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
     var examType = String()
     var examsNameArray = [String]()
 	var isAdvertising = Bool()
-    
+    var isShowedAd = Bool()
+	
     var interstitial: GADInterstitial!
 	var rewardedAd: GADRewardedAd?
 
@@ -41,6 +42,7 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
     
     override func viewWillAppear(_ animated: Bool) {
 		
+		self.isShowedAd = false
 		self.rewardedAd = createAndLoadRewardedAd()
         
         // test id ca-app-pub-3940256099942544/8691691433
@@ -110,7 +112,6 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
 		} else {
 			self.isAdvertising = false
 			examName = examsNameArray[indexPath.row]
-			getDataFromFireBaseExamType()
 		}
     }
     
@@ -166,11 +167,14 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
 	}
 	
 	func rewardedAd(_ rewardedAd: GADRewardedAd, userDidEarn reward: GADAdReward) {
-		getDataFromFireBaseExamType()
+		self.isShowedAd = true
 	}
 	
 	func rewardedAdDidDismiss(_ rewardedAd: GADRewardedAd) {
 		self.rewardedAd = createAndLoadRewardedAd()
+		if (self.isShowedAd) {
+			getDataFromFireBaseExamType()
+		}
 	}
 	
 	func rewardedAd(_ rewardedAd: GADRewardedAd, didFailToPresentWithError error: Error) {
