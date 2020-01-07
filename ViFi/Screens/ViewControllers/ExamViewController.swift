@@ -112,6 +112,7 @@ class ExamViewController: UIViewController, UITableViewDataSource, UITableViewDe
 		} else {
 			self.isAdvertising = false
 			examName = examsNameArray[indexPath.row]
+			getDataFromFireBaseExamType()
 		}
     }
     
