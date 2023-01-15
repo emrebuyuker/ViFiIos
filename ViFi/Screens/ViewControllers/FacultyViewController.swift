@@ -2,8 +2,7 @@
 //  FacultyViewController.swift
 //  ViFi
 //
-//  Created by Emre BÜYÜKER on 15.05.2019.
-//  Copyright © 2019 Emre BÜYÜKER. All rights reserved.
+//  Created by Emre Büyüker on 15.01.2023.
 //
 
 import UIKit

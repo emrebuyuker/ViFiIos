@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="15505" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="JWH-LR-fH0">
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="21225" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="JWH-LR-fH0">
     <device id="retina6_1" orientation="portrait" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="15509"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="21207"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -17,11 +17,11 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="28" sectionFooterHeight="28" translatesAutoresizingMaskIntoConstraints="NO" id="LhW-Qs-fwd">
-                                <rect key="frame" x="0.0" y="88" width="414" height="725"/>
+                                <rect key="frame" x="0.0" y="92" width="414" height="721"/>
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <prototypes>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" reuseIdentifier="Cell" rowHeight="61" id="GzT-Qw-3RQ" customClass="FacultyTableViewCell" customModule="ViFi" customModuleProvider="target">
-                                        <rect key="frame" x="0.0" y="28" width="414" height="61"/>
+                                        <rect key="frame" x="0.0" y="50" width="414" height="61"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="GzT-Qw-3RQ" id="YlX-nN-dzT">
                                             <rect key="frame" x="0.0" y="0.0" width="414" height="61"/>
@@ -61,6 +61,7 @@
                                 </prototypes>
                             </tableView>
                         </subviews>
+                        <viewLayoutGuide key="safeArea" id="Wp7-Kq-DRA"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="LhW-Qs-fwd" firstAttribute="top" secondItem="Wp7-Kq-DRA" secondAttribute="top" id="8bA-X1-4rm"/>
@@ -68,7 +69,6 @@
                             <constraint firstItem="LhW-Qs-fwd" firstAttribute="leading" secondItem="Wp7-Kq-DRA" secondAttribute="leading" id="BOu-qR-72l"/>
                             <constraint firstItem="Wp7-Kq-DRA" firstAttribute="trailing" secondItem="LhW-Qs-fwd" secondAttribute="trailing" id="Pnh-SO-ia5"/>
                         </constraints>
-                        <viewLayoutGuide key="safeArea" id="Wp7-Kq-DRA"/>
                     </view>
                     <navigationItem key="navigationItem" id="oIA-Nn-NEW"/>
                     <connections>
@@ -88,11 +88,11 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="28" sectionFooterHeight="28" translatesAutoresizingMaskIntoConstraints="NO" id="pNl-o9-U8e">
-                                <rect key="frame" x="0.0" y="88" width="414" height="725"/>
+                                <rect key="frame" x="0.0" y="92" width="414" height="721"/>
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <prototypes>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" reuseIdentifier="Cell" rowHeight="61" id="W41-q0-1Sh" customClass="DepartmentTableViewCell" customModule="ViFi" customModuleProvider="target">
-                                        <rect key="frame" x="0.0" y="28" width="414" height="61"/>
+                                        <rect key="frame" x="0.0" y="50" width="414" height="61"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="W41-q0-1Sh" id="xjt-m2-ehM">
                                             <rect key="frame" x="0.0" y="0.0" width="414" height="61"/>
@@ -132,6 +132,7 @@
                                 </prototypes>
                             </tableView>
                         </subviews>
+                        <viewLayoutGuide key="safeArea" id="k8N-dd-BQ4"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="pNl-o9-U8e" firstAttribute="top" secondItem="k8N-dd-BQ4" secondAttribute="top" id="AVA-65-TQH"/>
@@ -139,7 +140,6 @@
                             <constraint firstItem="pNl-o9-U8e" firstAttribute="leading" secondItem="k8N-dd-BQ4" secondAttribute="leading" id="hXm-Jc-ebl"/>
                             <constraint firstItem="k8N-dd-BQ4" firstAttribute="trailing" secondItem="pNl-o9-U8e" secondAttribute="trailing" id="hw6-OW-J1G"/>
                         </constraints>
-                        <viewLayoutGuide key="safeArea" id="k8N-dd-BQ4"/>
                     </view>
                     <navigationItem key="navigationItem" id="fDr-Sf-7py"/>
                     <connections>
@@ -163,7 +163,7 @@
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <prototypes>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" reuseIdentifier="Cell" rowHeight="61" id="jpO-sc-Gfx" customClass="LessonTableViewCell" customModule="ViFi" customModuleProvider="target">
-                                        <rect key="frame" x="0.0" y="28" width="414" height="61"/>
+                                        <rect key="frame" x="0.0" y="50" width="414" height="61"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="jpO-sc-Gfx" id="1uH-ed-lVT">
                                             <rect key="frame" x="0.0" y="0.0" width="414" height="61"/>
@@ -203,6 +203,7 @@
                                 </prototypes>
                             </tableView>
                         </subviews>
+                        <viewLayoutGuide key="safeArea" id="DhH-o2-DRA"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="DhH-o2-DRA" firstAttribute="bottom" secondItem="EeU-yJ-hPz" secondAttribute="bottom" id="AlS-DA-2uo"/>
@@ -210,7 +211,6 @@
                             <constraint firstItem="EeU-yJ-hPz" firstAttribute="trailing" secondItem="DhH-o2-DRA" secondAttribute="trailing" id="Pjw-6x-1bW"/>
                             <constraint firstItem="EeU-yJ-hPz" firstAttribute="leading" secondItem="DhH-o2-DRA" secondAttribute="leading" id="hFF-kb-9md"/>
                         </constraints>
-                        <viewLayoutGuide key="safeArea" id="DhH-o2-DRA"/>
                     </view>
                     <navigationItem key="navigationItem" id="CPv-1H-qZo">
                         <barButtonItem key="rightBarButtonItem" title="Home" image="home" id="gao-Nq-LxJ">
@@ -236,8 +236,8 @@
                     <view key="view" contentMode="scaleToFill" id="j4x-MA-mrg">
                         <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <viewLayoutGuide key="safeArea" id="j89-kY-DAB"/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                     </view>
                     <navigationItem key="navigationItem" title="Title" id="bBW-AM-2BO"/>
                 </viewController>
@@ -258,7 +258,7 @@
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <prototypes>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" reuseIdentifier="Cell" rowHeight="61" id="Jic-Lv-vaY" customClass="ExamTableViewCell" customModule="ViFi" customModuleProvider="target">
-                                        <rect key="frame" x="0.0" y="28" width="414" height="61"/>
+                                        <rect key="frame" x="0.0" y="50" width="414" height="61"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Jic-Lv-vaY" id="rUw-jS-xDk">
                                             <rect key="frame" x="0.0" y="0.0" width="414" height="61"/>
@@ -298,6 +298,7 @@
                                 </prototypes>
                             </tableView>
                         </subviews>
+                        <viewLayoutGuide key="safeArea" id="KbI-94-xQk"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="wKG-pH-A6M" firstAttribute="trailing" secondItem="KbI-94-xQk" secondAttribute="trailing" id="CX9-Pw-2UG"/>
@@ -305,7 +306,6 @@
                             <constraint firstItem="wKG-pH-A6M" firstAttribute="leading" secondItem="KbI-94-xQk" secondAttribute="leading" id="UFM-FK-oTo"/>
                             <constraint firstItem="wKG-pH-A6M" firstAttribute="top" secondItem="5x7-ix-OeP" secondAttribute="top" id="nVY-wy-K7Q"/>
                         </constraints>
-                        <viewLayoutGuide key="safeArea" id="KbI-94-xQk"/>
                     </view>
                     <connections>
                         <outlet property="examTableView" destination="wKG-pH-A6M" id="mxR-T5-vDd"/>
@@ -326,11 +326,11 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="28" sectionFooterHeight="28" translatesAutoresizingMaskIntoConstraints="NO" id="CKz-E3-Ki2">
-                                <rect key="frame" x="0.0" y="88" width="414" height="725"/>
+                                <rect key="frame" x="0.0" y="92" width="414" height="721"/>
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <prototypes>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="Cell" id="Ggq-20-W08" customClass="JPGTableViewCell" customModule="ViFi" customModuleProvider="target">
-                                        <rect key="frame" x="0.0" y="28" width="414" height="22.5"/>
+                                        <rect key="frame" x="0.0" y="50" width="414" height="22.5"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="Ggq-20-W08" id="nbF-jd-b4I">
                                             <rect key="frame" x="0.0" y="0.0" width="414" height="22.5"/>
@@ -354,6 +354,7 @@
                                 </prototypes>
                             </tableView>
                         </subviews>
+                        <viewLayoutGuide key="safeArea" id="6Zw-2g-lqJ"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="6Zw-2g-lqJ" firstAttribute="trailing" secondItem="CKz-E3-Ki2" secondAttribute="trailing" id="6B6-eU-MYN"/>
@@ -361,7 +362,6 @@
                             <constraint firstItem="CKz-E3-Ki2" firstAttribute="top" secondItem="6Zw-2g-lqJ" secondAttribute="top" id="TeZ-w4-6Tz"/>
                             <constraint firstItem="CKz-E3-Ki2" firstAttribute="leading" secondItem="6Zw-2g-lqJ" secondAttribute="leading" id="YQn-an-PE6"/>
                         </constraints>
-                        <viewLayoutGuide key="safeArea" id="6Zw-2g-lqJ"/>
                     </view>
                     <navigationItem key="navigationItem" title="Title" id="Awn-bq-6xy"/>
                     <connections>
@@ -382,11 +382,11 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <tableView clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="28" sectionFooterHeight="28" translatesAutoresizingMaskIntoConstraints="NO" id="YW1-6s-sjd">
-                                <rect key="frame" x="0.0" y="88" width="414" height="725"/>
+                                <rect key="frame" x="0.0" y="92" width="414" height="721"/>
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                 <prototypes>
                                     <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" selectionStyle="blue" hidesAccessoryWhenEditing="NO" indentationLevel="1" indentationWidth="0.0" reuseIdentifier="Cell" rowHeight="61" id="qvx-cO-LZ9" customClass="UniversityTableViewCell" customModule="ViFi" customModuleProvider="target">
-                                        <rect key="frame" x="0.0" y="28" width="414" height="61"/>
+                                        <rect key="frame" x="0.0" y="50" width="414" height="61"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="qvx-cO-LZ9" id="jmp-8B-U2X">
                                             <rect key="frame" x="0.0" y="0.0" width="414" height="61"/>
@@ -426,6 +426,7 @@
                                 </prototypes>
                             </tableView>
                         </subviews>
+                        <viewLayoutGuide key="safeArea" id="kR8-6u-R0A"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="YW1-6s-sjd" firstAttribute="leading" secondItem="kR8-6u-R0A" secondAttribute="leading" id="B6J-fm-SNK"/>
@@ -433,7 +434,6 @@
                             <constraint firstItem="YW1-6s-sjd" firstAttribute="top" secondItem="kR8-6u-R0A" secondAttribute="top" id="HIW-wG-aZd"/>
                             <constraint firstItem="kR8-6u-R0A" firstAttribute="bottom" secondItem="YW1-6s-sjd" secondAttribute="bottom" id="bhw-aA-TTS"/>
                         </constraints>
-                        <viewLayoutGuide key="safeArea" id="kR8-6u-R0A"/>
                     </view>
                     <navigationItem key="navigationItem" id="QfU-zR-WUm"/>
                     <connections>
@@ -451,10 +451,10 @@
                     <tabBar key="tabBar" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" barStyle="black" id="dZd-Jn-b4d">
                         <rect key="frame" x="0.0" y="0.0" width="414" height="49"/>
                         <autoresizingMask key="autoresizingMask"/>
-                        <color key="backgroundColor" cocoaTouchSystemColor="tableCellGroupedBackgroundColor"/>
+                        <color key="backgroundColor" systemColor="tableCellGroupedBackgroundColor"/>
                         <color key="tintColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <color key="barTintColor" red="0.27447596190000001" green="0.27452921870000002" blue="0.27447256450000002" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-                        <color key="selectedImageTintColor" cocoaTouchSystemColor="tableCellGroupedBackgroundColor"/>
+                        <color key="selectedImageTintColor" systemColor="tableCellGroupedBackgroundColor"/>
                     </tabBar>
                     <connections>
                         <outlet property="tabbarItem" destination="dZd-Jn-b4d" id="1O9-BG-5Rd"/>
@@ -475,9 +475,9 @@
                     <tabBarItem key="tabBarItem" title="Üniversite" image="universityItemIcon" id="rHZ-oc-gfP"/>
                     <toolbarItems/>
                     <navigationBar key="navigationBar" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" id="LbG-VL-zf6">
-                        <rect key="frame" x="0.0" y="44" width="414" height="44"/>
+                        <rect key="frame" x="0.0" y="48" width="414" height="44"/>
                         <autoresizingMask key="autoresizingMask"/>
-                        <color key="backgroundColor" cocoaTouchSystemColor="scrollViewTexturedBackgroundColor"/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                     </navigationBar>
                     <nil name="viewControllers"/>
                     <connections>
@@ -495,9 +495,9 @@
                     <tabBarItem key="tabBarItem" title="Fakülte" image="facultiyItemIcon" id="mfw-4S-VMl"/>
                     <toolbarItems/>
                     <navigationBar key="navigationBar" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" id="Z6k-0D-4Be">
-                        <rect key="frame" x="0.0" y="44" width="414" height="44"/>
+                        <rect key="frame" x="0.0" y="48" width="414" height="44"/>
                         <autoresizingMask key="autoresizingMask"/>
-                        <color key="backgroundColor" cocoaTouchSystemColor="scrollViewTexturedBackgroundColor"/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                     </navigationBar>
                     <nil name="viewControllers"/>
                     <connections>
@@ -515,9 +515,9 @@
                     <tabBarItem key="tabBarItem" title="Bölüm" image="departmentItemIcon" id="2FD-qP-fFA"/>
                     <toolbarItems/>
                     <navigationBar key="navigationBar" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" id="zPU-ev-TxR">
-                        <rect key="frame" x="0.0" y="44" width="414" height="44"/>
+                        <rect key="frame" x="0.0" y="48" width="414" height="44"/>
                         <autoresizingMask key="autoresizingMask"/>
-                        <color key="backgroundColor" cocoaTouchSystemColor="scrollViewTexturedBackgroundColor"/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                     </navigationBar>
                     <nil name="viewControllers"/>
                     <connections>
@@ -535,9 +535,9 @@
                     <tabBarItem key="tabBarItem" title="Ders" image="lessonItemIcon" id="DjV-pj-cue"/>
                     <toolbarItems/>
                     <navigationBar key="navigationBar" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" id="Roh-dp-2F1">
-                        <rect key="frame" x="0.0" y="44" width="414" height="44"/>
+                        <rect key="frame" x="0.0" y="48" width="414" height="44"/>
                         <autoresizingMask key="autoresizingMask"/>
-                        <color key="backgroundColor" cocoaTouchSystemColor="scrollViewTexturedBackgroundColor"/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                     </navigationBar>
                     <nil name="viewControllers"/>
                     <connections>
@@ -573,6 +573,7 @@
                                 </userDefinedRuntimeAttributes>
                             </view>
                         </subviews>
+                        <viewLayoutGuide key="safeArea" id="hXY-D0-BtD"/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="E4x-Gt-2m1" firstAttribute="leading" secondItem="Eye-67-qcY" secondAttribute="leading" id="GI7-cW-CrV"/>
@@ -580,7 +581,6 @@
                             <constraint firstAttribute="trailing" secondItem="E4x-Gt-2m1" secondAttribute="trailing" id="xEV-JG-B4k"/>
                             <constraint firstItem="SnX-fN-XrW" firstAttribute="top" secondItem="E4x-Gt-2m1" secondAttribute="bottom" id="xls-Lh-OiV"/>
                         </constraints>
-                        <viewLayoutGuide key="safeArea" id="hXY-D0-BtD"/>
                     </view>
                     <connections>
                         <outlet property="imageViewZoom" destination="E4x-Gt-2m1" id="Kqq-5U-Vp0"/>
@@ -597,5 +597,8 @@
         <image name="home" width="30" height="30"/>
         <image name="lessonItemIcon" width="30" height="30"/>
         <image name="universityItemIcon" width="30" height="30"/>
+        <systemColor name="tableCellGroupedBackgroundColor">
+            <color white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+        </systemColor>
     </resources>
 </document>

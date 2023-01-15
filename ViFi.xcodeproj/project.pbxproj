@@ -3,254 +3,242 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 51;
+	objectVersion = 56;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		386B2A5C228EDE2000B683E0 /* EFImageViewZoom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 386B2A5B228EDE2000B683E0 /* EFImageViewZoom.swift */; };
-		38D4DC7823AE8CC70041F2F6 /* VersionCheck.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38D4DC7723AE8CC70041F2F6 /* VersionCheck.swift */; };
-		38D4DC7F23AF9F660041F2F6 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 38D4DC7E23AF9F660041F2F6 /* GoogleService-Info.plist */; };
-		38DE9E45228959F800F6FF11 /* UniversityViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E44228959F800F6FF11 /* UniversityViewController.swift */; };
-		38DE9E51228ACD2A00F6FF11 /* UniversityTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */; };
-		38DE9E99228C46F900F6FF11 /* BaseTabbarVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E98228C46F900F6FF11 /* BaseTabbarVC.swift */; };
-		38DE9E9B228C478900F6FF11 /* FacultyViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E9A228C478900F6FF11 /* FacultyViewController.swift */; };
-		38DE9E9D228C537900F6FF11 /* FacultyTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9E9C228C537800F6FF11 /* FacultyTableViewCell.swift */; };
-		38DE9EA1228C57AA00F6FF11 /* DepartmentViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9EA0228C57AA00F6FF11 /* DepartmentViewController.swift */; };
-		38DE9EA3228C585100F6FF11 /* DepartmentTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9EA2228C585100F6FF11 /* DepartmentTableViewCell.swift */; };
-		38DE9EB2228D425B00F6FF11 /* LessonTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9EB1228D425B00F6FF11 /* LessonTableViewCell.swift */; };
-		38DE9EB4228D435900F6FF11 /* LessonViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9EB3228D435900F6FF11 /* LessonViewController.swift */; };
-		38DE9EB8228D4E3700F6FF11 /* PDFViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9EB7228D4E3700F6FF11 /* PDFViewController.swift */; };
-		38DE9EBA228D4E4D00F6FF11 /* JPGViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9EB9228D4E4D00F6FF11 /* JPGViewController.swift */; };
-		38DE9EBC228D555300F6FF11 /* ExamViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9EBB228D555300F6FF11 /* ExamViewController.swift */; };
-		38DE9EBE228D557F00F6FF11 /* ExamTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9EBD228D557F00F6FF11 /* ExamTableViewCell.swift */; };
-		38DE9EC0228DAD9800F6FF11 /* JPGTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DE9EBF228DAD9800F6FF11 /* JPGTableViewCell.swift */; };
-		38DEE2A022801BF0002BC59D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DEE29F22801BF0002BC59D /* AppDelegate.swift */; };
-		38DEE2A222801BF0002BC59D /* JPGZoomViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38DEE2A122801BF0002BC59D /* JPGZoomViewController.swift */; };
-		38DEE2A522801BF0002BC59D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 38DEE2A322801BF0002BC59D /* Main.storyboard */; };
-		38DEE2A722801BF2002BC59D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 38DEE2A622801BF2002BC59D /* Assets.xcassets */; };
-		38DEE2AA22801BF2002BC59D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 38DEE2A822801BF2002BC59D /* LaunchScreen.storyboard */; };
-		DE5EADD64B12D83D07161B0A /* Pods_ViFi.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DB6263FC6EC9C96801E91FA /* Pods_ViFi.framework */; };
+		641E7444F17D0F7B186ED2EF /* Pods_ViFi.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D3AC36D7F1519DE4BCDC2DFD /* Pods_ViFi.framework */; };
+		93262F5D2974272500C0347C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F5C2974272500C0347C /* AppDelegate.swift */; };
+		93262F5F2974272500C0347C /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F5E2974272500C0347C /* SceneDelegate.swift */; };
+		93262F642974272500C0347C /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 93262F622974272500C0347C /* Main.storyboard */; };
+		93262F662974272600C0347C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 93262F652974272600C0347C /* Assets.xcassets */; };
+		93262F692974272600C0347C /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 93262F672974272600C0347C /* LaunchScreen.storyboard */; };
+		93262F7429742B7F00C0347C /* UniversityViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F7329742B7F00C0347C /* UniversityViewController.swift */; };
+		93262F7729742BA800C0347C /* UniversityTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F7629742BA800C0347C /* UniversityTableViewCell.swift */; };
+		93262F7A29742BF300C0347C /* FacultyTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F7929742BF300C0347C /* FacultyTableViewCell.swift */; };
+		93262F7C29742C0D00C0347C /* DepartmentTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F7B29742C0D00C0347C /* DepartmentTableViewCell.swift */; };
+		93262F7E29742C2600C0347C /* LessonTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F7D29742C2600C0347C /* LessonTableViewCell.swift */; };
+		93262F8029742C4200C0347C /* ExamTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F7F29742C4200C0347C /* ExamTableViewCell.swift */; };
+		93262F8229742C5B00C0347C /* JPGTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F8129742C5B00C0347C /* JPGTableViewCell.swift */; };
+		93262F8529742C8000C0347C /* FacultyViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F8429742C8000C0347C /* FacultyViewController.swift */; };
+		93262F8729742CB500C0347C /* DepartmentViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F8629742CB500C0347C /* DepartmentViewController.swift */; };
+		93262F8929742CC800C0347C /* LessonViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F8829742CC800C0347C /* LessonViewController.swift */; };
+		93262F8B29742CDF00C0347C /* ExamViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F8A29742CDF00C0347C /* ExamViewController.swift */; };
+		93262F9129742D1700C0347C /* PDFViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F9029742D1700C0347C /* PDFViewController.swift */; };
+		93262F9329742D2A00C0347C /* JPGViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F9229742D2A00C0347C /* JPGViewController.swift */; };
+		93262F9529742D3C00C0347C /* JPGZoomViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F9429742D3C00C0347C /* JPGZoomViewController.swift */; };
+		93262F9729742D5800C0347C /* BaseTabbarVC.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F9629742D5800C0347C /* BaseTabbarVC.swift */; };
+		93262F9929742D6E00C0347C /* EFImageViewZoom.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93262F9829742D6E00C0347C /* EFImageViewZoom.swift */; };
+		93262F9F29742DE400C0347C /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 93262F9E29742DE400C0347C /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		17ACBF58F698970DD94C2DA4 /* Pods-ViFi.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ViFi.release.xcconfig"; path = "Target Support Files/Pods-ViFi/Pods-ViFi.release.xcconfig"; sourceTree = "<group>"; };
-		386B2A5B228EDE2000B683E0 /* EFImageViewZoom.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EFImageViewZoom.swift; sourceTree = "<group>"; };
-		38D4DC7723AE8CC70041F2F6 /* VersionCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionCheck.swift; sourceTree = "<group>"; };
-		38D4DC7E23AF9F660041F2F6 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
-		38D4DC8023AFA2300041F2F6 /* ViFiRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ViFiRelease.entitlements; sourceTree = "<group>"; };
-		38D4DC8123AFA2430041F2F6 /* ViFi.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ViFi.entitlements; sourceTree = "<group>"; };
-		38DE9E44228959F800F6FF11 /* UniversityViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversityViewController.swift; sourceTree = "<group>"; };
-		38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversityTableViewCell.swift; sourceTree = "<group>"; };
-		38DE9E98228C46F900F6FF11 /* BaseTabbarVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseTabbarVC.swift; sourceTree = "<group>"; };
-		38DE9E9A228C478900F6FF11 /* FacultyViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FacultyViewController.swift; sourceTree = "<group>"; };
-		38DE9E9C228C537800F6FF11 /* FacultyTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FacultyTableViewCell.swift; sourceTree = "<group>"; };
-		38DE9EA0228C57AA00F6FF11 /* DepartmentViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DepartmentViewController.swift; sourceTree = "<group>"; };
-		38DE9EA2228C585100F6FF11 /* DepartmentTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DepartmentTableViewCell.swift; sourceTree = "<group>"; };
-		38DE9EB1228D425B00F6FF11 /* LessonTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LessonTableViewCell.swift; sourceTree = "<group>"; };
-		38DE9EB3228D435900F6FF11 /* LessonViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LessonViewController.swift; sourceTree = "<group>"; };
-		38DE9EB7228D4E3700F6FF11 /* PDFViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFViewController.swift; sourceTree = "<group>"; };
-		38DE9EB9228D4E4D00F6FF11 /* JPGViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JPGViewController.swift; sourceTree = "<group>"; };
-		38DE9EBB228D555300F6FF11 /* ExamViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExamViewController.swift; sourceTree = "<group>"; };
-		38DE9EBD228D557F00F6FF11 /* ExamTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExamTableViewCell.swift; sourceTree = "<group>"; };
-		38DE9EBF228DAD9800F6FF11 /* JPGTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JPGTableViewCell.swift; sourceTree = "<group>"; };
-		38DEE29C22801BF0002BC59D /* ViFi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ViFi.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		38DEE29F22801BF0002BC59D /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		38DEE2A122801BF0002BC59D /* JPGZoomViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JPGZoomViewController.swift; sourceTree = "<group>"; };
-		38DEE2A422801BF0002BC59D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		38DEE2A622801BF2002BC59D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		38DEE2A922801BF2002BC59D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		38DEE2AB22801BF2002BC59D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		4DB6263FC6EC9C96801E91FA /* Pods_ViFi.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ViFi.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		732842A922BA18B35FBF3595 /* Pods-ViFi.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ViFi.debug.xcconfig"; path = "Target Support Files/Pods-ViFi/Pods-ViFi.debug.xcconfig"; sourceTree = "<group>"; };
+		93262F592974272500C0347C /* ViFi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ViFi.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		93262F5C2974272500C0347C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		93262F5E2974272500C0347C /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		93262F632974272500C0347C /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		93262F652974272600C0347C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		93262F682974272600C0347C /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		93262F6A2974272600C0347C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		93262F7329742B7F00C0347C /* UniversityViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversityViewController.swift; sourceTree = "<group>"; };
+		93262F7629742BA800C0347C /* UniversityTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversityTableViewCell.swift; sourceTree = "<group>"; };
+		93262F7929742BF300C0347C /* FacultyTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FacultyTableViewCell.swift; sourceTree = "<group>"; };
+		93262F7B29742C0D00C0347C /* DepartmentTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DepartmentTableViewCell.swift; sourceTree = "<group>"; };
+		93262F7D29742C2600C0347C /* LessonTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LessonTableViewCell.swift; sourceTree = "<group>"; };
+		93262F7F29742C4200C0347C /* ExamTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExamTableViewCell.swift; sourceTree = "<group>"; };
+		93262F8129742C5B00C0347C /* JPGTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JPGTableViewCell.swift; sourceTree = "<group>"; };
+		93262F8429742C8000C0347C /* FacultyViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FacultyViewController.swift; sourceTree = "<group>"; };
+		93262F8629742CB500C0347C /* DepartmentViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DepartmentViewController.swift; sourceTree = "<group>"; };
+		93262F8829742CC800C0347C /* LessonViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LessonViewController.swift; sourceTree = "<group>"; };
+		93262F8A29742CDF00C0347C /* ExamViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExamViewController.swift; sourceTree = "<group>"; };
+		93262F9029742D1700C0347C /* PDFViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFViewController.swift; sourceTree = "<group>"; };
+		93262F9229742D2A00C0347C /* JPGViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JPGViewController.swift; sourceTree = "<group>"; };
+		93262F9429742D3C00C0347C /* JPGZoomViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JPGZoomViewController.swift; sourceTree = "<group>"; };
+		93262F9629742D5800C0347C /* BaseTabbarVC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseTabbarVC.swift; sourceTree = "<group>"; };
+		93262F9829742D6E00C0347C /* EFImageViewZoom.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EFImageViewZoom.swift; sourceTree = "<group>"; };
+		93262F9E29742DE400C0347C /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		95B4C669120264AB067D023B /* Pods-ViFi.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ViFi.debug.xcconfig"; path = "Target Support Files/Pods-ViFi/Pods-ViFi.debug.xcconfig"; sourceTree = "<group>"; };
+		D3AC36D7F1519DE4BCDC2DFD /* Pods_ViFi.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ViFi.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		E22A313FDBD7985987F162D6 /* Pods-ViFi.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ViFi.release.xcconfig"; path = "Target Support Files/Pods-ViFi/Pods-ViFi.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		38DEE29922801BF0002BC59D /* Frameworks */ = {
+		93262F562974272500C0347C /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DE5EADD64B12D83D07161B0A /* Pods_ViFi.framework in Frameworks */,
+				641E7444F17D0F7B186ED2EF /* Pods_ViFi.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		38DAFADE22DB431700B589AA /* Universities */ = {
+		8F49537907DE6438E5D9A94C /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				38DAFADF22DB434500B589AA /* ViewControllers */,
-				38DAFAE922E5C22A00B589AA /* ViewModels */,
-				38DAFAE022DB439A00B589AA /* Views */,
-			);
-			path = Universities;
-			sourceTree = "<group>";
-		};
-		38DAFADF22DB434500B589AA /* ViewControllers */ = {
-			isa = PBXGroup;
-			children = (
-				38DE9E44228959F800F6FF11 /* UniversityViewController.swift */,
-			);
-			path = ViewControllers;
-			sourceTree = "<group>";
-		};
-		38DAFAE022DB439A00B589AA /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				38DE9E50228ACD2A00F6FF11 /* UniversityTableViewCell.swift */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		38DAFAE922E5C22A00B589AA /* ViewModels */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = ViewModels;
-			sourceTree = "<group>";
-		};
-		38DE9E4622895A0700F6FF11 /* ViewControllers */ = {
-			isa = PBXGroup;
-			children = (
-				38DE9E9A228C478900F6FF11 /* FacultyViewController.swift */,
-				38DE9EA0228C57AA00F6FF11 /* DepartmentViewController.swift */,
-				38DE9EB3228D435900F6FF11 /* LessonViewController.swift */,
-				38DE9EBB228D555300F6FF11 /* ExamViewController.swift */,
-				38DE9EB7228D4E3700F6FF11 /* PDFViewController.swift */,
-				38DE9EB9228D4E4D00F6FF11 /* JPGViewController.swift */,
-				38DEE2A122801BF0002BC59D /* JPGZoomViewController.swift */,
-			);
-			path = ViewControllers;
-			sourceTree = "<group>";
-		};
-		38DE9E492289B71800F6FF11 /* Home */ = {
-			isa = PBXGroup;
-			children = (
-				38DEE2A322801BF0002BC59D /* Main.storyboard */,
-			);
-			path = Home;
-			sourceTree = "<group>";
-		};
-		38DE9E4A2289B85800F6FF11 /* Application */ = {
-			isa = PBXGroup;
-			children = (
-				38DE9E4B2289B87500F6FF11 /* Delegate */,
-			);
-			path = Application;
-			sourceTree = "<group>";
-		};
-		38DE9E4B2289B87500F6FF11 /* Delegate */ = {
-			isa = PBXGroup;
-			children = (
-				38DEE29F22801BF0002BC59D /* AppDelegate.swift */,
-			);
-			path = Delegate;
-			sourceTree = "<group>";
-		};
-		38DE9E4C2289B8BD00F6FF11 /* Business */ = {
-			isa = PBXGroup;
-			children = (
-				38DE9E4D2289B8CE00F6FF11 /* Services */,
-			);
-			path = Business;
-			sourceTree = "<group>";
-		};
-		38DE9E4D2289B8CE00F6FF11 /* Services */ = {
-			isa = PBXGroup;
-			children = (
-				38D4DC7E23AF9F660041F2F6 /* GoogleService-Info.plist */,
-			);
-			path = Services;
-			sourceTree = "<group>";
-		};
-		38DE9E4E2289B90600F6FF11 /* Screens */ = {
-			isa = PBXGroup;
-			children = (
-				38DAFADE22DB431700B589AA /* Universities */,
-				38DE9E4F228ACCD000F6FF11 /* TableViewCells */,
-				38DE9E4622895A0700F6FF11 /* ViewControllers */,
-				38DE9E98228C46F900F6FF11 /* BaseTabbarVC.swift */,
-				386B2A5B228EDE2000B683E0 /* EFImageViewZoom.swift */,
-				38D4DC7723AE8CC70041F2F6 /* VersionCheck.swift */,
-			);
-			path = Screens;
-			sourceTree = "<group>";
-		};
-		38DE9E4F228ACCD000F6FF11 /* TableViewCells */ = {
-			isa = PBXGroup;
-			children = (
-				38DE9E9C228C537800F6FF11 /* FacultyTableViewCell.swift */,
-				38DE9EA2228C585100F6FF11 /* DepartmentTableViewCell.swift */,
-				38DE9EB1228D425B00F6FF11 /* LessonTableViewCell.swift */,
-				38DE9EBD228D557F00F6FF11 /* ExamTableViewCell.swift */,
-				38DE9EBF228DAD9800F6FF11 /* JPGTableViewCell.swift */,
-			);
-			path = TableViewCells;
-			sourceTree = "<group>";
-		};
-		38DEE29322801BF0002BC59D = {
-			isa = PBXGroup;
-			children = (
-				38DEE29E22801BF0002BC59D /* ViFi */,
-				38DEE29D22801BF0002BC59D /* Products */,
-				7B282F403B1EADB198AB855F /* Pods */,
-				68E1B3824F7B346760F9A473 /* Frameworks */,
-			);
-			sourceTree = "<group>";
-		};
-		38DEE29D22801BF0002BC59D /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				38DEE29C22801BF0002BC59D /* ViFi.app */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		38DEE29E22801BF0002BC59D /* ViFi */ = {
-			isa = PBXGroup;
-			children = (
-				38D4DC8123AFA2430041F2F6 /* ViFi.entitlements */,
-				38D4DC8023AFA2300041F2F6 /* ViFiRelease.entitlements */,
-				38DE9E4E2289B90600F6FF11 /* Screens */,
-				38DE9E4C2289B8BD00F6FF11 /* Business */,
-				38DE9E4A2289B85800F6FF11 /* Application */,
-				38DE9E492289B71800F6FF11 /* Home */,
-				38DEE2A622801BF2002BC59D /* Assets.xcassets */,
-				38DEE2A822801BF2002BC59D /* LaunchScreen.storyboard */,
-				38DEE2AB22801BF2002BC59D /* Info.plist */,
-			);
-			path = ViFi;
-			sourceTree = "<group>";
-		};
-		68E1B3824F7B346760F9A473 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				4DB6263FC6EC9C96801E91FA /* Pods_ViFi.framework */,
+				D3AC36D7F1519DE4BCDC2DFD /* Pods_ViFi.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		7B282F403B1EADB198AB855F /* Pods */ = {
+		907B17965F465A3BD95FE1F1 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				732842A922BA18B35FBF3595 /* Pods-ViFi.debug.xcconfig */,
-				17ACBF58F698970DD94C2DA4 /* Pods-ViFi.release.xcconfig */,
+				95B4C669120264AB067D023B /* Pods-ViFi.debug.xcconfig */,
+				E22A313FDBD7985987F162D6 /* Pods-ViFi.release.xcconfig */,
 			);
 			path = Pods;
+			sourceTree = "<group>";
+		};
+		93262F502974272500C0347C = {
+			isa = PBXGroup;
+			children = (
+				93262F5B2974272500C0347C /* ViFi */,
+				93262F5A2974272500C0347C /* Products */,
+				907B17965F465A3BD95FE1F1 /* Pods */,
+				8F49537907DE6438E5D9A94C /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		93262F5A2974272500C0347C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				93262F592974272500C0347C /* ViFi.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		93262F5B2974272500C0347C /* ViFi */ = {
+			isa = PBXGroup;
+			children = (
+				93262FA229742FF100C0347C /* Home */,
+				93262FA029742F8600C0347C /* Application */,
+				93262F9C29742DAB00C0347C /* Business */,
+				93262F7029742B4700C0347C /* Screens */,
+				93262F652974272600C0347C /* Assets.xcassets */,
+				93262F672974272600C0347C /* LaunchScreen.storyboard */,
+				93262F6A2974272600C0347C /* Info.plist */,
+			);
+			path = ViFi;
+			sourceTree = "<group>";
+		};
+		93262F7029742B4700C0347C /* Screens */ = {
+			isa = PBXGroup;
+			children = (
+				93262F8329742C7500C0347C /* ViewControllers */,
+				93262F7829742BBA00C0347C /* TableViewCells */,
+				93262F7129742B6700C0347C /* Universities */,
+				93262F9629742D5800C0347C /* BaseTabbarVC.swift */,
+				93262F9829742D6E00C0347C /* EFImageViewZoom.swift */,
+			);
+			path = Screens;
+			sourceTree = "<group>";
+		};
+		93262F7129742B6700C0347C /* Universities */ = {
+			isa = PBXGroup;
+			children = (
+				93262F7229742B7000C0347C /* ViewControllers */,
+				93262F7529742B9900C0347C /* Views */,
+			);
+			path = Universities;
+			sourceTree = "<group>";
+		};
+		93262F7229742B7000C0347C /* ViewControllers */ = {
+			isa = PBXGroup;
+			children = (
+				93262F7329742B7F00C0347C /* UniversityViewController.swift */,
+			);
+			path = ViewControllers;
+			sourceTree = "<group>";
+		};
+		93262F7529742B9900C0347C /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				93262F7629742BA800C0347C /* UniversityTableViewCell.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		93262F7829742BBA00C0347C /* TableViewCells */ = {
+			isa = PBXGroup;
+			children = (
+				93262F7929742BF300C0347C /* FacultyTableViewCell.swift */,
+				93262F7B29742C0D00C0347C /* DepartmentTableViewCell.swift */,
+				93262F7D29742C2600C0347C /* LessonTableViewCell.swift */,
+				93262F7F29742C4200C0347C /* ExamTableViewCell.swift */,
+				93262F8129742C5B00C0347C /* JPGTableViewCell.swift */,
+			);
+			path = TableViewCells;
+			sourceTree = "<group>";
+		};
+		93262F8329742C7500C0347C /* ViewControllers */ = {
+			isa = PBXGroup;
+			children = (
+				93262F8429742C8000C0347C /* FacultyViewController.swift */,
+				93262F8629742CB500C0347C /* DepartmentViewController.swift */,
+				93262F8829742CC800C0347C /* LessonViewController.swift */,
+				93262F8A29742CDF00C0347C /* ExamViewController.swift */,
+				93262F9029742D1700C0347C /* PDFViewController.swift */,
+				93262F9229742D2A00C0347C /* JPGViewController.swift */,
+				93262F9429742D3C00C0347C /* JPGZoomViewController.swift */,
+			);
+			path = ViewControllers;
+			sourceTree = "<group>";
+		};
+		93262F9C29742DAB00C0347C /* Business */ = {
+			isa = PBXGroup;
+			children = (
+				93262F9D29742DB400C0347C /* Services */,
+			);
+			path = Business;
+			sourceTree = "<group>";
+		};
+		93262F9D29742DB400C0347C /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				93262F9E29742DE400C0347C /* GoogleService-Info.plist */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		93262FA029742F8600C0347C /* Application */ = {
+			isa = PBXGroup;
+			children = (
+				93262FA129742F9000C0347C /* Delegate */,
+			);
+			path = Application;
+			sourceTree = "<group>";
+		};
+		93262FA129742F9000C0347C /* Delegate */ = {
+			isa = PBXGroup;
+			children = (
+				93262F5C2974272500C0347C /* AppDelegate.swift */,
+				93262F5E2974272500C0347C /* SceneDelegate.swift */,
+			);
+			path = Delegate;
+			sourceTree = "<group>";
+		};
+		93262FA229742FF100C0347C /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				93262F622974272500C0347C /* Main.storyboard */,
+			);
+			path = Home;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		38DEE29B22801BF0002BC59D /* ViFi */ = {
+		93262F582974272500C0347C /* ViFi */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 38DEE2AE22801BF2002BC59D /* Build configuration list for PBXNativeTarget "ViFi" */;
+			buildConfigurationList = 93262F6D2974272600C0347C /* Build configuration list for PBXNativeTarget "ViFi" */;
 			buildPhases = (
-				227109C323A66B999D620F8D /* [CP] Check Pods Manifest.lock */,
-				38DEE29822801BF0002BC59D /* Sources */,
-				38DEE29922801BF0002BC59D /* Frameworks */,
-				38DEE29A22801BF0002BC59D /* Resources */,
-				18C6719D43053A86A68B901E /* [CP] Embed Pods Frameworks */,
+				772A7F8508ED4126A3EE498C /* [CP] Check Pods Manifest.lock */,
+				93262F552974272500C0347C /* Sources */,
+				93262F562974272500C0347C /* Frameworks */,
+				93262F572974272500C0347C /* Resources */,
+				60B19BD5F43537CE9C300990 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -258,58 +246,58 @@
 			);
 			name = ViFi;
 			productName = ViFi;
-			productReference = 38DEE29C22801BF0002BC59D /* ViFi.app */;
+			productReference = 93262F592974272500C0347C /* ViFi.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		38DEE29422801BF0002BC59D /* Project object */ = {
+		93262F512974272500C0347C /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastSwiftUpdateCheck = 1020;
-				LastUpgradeCheck = 1020;
-				ORGANIZATIONNAME = "Emre BÜYÜKER";
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1400;
+				LastUpgradeCheck = 1400;
 				TargetAttributes = {
-					38DEE29B22801BF0002BC59D = {
-						CreatedOnToolsVersion = 10.2.1;
+					93262F582974272500C0347C = {
+						CreatedOnToolsVersion = 14.0.1;
 					};
 				};
 			};
-			buildConfigurationList = 38DEE29722801BF0002BC59D /* Build configuration list for PBXProject "ViFi" */;
-			compatibilityVersion = "Xcode 9.3";
+			buildConfigurationList = 93262F542974272500C0347C /* Build configuration list for PBXProject "ViFi" */;
+			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 				Base,
 			);
-			mainGroup = 38DEE29322801BF0002BC59D;
-			productRefGroup = 38DEE29D22801BF0002BC59D /* Products */;
+			mainGroup = 93262F502974272500C0347C;
+			productRefGroup = 93262F5A2974272500C0347C /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				38DEE29B22801BF0002BC59D /* ViFi */,
+				93262F582974272500C0347C /* ViFi */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		38DEE29A22801BF0002BC59D /* Resources */ = {
+		93262F572974272500C0347C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				38DEE2AA22801BF2002BC59D /* LaunchScreen.storyboard in Resources */,
-				38D4DC7F23AF9F660041F2F6 /* GoogleService-Info.plist in Resources */,
-				38DEE2A722801BF2002BC59D /* Assets.xcassets in Resources */,
-				38DEE2A522801BF0002BC59D /* Main.storyboard in Resources */,
+				93262F692974272600C0347C /* LaunchScreen.storyboard in Resources */,
+				93262F9F29742DE400C0347C /* GoogleService-Info.plist in Resources */,
+				93262F662974272600C0347C /* Assets.xcassets in Resources */,
+				93262F642974272500C0347C /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		18C6719D43053A86A68B901E /* [CP] Embed Pods Frameworks */ = {
+		60B19BD5F43537CE9C300990 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -326,7 +314,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ViFi/Pods-ViFi-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		227109C323A66B999D620F8D /* [CP] Check Pods Manifest.lock */ = {
+		772A7F8508ED4126A3EE498C /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -351,46 +339,46 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		38DEE29822801BF0002BC59D /* Sources */ = {
+		93262F552974272500C0347C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				38DEE2A222801BF0002BC59D /* JPGZoomViewController.swift in Sources */,
-				38DE9E9B228C478900F6FF11 /* FacultyViewController.swift in Sources */,
-				38DE9E9D228C537900F6FF11 /* FacultyTableViewCell.swift in Sources */,
-				38DE9EBE228D557F00F6FF11 /* ExamTableViewCell.swift in Sources */,
-				38DE9EBC228D555300F6FF11 /* ExamViewController.swift in Sources */,
-				38DE9EC0228DAD9800F6FF11 /* JPGTableViewCell.swift in Sources */,
-				38DE9EBA228D4E4D00F6FF11 /* JPGViewController.swift in Sources */,
-				38D4DC7823AE8CC70041F2F6 /* VersionCheck.swift in Sources */,
-				386B2A5C228EDE2000B683E0 /* EFImageViewZoom.swift in Sources */,
-				38DE9EB8228D4E3700F6FF11 /* PDFViewController.swift in Sources */,
-				38DE9EB2228D425B00F6FF11 /* LessonTableViewCell.swift in Sources */,
-				38DE9EB4228D435900F6FF11 /* LessonViewController.swift in Sources */,
-				38DE9E99228C46F900F6FF11 /* BaseTabbarVC.swift in Sources */,
-				38DE9EA1228C57AA00F6FF11 /* DepartmentViewController.swift in Sources */,
-				38DE9E51228ACD2A00F6FF11 /* UniversityTableViewCell.swift in Sources */,
-				38DE9EA3228C585100F6FF11 /* DepartmentTableViewCell.swift in Sources */,
-				38DE9E45228959F800F6FF11 /* UniversityViewController.swift in Sources */,
-				38DEE2A022801BF0002BC59D /* AppDelegate.swift in Sources */,
+				93262F9129742D1700C0347C /* PDFViewController.swift in Sources */,
+				93262F9729742D5800C0347C /* BaseTabbarVC.swift in Sources */,
+				93262F8929742CC800C0347C /* LessonViewController.swift in Sources */,
+				93262F9529742D3C00C0347C /* JPGZoomViewController.swift in Sources */,
+				93262F9929742D6E00C0347C /* EFImageViewZoom.swift in Sources */,
+				93262F9329742D2A00C0347C /* JPGViewController.swift in Sources */,
+				93262F8729742CB500C0347C /* DepartmentViewController.swift in Sources */,
+				93262F8B29742CDF00C0347C /* ExamViewController.swift in Sources */,
+				93262F5D2974272500C0347C /* AppDelegate.swift in Sources */,
+				93262F7A29742BF300C0347C /* FacultyTableViewCell.swift in Sources */,
+				93262F7E29742C2600C0347C /* LessonTableViewCell.swift in Sources */,
+				93262F7429742B7F00C0347C /* UniversityViewController.swift in Sources */,
+				93262F5F2974272500C0347C /* SceneDelegate.swift in Sources */,
+				93262F8029742C4200C0347C /* ExamTableViewCell.swift in Sources */,
+				93262F8529742C8000C0347C /* FacultyViewController.swift in Sources */,
+				93262F7C29742C0D00C0347C /* DepartmentTableViewCell.swift in Sources */,
+				93262F7729742BA800C0347C /* UniversityTableViewCell.swift in Sources */,
+				93262F8229742C5B00C0347C /* JPGTableViewCell.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		38DEE2A322801BF0002BC59D /* Main.storyboard */ = {
+		93262F622974272500C0347C /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				38DEE2A422801BF0002BC59D /* Base */,
+				93262F632974272500C0347C /* Base */,
 			);
 			name = Main.storyboard;
 			sourceTree = "<group>";
 		};
-		38DEE2A822801BF2002BC59D /* LaunchScreen.storyboard */ = {
+		93262F672974272600C0347C /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				38DEE2A922801BF2002BC59D /* Base */,
+				93262F682974272600C0347C /* Base */,
 			);
 			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";
@@ -398,14 +386,13 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		38DEE2AC22801BF2002BC59D /* Debug */ = {
+		93262F6B2974272600C0347C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
@@ -424,13 +411,13 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -449,7 +436,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -459,14 +446,13 @@
 			};
 			name = Debug;
 		};
-		38DEE2AD22801BF2002BC59D /* Release */ = {
+		93262F6C2974272600C0347C /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
@@ -485,13 +471,13 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -504,7 +490,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
@@ -514,18 +500,25 @@
 			};
 			name = Release;
 		};
-		38DEE2AF22801BF2002BC59D /* Debug */ = {
+		93262F6E2974272600C0347C /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 732842A922BA18B35FBF3595 /* Pods-ViFi.debug.xcconfig */;
+			baseConfigurationReference = 95B4C669120264AB067D023B /* Pods-ViFi.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = ViFi/ViFi.entitlements;
-				CODE_SIGN_IDENTITY = "iPhone Distribution: Emre Buyuker (A9ZTFRX9B5)";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 3;
-				DEVELOPMENT_TEAM = A9ZTFRX9B5;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = A9ZTFRX9B5;
+				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ViFi/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -533,24 +526,33 @@
 				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.BuyukerYazilim.ViFi2;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "Vifi app Store";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "ViFi Development";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
-		38DEE2B022801BF2002BC59D /* Release */ = {
+		93262F6F2974272600C0347C /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 17ACBF58F698970DD94C2DA4 /* Pods-ViFi.release.xcconfig */;
+			baseConfigurationReference = E22A313FDBD7985987F162D6 /* Pods-ViFi.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = ViFi/ViFiRelease.entitlements;
-				CODE_SIGN_IDENTITY = "iPhone Distribution: Emre Buyuker (A9ZTFRX9B5)";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 3;
-				DEVELOPMENT_TEAM = A9ZTFRX9B5;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = A9ZTFRX9B5;
+				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ViFi/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -558,7 +560,9 @@
 				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.BuyukerYazilim.ViFi2;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "Vifi app Store";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "ViFi Development";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -567,25 +571,25 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		38DEE29722801BF0002BC59D /* Build configuration list for PBXProject "ViFi" */ = {
+		93262F542974272500C0347C /* Build configuration list for PBXProject "ViFi" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				38DEE2AC22801BF2002BC59D /* Debug */,
-				38DEE2AD22801BF2002BC59D /* Release */,
+				93262F6B2974272600C0347C /* Debug */,
+				93262F6C2974272600C0347C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		38DEE2AE22801BF2002BC59D /* Build configuration list for PBXNativeTarget "ViFi" */ = {
+		93262F6D2974272600C0347C /* Build configuration list for PBXNativeTarget "ViFi" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				38DEE2AF22801BF2002BC59D /* Debug */,
-				38DEE2B022801BF2002BC59D /* Release */,
+				93262F6E2974272600C0347C /* Debug */,
+				93262F6F2974272600C0347C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 38DEE29422801BF0002BC59D /* Project object */;
+	rootObject = 93262F512974272500C0347C /* Project object */;
 }

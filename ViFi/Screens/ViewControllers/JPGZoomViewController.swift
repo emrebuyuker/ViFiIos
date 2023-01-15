@@ -1,9 +1,8 @@
 //
-//  ViewController.swift
+//  JPGZoomViewController.swift
 //  ViFi
 //
-//  Created by Emre BÜYÜKER on 6.05.2019.
-//  Copyright © 2019 Emre BÜYÜKER. All rights reserved.
+//  Created by Emre Büyüker on 15.01.2023.
 //
 
 import UIKit
@@ -24,4 +23,3 @@ class JPGZoomViewController: UIViewController, EFImageViewZoomDelegate {
         
     }
 }
-

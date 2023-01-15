@@ -2,14 +2,12 @@
 //  LessonViewController.swift
 //  ViFi
 //
-//  Created by Emre BÜYÜKER on 16.05.2019.
-//  Copyright © 2019 Emre BÜYÜKER. All rights reserved.
+//  Created by Emre Büyüker on 15.01.2023.
 //
 
 import UIKit
 import Firebase
 import FirebaseDatabase
-import GoogleMobileAds
 
 class LessonViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
     
@@ -18,8 +16,6 @@ class LessonViewController: UIViewController, UITableViewDataSource, UITableView
     var depName = String()
     var lessonName = String()
     var lessonsNameArray = [String]()
-    
-    var interstitial: GADInterstitial!
     
     @IBOutlet weak var lessonTableView: UITableView!
     
@@ -36,12 +32,6 @@ class LessonViewController: UIViewController, UITableViewDataSource, UITableView
     }
     
     override func viewWillAppear(_ animated: Bool) {
-        
-        // test id ca-app-pub-3940256099942544/8691691433
-        interstitial = GADInterstitial(adUnitID: "ca-app-pub-9037305793844471/7508598083") // id değeri atandı.
-        let request = GADRequest() // request olusturma
-        interstitial.load(request) // reklamı yüklemek için isteği ekledik.
-        
         let tabBar = tabBarController as! BaseTabbarVC
         uniName = tabBar.uniNameVariable
         facName = tabBar.facNameVariable
@@ -88,12 +78,6 @@ class LessonViewController: UIViewController, UITableViewDataSource, UITableView
         if segue.identifier == "toExamVC" {
             let destinationVC = segue.destination as! ExamViewController
             destinationVC.lessonName = self.lessonName
-            
-            if interstitial.isReady{ // reklam hazır
-                interstitial.present(fromRootViewController: self) // reklamı aynı ekranda göster.
-            }else{ // reklam hazır değilse
-                print("Reklam hazır değil") // consol'da mesaj bastırılacak.
-            }
         }
     }
 }

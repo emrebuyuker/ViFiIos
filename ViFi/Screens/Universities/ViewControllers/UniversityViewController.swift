@@ -2,8 +2,7 @@
 //  UniversityViewController.swift
 //  ViFi
 //
-//  Created by Emre BÜYÜKER on 13.05.2019.
-//  Copyright © 2019 Emre BÜYÜKER. All rights reserved.
+//  Created by Emre Büyüker on 15.01.2023.
 //
 
 import UIKit
@@ -13,15 +12,12 @@ import FirebaseDatabase
 class UniversityViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
     
     // MARK - Outles
-    
     @IBOutlet weak var universityTableView: UITableView!
     
     // MARK - Public
-    
     public var universitiesNameArray = [String]()
     
     // MARK - Life Cycles
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -38,7 +34,6 @@ class UniversityViewController: UIViewController, UITableViewDataSource, UITable
     }
     
     // MARK - Helpers Methods
-    
     func getDataFromFireBase() {
         let dataBaseRefence = Database.database().reference()
         
@@ -49,7 +44,6 @@ class UniversityViewController: UIViewController, UITableViewDataSource, UITable
     }
     
     // MARK - Table View Methods
-    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return self.universitiesNameArray.count
     }
@@ -67,3 +61,4 @@ class UniversityViewController: UIViewController, UITableViewDataSource, UITable
         self.tabBarController?.selectedIndex = 1
     }
 }
+

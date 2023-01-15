@@ -14,16 +14,18 @@
 
 #import <Foundation/Foundation.h>
 
-#import "Private/GULNetworkURLSession.h"
+#import "GoogleUtilities/Network/Public/GoogleUtilities/GULNetworkURLSession.h"
 
-#import <GoogleUtilities/GULLogger.h>
-#import "Private/GULMutableDictionary.h"
-#import "Private/GULNetworkConstants.h"
-#import "Private/GULNetworkMessageCode.h"
+#import "GoogleUtilities/Logger/Public/GoogleUtilities/GULLogger.h"
+#import "GoogleUtilities/Network/GULNetworkInternal.h"
+#import "GoogleUtilities/Network/Public/GoogleUtilities/GULMutableDictionary.h"
+#import "GoogleUtilities/Network/Public/GoogleUtilities/GULNetworkConstants.h"
+#import "GoogleUtilities/Network/Public/GoogleUtilities/GULNetworkMessageCode.h"
 
 @interface GULNetworkURLSession () <NSURLSessionDelegate,
-                                    NSURLSessionTaskDelegate,
-                                    NSURLSessionDownloadDelegate>
+                                    NSURLSessionDataDelegate,
+                                    NSURLSessionDownloadDelegate,
+                                    NSURLSessionTaskDelegate>
 @end
 
 @implementation GULNetworkURLSession {
@@ -61,12 +63,15 @@
   self = [super init];
   if (self) {
     // Create URL to the directory where all temporary files to upload have to be stored.
+#if TARGET_OS_TV
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+#else
     NSArray *paths =
         NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
-    NSString *applicationSupportDirectory = paths.firstObject;
+#endif
+    NSString *storageDirectory = paths.firstObject;
     NSArray *tempPathComponents = @[
-      applicationSupportDirectory, kGULNetworkApplicationSupportSubdirectory,
-      kGULNetworkTempDirectoryName
+      storageDirectory, kGULNetworkApplicationSupportSubdirectory, kGULNetworkTempDirectoryName
     ];
     _networkDirectoryURL = [NSURL fileURLWithPathComponents:tempPathComponents];
     _sessionID = [NSString stringWithFormat:@"%@-%@", kGULNetworkBackgroundSessionConfigIDPrefix,
@@ -221,6 +226,24 @@
   return _sessionID;
 }
 
+#pragma mark - NSURLSessionDataDelegate
+
+/// Called by the NSURLSession when the data task has received some of the expected data.
+/// Once the session is completed, URLSession:task:didCompleteWithError will be called and the
+/// completion handler will be called with the downloaded data.
+- (void)URLSession:(NSURLSession *)session
+          dataTask:(NSURLSessionDataTask *)dataTask
+    didReceiveData:(NSData *)data {
+  @synchronized(self) {
+    NSMutableData *mutableData = [[NSMutableData alloc] init];
+    if (_downloadedData) {
+      mutableData = _downloadedData.mutableCopy;
+    }
+    [mutableData appendData:data];
+    _downloadedData = mutableData;
+  }
+}
+
 #pragma mark - NSURLSessionTaskDelegate
 
 /// Called by the NSURLSession once the download task is completed. The file is saved in the
@@ -368,7 +391,10 @@
       OSStatus trustError;
 
       @synchronized([GULNetworkURLSession class]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         trustError = SecTrustEvaluate(serverTrust, &trustEval);
+#pragma clang diagnostic pop
       }
 
       if (trustError != errSecSuccess) {
@@ -452,38 +478,8 @@
 }
 
 /// Creates a background session configuration with the session ID using the supported method.
-- (NSURLSessionConfiguration *)backgroundSessionConfigWithSessionID:(NSString *)sessionID
-    API_AVAILABLE(ios(7.0)) {
-#if (TARGET_OS_OSX && defined(MAC_OS_X_VERSION_10_10) &&         \
-     MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_10) || \
-    TARGET_OS_TV ||                                              \
-    (TARGET_OS_IOS && defined(__IPHONE_8_0) && __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_8_0)
-
-  // iOS 8/10.10 builds require the new backgroundSessionConfiguration method name.
+- (NSURLSessionConfiguration *)backgroundSessionConfigWithSessionID:(NSString *)sessionID {
   return [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:sessionID];
-
-#elif (TARGET_OS_OSX && defined(MAC_OS_X_VERSION_10_10) &&        \
-       MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_10) || \
-    (TARGET_OS_IOS && defined(__IPHONE_8_0) && __IPHONE_OS_VERSION_MIN_REQUIRED < __IPHONE_8_0)
-
-  // Do a runtime check to avoid a deprecation warning about using
-  // +backgroundSessionConfiguration: on iOS 8.
-  if ([NSURLSessionConfiguration
-          respondsToSelector:@selector(backgroundSessionConfigurationWithIdentifier:)]) {
-    // Running on iOS 8+/OS X 10.10+.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunguarded-availability"
-    return [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:sessionID];
-#pragma clang diagnostic pop
-  } else {
-    // Running on iOS 7/OS X 10.9.
-    return [NSURLSessionConfiguration backgroundSessionConfiguration:sessionID];
-  }
-
-#else
-  // Building with an SDK earlier than iOS 8/OS X 10.10.
-  return [NSURLSessionConfiguration backgroundSessionConfiguration:sessionID];
-#endif
 }
 
 - (void)maybeRemoveTempFilesAtURL:(NSURL *)folderURL expiringTime:(NSTimeInterval)staleTime {
