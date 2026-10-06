@@ -1,0 +1,1071 @@
+{
+  "sourceLanguage" : "tr",
+  "strings" : {
+    "%@ - Dosya %lld" : {
+      "comment" : "File name of a shared PDF when an exam has several, e.g. “2018 VİZE - Dosya 2”. Avoid / \\ : characters.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ - File %2$lld"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ - Dosya %2$lld"
+          }
+        }
+      }
+    },
+    "%@ - Sayfa %lld" : {
+      "comment" : "File name of a shared exam page, e.g. “2019 FİNAL - Sayfa 2”. Avoid / \\ : characters.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ - Page %2$lld"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ - Sayfa %2$lld"
+          }
+        }
+      }
+    },
+    "%lld / %lld" : {
+      "comment" : "Page counter, e.g. “2 / 3”. Language-neutral; UI tests match it.",
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld / %2$lld"
+          }
+        }
+      },
+      "shouldTranslate" : false
+    },
+    "%lld / %lld sayfa" : {
+      "comment" : "Progress banner: pages prepared so far / total pages, e.g. “1 / 3 sayfa”.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld of %2$#@pages@"
+          },
+          "substitutions" : {
+            "pages" : {
+              "argNum" : 2,
+              "formatSpecifier" : "lld",
+              "variations" : {
+                "plural" : {
+                  "one" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg page"
+                    }
+                  },
+                  "other" : {
+                    "stringUnit" : {
+                      "state" : "translated",
+                      "value" : "%arg pages"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld / %2$lld sayfa"
+          }
+        }
+      }
+    },
+    "%lld bölüm" : {
+      "comment" : "Row subtitle of a faculty: its number of departments.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld department"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld departments"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld ders" : {
+      "comment" : "Row subtitle of a department: its number of courses.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld course"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld courses"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld fakülte" : {
+      "comment" : "Row subtitle of a university: its number of faculties.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld faculty"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld faculties"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld sayfa" : {
+      "comment" : "Subtitle of an image exam: its number of pages.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld page"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld pages"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld sınav" : {
+      "comment" : "Row subtitle of a course: its number of exams.",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld exam"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld exams"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Ana Sayfa" : {
+      "comment" : "Toolbar button (house icon) that returns to the university list.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Home"
+          }
+        }
+      }
+    },
+    "Belge indiriliyor…" : {
+      "comment" : "Loading indicator while a PDF exam is downloaded.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloading document…"
+          }
+        }
+      }
+    },
+    "Bir sorun oluştu" : {
+      "comment" : "Error state title.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Something Went Wrong"
+          }
+        }
+      }
+    },
+    "Bitti" : {
+      "comment" : "Button that closes the About sheet.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Done"
+          }
+        }
+      }
+    },
+    "Bölümler" : {
+      "comment" : "List title: the departments of a faculty.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Departments"
+          }
+        }
+      }
+    },
+    "Bölümlerde ara" : {
+      "comment" : "Search field prompt on a department list.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search departments"
+          }
+        }
+      }
+    },
+    "Bu bölümde henüz ders yok" : {
+      "comment" : "Empty state title: a department without courses.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Courses Yet"
+          }
+        }
+      }
+    },
+    "Bu derste henüz sınav yok" : {
+      "comment" : "Empty state title: a course without exams.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Exams Yet"
+          }
+        }
+      }
+    },
+    "Bu fakültede henüz bölüm yok" : {
+      "comment" : "Empty state title: a faculty without departments.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Departments Yet"
+          }
+        }
+      }
+    },
+    "Bu içeriğe şu anda erişilemiyor." : {
+      "comment" : "Error: the database refused the read.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This content isn’t available right now."
+          }
+        }
+      }
+    },
+    "Bu seviyeye döner" : {
+      "comment" : "Accessibility hint of a breadcrumb chip.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Goes back to this level."
+          }
+        }
+      }
+    },
+    "Bu sınavda dosya yok" : {
+      "comment" : "Empty state title: a PDF exam without files.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Exam Has No Files"
+          }
+        }
+      }
+    },
+    "Bu sınavda sayfa yok" : {
+      "comment" : "Empty state title: an image exam without pages.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Exam Has No Pages"
+          }
+        }
+      }
+    },
+    "Bu üniversitede henüz fakülte yok" : {
+      "comment" : "Empty state title: a university without faculties.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Faculties Yet"
+          }
+        }
+      }
+    },
+    "Daha Sonra" : {
+      "comment" : "Update alert button that dismisses the alert.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not Now"
+          }
+        }
+      }
+    },
+    "Dersler" : {
+      "comment" : "List title: the courses of a department.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Courses"
+          }
+        }
+      }
+    },
+    "Derslerde ara" : {
+      "comment" : "Search field prompt on a course list.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search courses"
+          }
+        }
+      }
+    },
+    "Dosya" : {
+      "comment" : "Label of the picker that switches between the PDF files of an exam; also the fallback name of a saved file.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File"
+          }
+        }
+      }
+    },
+    "Dosya %lld" : {
+      "comment" : "Item of the PDF file picker, e.g. “Dosya 2”.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File %lld"
+          }
+        }
+      }
+    },
+    "Dosya bulunamadı" : {
+      "comment" : "Row subtitle of an exam that has no files and can’t be opened.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No files found"
+          }
+        }
+      }
+    },
+    "Dosya cihaza kaydedilemedi. Boş alanını kontrol edip tekrar dene." : {
+      "comment" : "Error: a downloaded file could not be written to the device.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t save the file to your device. Check your free storage and try again."
+          }
+        }
+      }
+    },
+    "Dosya şu anda sunucudan alınamıyor. Lütfen daha sonra tekrar dene." : {
+      "comment" : "Error: the file host refused the download.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The file can’t be downloaded from the server right now. Please try again later."
+          }
+        }
+      }
+    },
+    "Dosyalar" : {
+      "comment" : "Toolbar menu listing the PDF files of an exam.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Files"
+          }
+        }
+      }
+    },
+    "Fakülteler" : {
+      "comment" : "List title: the faculties of a university.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faculties"
+          }
+        }
+      }
+    },
+    "Fakültelerde ara" : {
+      "comment" : "Search field prompt on a faculty list.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search faculties"
+          }
+        }
+      }
+    },
+    "Görsel" : {
+      "comment" : "Format badge of an exam made of scanned image pages (the other format is “PDF”).",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Images"
+          }
+        }
+      }
+    },
+    "Görsel ve PDF sınavlar tek yerde" : {
+      "comment" : "About screen feature.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image and PDF exams in one place"
+          }
+        }
+      }
+    },
+    "Güncelle" : {
+      "comment" : "Update alert button that opens the App Store.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update"
+          }
+        }
+      }
+    },
+    "Hakkında" : {
+      "comment" : "Toolbar button and screen title: information about the app.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About"
+          }
+        }
+      }
+    },
+    "Henüz üniversite yok" : {
+      "comment" : "Empty state title: the archive has no universities.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Universities Yet"
+          }
+        }
+      }
+    },
+    "İçerik bulunamadı." : {
+      "comment" : "Error: the requested archive entry does not exist.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Content not found."
+          }
+        }
+      }
+    },
+    "İnternet bağlantısı yok. Bağlantını kontrol edip tekrar dene." : {
+      "comment" : "Error: offline or the request timed out.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No internet connection. Check your connection and try again."
+          }
+        }
+      }
+    },
+    "Kapat" : {
+      "comment" : "Accessibility label of the button that closes the full-screen viewer.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
+          }
+        }
+      }
+    },
+    "Konum" : {
+      "comment" : "Accessibility label of the breadcrumb trail showing the current location in the archive.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Location"
+          }
+        }
+      }
+    },
+    "Listeden Kaldır" : {
+      "comment" : "Context menu and accessibility action that removes one exam from “Recently Viewed”.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove from List"
+          }
+        }
+      }
+    },
+    "Öne Çıkanlar" : {
+      "comment" : "About screen section header: the app’s main features.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Highlights"
+          }
+        }
+      }
+    },
+    "Paylaş" : {
+      "comment" : "Toolbar button that shares the exam.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share"
+          }
+        }
+      }
+    },
+    "Paylaşım hazırlanamadı" : {
+      "comment" : "Alert title: the pages could not be prepared for sharing.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t Prepare to Share"
+          }
+        }
+      }
+    },
+    "PDF belge" : {
+      "comment" : "Row subtitle of a PDF exam.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PDF document"
+          }
+        }
+      }
+    },
+    "PDF belgesi açılamadı. Dosya bozuk olabilir." : {
+      "comment" : "Error: a downloaded PDF could not be opened.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t open the PDF. The file may be damaged."
+          }
+        }
+      }
+    },
+    "Sayfa %lld" : {
+      "comment" : "Accessibility label of a page image in the full-screen viewer.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Page %lld"
+          }
+        }
+      }
+    },
+    "Sayfa %lld / %lld" : {
+      "comment" : "Caption and accessibility label of an exam page, e.g. “Sayfa 2 / 3”.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Page %1$lld of %2$lld"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sayfa %1$lld / %2$lld"
+          }
+        }
+      }
+    },
+    "Sayfa %lld / %lld, yüklenemedi" : {
+      "comment" : "Accessibility label of an exam page that failed to load.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Page %1$lld of %2$lld, failed to load"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sayfa %1$lld / %2$lld, yüklenemedi"
+          }
+        }
+      }
+    },
+    "Sayfa görüntüsü açılamadı. Lütfen daha sonra tekrar dene." : {
+      "comment" : "Error: a downloaded page image could not be decoded.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t open the page image. Please try again later."
+          }
+        }
+      }
+    },
+    "Sayfa yüklenemedi" : {
+      "comment" : "Title shown on an exam page that failed to load.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t Load Page"
+          }
+        }
+      }
+    },
+    "Sayfalar hazırlanıyor" : {
+      "comment" : "Progress banner title while the pages are saved for sharing.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing pages"
+          }
+        }
+      }
+    },
+    "Sayfayı paylaş" : {
+      "comment" : "Accessibility label of the full-screen viewer button that shares the current page.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share Page"
+          }
+        }
+      }
+    },
+    "Sayfayı tam ekran açar." : {
+      "comment" : "Accessibility hint of an exam page.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the page in full screen."
+          }
+        }
+      }
+    },
+    "Sayfayı yeniden yükler." : {
+      "comment" : "Accessibility hint of an exam page that failed to load.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reloads the page."
+          }
+        }
+      }
+    },
+    "Sınav" : {
+      "comment" : "Fallback file name of a shared exam whose name is empty.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exam"
+          }
+        }
+      }
+    },
+    "Sınav Arşivi" : {
+      "comment" : "Tagline under the app name: ViFi is an archive of past university exams.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exam Archive"
+          }
+        }
+      }
+    },
+    "Sınav belgeleri ViFi'nin çevrim içi arşivinden yüklenir; görüntülemek için internet bağlantısı gerekir. Açtığın sınavlar daha hızlı açılması için cihazında önbelleğe alınır." : {
+      "comment" : "About screen: data source and caching note.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exam documents are loaded from ViFi’s online archive, so viewing them requires an internet connection. Exams you open are cached on your device so they open faster next time."
+          }
+        }
+      }
+    },
+    "Sınavı açar" : {
+      "comment" : "Accessibility hint of a recently viewed exam card.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opens the exam."
+          }
+        }
+      }
+    },
+    "Sınavlar" : {
+      "comment" : "List title: the exams of a course.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exams"
+          }
+        }
+      }
+    },
+    "Sınavlar arşivde kalmaya devam eder; yalnızca bu liste boşaltılır." : {
+      "comment" : "Confirmation dialog message before clearing the recently viewed exams.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The exams stay in the archive; only this list is cleared."
+          }
+        }
+      }
+    },
+    "Sınavlarda ara" : {
+      "comment" : "Search field prompt on an exam list.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search exams"
+          }
+        }
+      }
+    },
+    "Sınavları kolayca paylaşma" : {
+      "comment" : "About screen feature.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share exams easily"
+          }
+        }
+      }
+    },
+    "Son görüntülenen sınavlara hızlı erişim" : {
+      "comment" : "About screen feature.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quick access to recently viewed exams"
+          }
+        }
+      }
+    },
+    "Son Görüntülenenler" : {
+      "comment" : "Home section header: exams the user opened recently.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recently Viewed"
+          }
+        }
+      }
+    },
+    "Son görüntülenenler temizlensin mi?" : {
+      "comment" : "Confirmation dialog title before clearing the recently viewed exams.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear recently viewed exams?"
+          }
+        }
+      }
+    },
+    "Sürüm %@ (%@)" : {
+      "comment" : "App version and build number, e.g. “Sürüm 3.0.0 (6)”.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version %1$@ (%2$@)"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sürüm %1$@ (%2$@)"
+          }
+        }
+      }
+    },
+    "Tamam" : {
+      "comment" : "Button that dismisses an alert.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "Tekrar Dene" : {
+      "comment" : "Button that retries a failed load.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try Again"
+          }
+        }
+      }
+    },
+    "Temizle" : {
+      "comment" : "Button in the “Recently Viewed” header that clears the list.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear"
+          }
+        }
+      }
+    },
+    "Tüm sayfaları paylaş" : {
+      "comment" : "Accessibility label of the toolbar button that shares every page of the exam.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share All Pages"
+          }
+        }
+      }
+    },
+    "Tümünü Temizle" : {
+      "comment" : "Destructive confirmation button that clears the recently viewed exams.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear All"
+          }
+        }
+      }
+    },
+    "Üniversite ara" : {
+      "comment" : "Search field prompt on the university list.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search universities"
+          }
+        }
+      }
+    },
+    "Üniversiteler" : {
+      "comment" : "List and breadcrumb title: the list of universities.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Universities"
+          }
+        }
+      }
+    },
+    "Üniversitelerin geçmiş sınavlarına hızlıca ulaş." : {
+      "comment" : "Home screen header subtitle.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quickly find past exams from universities."
+          }
+        }
+      }
+    },
+    "Vazgeç" : {
+      "comment" : "Button that cancels preparing the pages for sharing.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "Veri Kaynağı" : {
+      "comment" : "About screen section header: where the exam files come from.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data Source"
+          }
+        }
+      }
+    },
+    "ViFi %@ App Store'da. En iyi deneyim için uygulamayı güncelle." : {
+      "comment" : "Update alert message. The argument is the new version number, e.g. “3.1.0”.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ViFi %@ is available on the App Store. Update the app for the best experience."
+          }
+        }
+      }
+    },
+    "ViFi, üniversitelerin geçmiş sınavlarını tek bir arşivde toplar. Üniversiteni, fakülteni, bölümünü ve dersini seç; sınavları görsel ya da PDF olarak incele ve paylaş." : {
+      "comment" : "About screen: what the app does.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ViFi brings past university exams together in one archive. Choose your university, faculty, department and course, then view and share exams as images or PDFs."
+          }
+        }
+      }
+    },
+    "Yakınlaştırarak ayrıntılı inceleme" : {
+      "comment" : "About screen feature: pages can be zoomed in.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom in to see every detail"
+          }
+        }
+      }
+    },
+    "Yeni içerik eklendiğinde burada görünecek." : {
+      "comment" : "Empty state message below the titles above.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New content will appear here once it’s added."
+          }
+        }
+      }
+    },
+    "Yeni sürüm mevcut" : {
+      "comment" : "Alert title: a newer version is on the App Store.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New Version Available"
+          }
+        }
+      }
+    },
+    "Yükleniyor…" : {
+      "comment" : "Loading indicator.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading…"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

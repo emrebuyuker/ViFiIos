@@ -1,0 +1,152 @@
+name: ViFi
+
+options:
+  bundleIdPrefix: com.BuyukerYazilim
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: tr
+  minimumXcodeGenVersion: "2.42.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    MARKETING_VERSION: "3.0.0"
+    CURRENT_PROJECT_VERSION: "6"
+    SWIFT_VERSION: "6.0"
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_EMIT_LOC_STRINGS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    from: 12.0.0
+
+targets:
+  ViFi:
+    type: application
+    platform: iOS
+    sources:
+      - path: ViFi
+        excludes:
+          # Generated from `info:` below and wired up as INFOPLIST_FILE, not a resource.
+          - Resources/Info.plist
+    info:
+      path: ViFi/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: ViFi
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: tr
+        CFBundleLocalizations:
+          - tr
+          - en
+        ITSAppUsesNonExemptEncryption: false
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchLogo
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        # Screen views are reported explicitly from SwiftUI.
+        FirebaseAutomaticScreenReportingEnabled: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.BuyukerYazilim.ViFi2
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        DEVELOPMENT_ASSET_PATHS: "\"ViFi/Preview Content\""
+        ENABLE_PREVIEWS: YES
+        # The SwiftLint phase reads sources outside the script's declared inputs.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: ""
+        "DEVELOPMENT_TEAM[sdk=iphoneos*]": A9ZTFRX9B5
+        "CODE_SIGN_IDENTITY[sdk=iphoneos*]": iPhone Developer
+        PROVISIONING_PROFILE_SPECIFIER: ""
+        "PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]": ViFi Development
+      configs:
+        Release:
+          # Sample exams back the DEBUG-only mock data; keep them out of shipped builds.
+          EXCLUDED_SOURCE_FILE_NAMES: "sample-page-*.jpg sample-exam.pdf"
+    dependencies:
+      - package: Firebase
+        product: FirebaseDatabase
+      - package: Firebase
+        product: FirebaseAnalyticsCore
+    postCompileScripts:
+      - name: SwiftLint
+        basedOnDependencyAnalysis: false
+        script: |
+          export PATH="$PATH:/opt/homebrew/bin:/usr/local/bin"
+          if command -v swiftlint >/dev/null 2>&1; then
+            swiftlint lint --quiet --config "${SRCROOT}/.swiftlint.yml"
+          else
+            echo "warning: SwiftLint is not installed (brew install swiftlint)"
+          fi
+
+  ViFiTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: ViFiTests
+    dependencies:
+      - target: ViFi
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.BuyukerYazilim.ViFi2.tests
+        # The manual "ViFi Development" profile covers the app only; test bundles sign automatically.
+        CODE_SIGN_STYLE: Automatic
+        "DEVELOPMENT_TEAM[sdk=iphoneos*]": A9ZTFRX9B5
+
+  ViFiUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: ViFiUITests
+    dependencies:
+      - target: ViFi
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.BuyukerYazilim.ViFi2.uitests
+        # The manual "ViFi Development" profile covers the app only; test bundles sign automatically.
+        CODE_SIGN_STYLE: Automatic
+        "DEVELOPMENT_TEAM[sdk=iphoneos*]": A9ZTFRX9B5
+
+schemes:
+  ViFi:
+    build:
+      targets:
+        ViFi: all
+        ViFiTests: [test]
+        ViFiUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: true
+      # Unit tests run inside the app; keep the host off Firebase and the App Store.
+      commandLineArguments:
+        "-ViFiMockData": true
+      coverageTargets:
+        - ViFi
+      targets:
+        - ViFiTests
+        - ViFiUITests
+    archive:
+      config: Release
