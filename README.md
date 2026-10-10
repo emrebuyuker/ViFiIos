@@ -28,6 +28,7 @@
 - [Örnek Veriyle Çalıştırma](#örnek-veriyle-çalıştırma)
 - [Testler ve Kod Kalitesi](#testler-ve-kod-kalitesi)
 - [Firebase Güvenlik Kuralları](#firebase-güvenlik-kuralları)
+- [Geliştirici Rehberi](#geliştirici-rehberi)
 - [Sürüm Notları](#sürüm-notları)
 - [Bilinen Durumlar](#bilinen-durumlar)
 
@@ -220,8 +221,9 @@ open ViFi.xcodeproj
 - **Firebase Konsolu (proje sahibi yapar).**
   - *Authentication › Sign-in method*: **Phone** sağlayıcısını etkinleştirin. *Settings › SMS region policy*
     altında yalnızca Türkiye (TR) için izin listesi tanımlayın.
-  - *Authentication › Phone*: geliştirme ve App Review için sahte test numaraları ekleyin (ör. `+90 555 000 00 01`,
-    kod `111111`). Debug'da `-ViFiPhoneAuthTesting` ile bu numaralarda uygulama doğrulaması atlanır.
+  - *Authentication › Phone*: geliştirme ve App Review için sahte test numaraları ekleyin (biçim `+90 5XX XXX XX XX`,
+    kod `111111`). Debug'da `-ViFiPhoneAuthTesting` ile bu numaralarda uygulama doğrulaması atlanır. Depo herkese
+    açık olduğundan gerçek test numaralarını hiçbir dosyaya yazmayın; bu numaralarla herkes SMS'siz giriş yapabilir.
   - *Project settings › Cloud Messaging*: Apple'dan APNs Auth Key (`.p8`) oluşturup Key ID ve Team ID ile yükleyin.
     Sessiz bildirimle doğrulama buna dayanır; yoksa giriş her zaman reCAPTCHA'ya düşer.
   - *App Check › Apps*: iOS uygulamasını **App Attest** sağlayıcısıyla kaydedin (yedek olarak DeviceCheck).
@@ -336,9 +338,85 @@ node scripts/revoke-download-tokens.mjs restore --from   backups/tokens-<tarih>.
 > 10.10.2026'daki iptal öncesinde canlı bucket'ta tek dosyayla ölçüldü. Ancak okuma yetkisi olan bir kullanıcı
 > `getMetadata`/`getDownloadURL` çağırarak belirteçsiz bir dosyaya yeni belirteç ürettirebilir ve kalıcı bir genel
 > bağlantı elde edebilir; bu kurallarla engellenemez. Bu yüzden iptal, sızmış bağlantıları temizleyen tek seferlik
-> bir işlemdir ve her çalıştırmadan önce yeni yedek gerekir. Yükleyen kullanıcılar da kendi `pending/` dosyaları için belirteç alabilir. Bunlar yalnızca kurallarla
-> kapatılamaz; ileride Cloud Functions (belirteç temizliği, kota) gerekebilir. Onay aracı, incelenen dosyanın
-> `generation`/`md5Hash` değerini sabitleyip yalnızca baytları kopyalamalıdır.
+> bir işlemdir ve her çalıştırmadan önce yeni yedek gerekir. Yükleyen kullanıcılar da kendi `pending/` dosyaları
+> için belirteç alabilir. Bunlar yalnızca kurallarla kapatılamaz; ileride Cloud Functions (belirteç temizliği, kota)
+> gerekebilir. Onay aracı, incelenen dosyanın `generation`/`md5Hash` değerini sabitleyip yalnızca baytları kopyalamalıdır.
+
+## Geliştirici Rehberi
+
+Bu bölüm ViFi'ye yeni kod eklerken izlenecek adımları toplar. Claude ile çalışırken kökteki
+[`CLAUDE.md`](CLAUDE.md) aynı kuralları özetler ve ek çalışma talimatları içerir. Her yeni dosyadan önce projede
+aynı isimli bir dosya olmadığını kontrol edin.
+
+### Yeni ekran eklemek
+
+1. Dosyaları `ViFi/Features/<Özellik>/` altına koyun: `<Ad>View.swift` ve `<Ad>ViewModel.swift`.
+2. **View model:** `@Observable final class <Ad>ViewModel`. Ekran durumu `Loadable<Value>` ile tutulur;
+   bağımlılıklar protokol tipinde ve `@ObservationIgnored private let` olarak saklanır.
+3. **View iki parçadır:** Dışarıdaki `struct <Ad>View`, bağımlılıkları `@Environment(AppEnvironment.self)` ile alır.
+   İçerideki `private struct <Ad>Screen`, view model'i `@State` ile sahiplenir (`HomeView` / `HomeScreen` gibi).
+   Yükleme, hata ve boş durumlar için `LoadingStateView`, `ErrorStateView` ve `EmptyStateView` kullanılır.
+4. **Gezinme:** Yığına eklenen bir ekransa `Route`'a yeni bir case ekleyip `RootView.destination(for:)` içinde
+   karşılayın. Modal ekranlar `.sheet` ile açılır (`AboutView`, `AccountView` gibi).
+5. **Erişilebilirlik ve analitik:** Etkileşimli her öğeye `accessibilityIdentifier("<ekran>.<öğe>")` verin. Ekran
+   görüntülemesini `environment.analytics.track(.screenView(name:))` ile bildirin.
+6. **Önizleme ve test:** `#if DEBUG` içinde `AppEnvironment.mock()` kullanan bir `#Preview` ekleyin. View model için
+   `ViFiTests/<Ad>ViewModelTests.swift` birim testini, kullanıcı akışı varsa UI testini yazın.
+
+### Yeni servis eklemek
+
+1. **Protokol:** `ViFi/Core/Services/ServiceProtocols.swift` içine (ya da `AuthServicing.swift` gibi kendi dosyasına)
+   `AnyObject` protokolü olarak, `async` API ile tanımlayın. Kullanıcıya gösterilecek hatalar `ArchiveError`,
+   `AuthError` ya da Türkçe `errorDescription` sağlayan yeni bir `LocalizedError` olmalıdır.
+2. **Canlı implementasyon:** `ViFi/Core/Services/` altına ekleyin. Firebase kullanıyorsa yalnızca
+   `AppEnvironment.live()` içinde oluşturun. Örnek veri modu Firebase'i hiç yapılandırmaz.
+3. **Örnek ve test sürümleri:** Debug örneği `ViFi/Preview Content/MockServices.swift` (`#if DEBUG`), test double'ı
+   `ViFiTests/TestDoubles.swift` içine eklenir.
+4. **Bağlama:** `AppEnvironment`'a özellik ve `init` parametresi ekleyip `live()` ile `mock()`'u güncelleyin.
+5. **Eşzamanlılık:** Ağır işler (JSON, görsel çözme, disk) `@concurrent nonisolated static` fonksiyonlarda yapılır.
+   Ana iş parçacığına taşınan modeller `nonisolated` ve `Sendable` olur. Günlükler `Logger.archive`, `Logger.files`
+   ya da `Logger.app` ile yazılır.
+
+### Test yazmak
+
+- **Birim testleri:** Swift Testing kullanılır (`import Testing`, `@Test`, `#expect`, `#require`); testler ağa
+  çıkmaz. Hazır yardımcılar `TestDoubles.swift` içindedir: `StubArchiveRepository`, `StubAuthService`,
+  `StubRequestAuthorizer`, `StubURLProtocol`, `AsyncGate`, `TestClock`, `TemporaryDefaults` ve `Fixture`.
+- **Arayüz testleri:** Uygulamayı `-ViFiMockData` ile (giriş akışı için ek olarak `-ViFiSignedOut`) başlatır ve
+  erişilebilirlik kimlikleriyle ilerler. Örnek modda doğrulama kodu `111111`'dir.
+- **Kural testleri:** Her kural değişikliği için `firebase/tests/` altına hem izin verilen hem reddedilen durumu
+  kapsayan test eklenir ve `cd firebase && npm test` ile çalıştırılır.
+
+### Proje ayarı veya bağımlılık değiştirmek
+
+Hedef, derleme ayarı, paket ve Info.plist değişiklikleri yalnızca `project.yml` üzerinden yapılır. Ardından
+`xcodegen generate` çalıştırılır ve proje derlenir. `ViFi/Resources/Info.plist` üretilen bir dosyadır, elle
+düzenlenmez. Entitlement değerleri `ViFi/Resources/ViFi.entitlements` dosyasında düzenlenir (yolu `project.yml`'de
+`CODE_SIGN_ENTITLEMENTS` ile tanımlıdır). Paket sürümü değişirse `Package.resolved` commit'lenir.
+
+### Firebase kuralı değiştirmek
+
+1. `firebase/database.rules.json` veya `firebase/storage.rules` dosyasını düzenleyin.
+2. Değişikliği kapsayan olumlu ve olumsuz testleri `firebase/tests/` altına ekleyin.
+3. `cd firebase && npm test` ile emulator'de doğrulayın.
+4. Proje sahibinin onayıyla yayınlayın (komut: [Firebase Güvenlik Kuralları](#firebase-güvenlik-kuralları)).
+5. Uygulamayı simülatörde canlı veriyle deneyin: giriş, liste ve sınav açma.
+
+### Sürüm öncesi kontrol listesi
+
+- [ ] `project.yml` içinde `MARKETING_VERSION` ve `CURRENT_PROJECT_VERSION` güncellendi.
+- [ ] Birim, arayüz ve kural testleri geçiyor; SwiftLint uyarısı yok.
+- [ ] Apple Developer'da *Push Notifications* ve *App Attest* açık, provisioning profilleri yenilendi.
+- [ ] Firebase'de APNs anahtarı yüklü, App Attest kayıtlı, App Check zorunlu.
+- [ ] App Store Connect gizlilik etiketinde *Telefon Numarası* ve *Kullanıcı Kimliği* (Uygulama İşlevselliği) var.
+- [ ] App Review notunda test numarası ve kodu verildi (numara depoya yazılmaz).
+- [ ] [Sürüm Notları](#sürüm-notları) güncellendi.
+
+### Commit kuralları
+
+Başlık `[feat]`, `[fix]` ya da `[chore]` önekiyle kısa tutulur. Gerekirse boş bir satırdan sonra açıklama yazılır.
+Test numaraları, debug token'ları, kişisel e-postalar, servis hesabı anahtarları ve `firebase/backups/` içeriği
+commit'lenmez; depo herkese açıktır.
 
 ## Sürüm Notları
 
