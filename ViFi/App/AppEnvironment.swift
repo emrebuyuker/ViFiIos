@@ -52,7 +52,7 @@ final class AppEnvironment {
         return AppEnvironment(
             repository: FirebaseArchiveRepository(auth: auth),
             fileLoader: RemoteFileLoader(authorizer: authorizer),
-            updateChecker: AppStoreUpdateChecker(),
+            updateChecker: RemoteAppUpdateChecker(config: FirebaseRemoteConfigReader()),
             analytics: FirebaseAnalyticsTracker(),
             auth: auth,
             recents: RecentExamsStore()
@@ -88,5 +88,7 @@ enum LaunchArgument {
     static let signedOut = "-ViFiSignedOut"
     /// Disables phone auth app verification (APNs / reCAPTCHA); works only with the console's test numbers.
     static let phoneAuthTesting = "-ViFiPhoneAuthTesting"
+    /// With `-ViFiMockData`: starts on the blocking required-update screen, to exercise the update gate.
+    static let forceUpdate = "-ViFiForceUpdate"
     #endif
 }

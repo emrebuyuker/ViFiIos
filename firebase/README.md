@@ -36,6 +36,33 @@ cd firebase
 firebase deploy --only database,storage --project vifi-831a8 --account <sahip hesabı>
 ```
 
+## Güncelleme politikası (`config/appUpdate/ios`)
+
+Uygulamanın zorunlu/opsiyonel güncelleme kapısı bu düğümden okur (`RemoteAppUpdateChecker`). Kurulu sürüm
+`minimumVersion`'ın altındaysa kapatılamayan zorunlu ekran, `latestVersion`'dan eskiyse kapatılabilir öneri çıkar.
+Düğüm herkese okunur (üretimde App Check zorunlu), yazma yalnızca `admin: true` claim'i olan hesaptadır.
+
+Değerleri Console'dan (Realtime Database) veya admin bir oturumla yazın — alan kurallarına uyması gerekir
+(`minimumVersion`/`latestVersion`: `N.N.N.N`'e kadar sayısal; `storeURL`: `https://` ile başlar, ≤500; `message`: ≤300):
+
+```json
+{
+  "config": {
+    "appUpdate": {
+      "ios": {
+        "minimumVersion": "3.0.0",
+        "latestVersion": "3.0.0",
+        "storeURL": "https://apps.apple.com/tr/app/vifi/id6670324094",
+        "message": "Daha iyi bir deneyim için uygulamayı güncelle."
+      }
+    }
+  }
+}
+```
+
+> Zorunlu güncellemeyi yalnızca kullanıcılara sunulmuş (App Store'da yayınlanmış) bir sürümü `minimumVersion` yaparak
+> tetikleyin; aksi halde kullanıcılar indiremeyecekleri bir sürüm için kilitlenir.
+
 ## Belirteç iptali
 
 ```bash

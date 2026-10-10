@@ -299,6 +299,21 @@ nonisolated final class ViFiUITests: XCTestCase {
         XCTAssertTrue(app.element("account.sheet").waitForNonExistence(timeout: Timeout.transition))
         XCTAssertTrue(app.element("home.list").exists)
     }
+
+    // MARK: - Update gate
+
+    @MainActor
+    func testRequiredUpdateBlocksTheAppWithAnUpdateButton() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ViFiMockData", "-ViFiForceUpdate"]
+        app.launch()
+
+        XCTAssertTrue(app.element("forceUpdate.title").waitForExistence(timeout: Timeout.content), "The force-update screen did not appear")
+        let updateButton = app.element("forceUpdate.update")
+        XCTAssertTrue(updateButton.waitForExistence(timeout: Timeout.transition), "The update button is missing")
+        XCTAssertTrue(updateButton.isHittable, "The update button must be reachable on the blocking screen")
+    }
 }
 
 // MARK: - Steps

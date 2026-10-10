@@ -42,15 +42,29 @@ protocol RequestAuthorizing: AnyObject {
     func authorizedRequest(for url: URL, forceRefresh: Bool) async throws -> URLRequest
 }
 
-/// A newer App Store release than the installed version.
+/// A release the user can move to, and where to get it.
 nonisolated struct AppUpdate: Equatable, Sendable {
     let version: String
     let storeURL: URL
+    /// A message from the remote config, shown instead of the default copy; `nil` uses the default.
+    let message: String?
+}
+
+/// The update requirement for the installed version.
+nonisolated enum AppUpdateStatus: Equatable, Sendable {
+    /// Up to date, or the policy could not be read.
+    case upToDate
+    /// A newer version exists; the user may keep using the app (a dismissible prompt).
+    case optional(AppUpdate)
+    /// The installed version is below the required minimum; the app is blocked until it updates.
+    case required(AppUpdate)
 }
 
 protocol AppUpdateChecking: AnyObject {
-    /// `nil` when the app is up to date or the check fails.
-    func availableUpdate() async -> AppUpdate?
+    /// A live stream of the update requirement: the current status, then again whenever the remote policy
+    /// changes. A required update stays latched when the policy later becomes unreadable, so the app is
+    /// never silently un-gated. The stream ends when the consuming task is cancelled.
+    func statusChanges() -> AsyncStream<AppUpdateStatus>
 }
 
 nonisolated enum AnalyticsEvent: Equatable, Sendable {

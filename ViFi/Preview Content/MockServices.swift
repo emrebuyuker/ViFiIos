@@ -13,11 +13,18 @@ extension AppEnvironment {
         AppEnvironment(
             repository: MockArchiveRepository(),
             fileLoader: RemoteFileLoader(),
-            updateChecker: StubUpdateChecker(),
+            updateChecker: StubUpdateChecker(status: mockUpdateStatus(arguments: arguments)),
             analytics: NoOpAnalyticsTracker(),
             auth: MockAuthService(isSignedIn: !arguments.contains(LaunchArgument.signedOut)),
             recents: RecentExamsStore(defaults: .mockSuite)
         )
+    }
+
+    /// A blocking required update with `-ViFiForceUpdate`, otherwise up to date.
+    private static func mockUpdateStatus(arguments: [String]) -> AppUpdateStatus {
+        guard arguments.contains(LaunchArgument.forceUpdate) else { return .upToDate }
+        let storeURL = URL(string: "https://apps.apple.com") ?? URL(filePath: "/")
+        return .required(AppUpdate(version: "99.0.0", storeURL: storeURL, message: nil))
     }
 }
 
@@ -337,16 +344,20 @@ final class NoOpAnalyticsTracker: AnalyticsTracking {
     }
 }
 
-/// Reports a fixed update result.
+/// Reports a fixed update status, once.
 final class StubUpdateChecker: AppUpdateChecking {
-    private let update: AppUpdate?
+    private let status: AppUpdateStatus
 
-    init(update: AppUpdate? = nil) {
-        self.update = update
+    init(status: AppUpdateStatus = .upToDate) {
+        self.status = status
     }
 
-    func availableUpdate() async -> AppUpdate? {
-        update
+    func statusChanges() -> AsyncStream<AppUpdateStatus> {
+        let status = status
+        return AsyncStream { continuation in
+            continuation.yield(status)
+            continuation.finish()
+        }
     }
 }
 #endif

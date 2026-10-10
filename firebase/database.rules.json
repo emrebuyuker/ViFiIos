@@ -2,6 +2,30 @@
   "rules": {
     ".read": false,
     ".write": false,
+    "config": {
+      ".read": true,
+      "appUpdate": {
+        "ios": {
+          ".write": "auth != null && auth.token.admin === true",
+          ".validate": "newData.hasChildren()",
+          "minimumVersion": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]+(\\.[0-9]+){0,3}$/)"
+          },
+          "latestVersion": {
+            ".validate": "newData.isString() && newData.val().matches(/^[0-9]+(\\.[0-9]+){0,3}$/)"
+          },
+          "storeURL": {
+            ".validate": "newData.isString() && newData.val().length <= 500 && newData.val().beginsWith('https://')"
+          },
+          "message": {
+            ".validate": "newData.isString() && newData.val().length <= 300"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
     "Universitiess": {
       ".read": "auth != null && (auth.token.admin === true || (auth.token.phone_number != null && auth.token.phone_number.matches(/^\\+90[0-9]{10}$/)))",
       ".write": "auth != null && auth.token.admin === true"

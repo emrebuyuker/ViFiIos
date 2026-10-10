@@ -58,7 +58,7 @@ sınav dosyaları ise Firebase Storage'da tutulur.
 | **Erişilebilirlik** | Dynamic Type, VoiceOver etiketleri ve iPad'de okunabilir satır genişlikleri. |
 | **Telefonla giriş** | Uygulamanın tamamı telefon numarasıyla (SMS kodu, yalnızca +90) girişi gerektirir; kod son hane girilince otomatik gönderilir, tekrar gönderme 60 sn bekletilir. |
 | **Hesap** | Ana sayfadaki kişi simgesinden numaranı gör, çıkış yap ya da hesabını kalıcı olarak sil. |
-| **Güncelleme bildirimi** | App Store'da yeni sürüm olduğunda kullanıcı nazikçe bilgilendirilir. |
+| **Güncelleme kapısı** | Sürüm politikası uzaktan (Realtime Database) yönetilir: yeni bir sürüm için kapatılabilir öneri (bu sürümü atlama seçeneğiyle), minimum sürümün altındakiler için kapatılamayan zorunlu güncelleme ekranı. |
 | **Gizlilik** | Reklam yok, reklam kimliği (IDFA) yok, takip izni istenmez. |
 
 ## Ekran Görüntüleri
@@ -96,7 +96,7 @@ flowchart LR
     R -.-> DB[("Firebase Realtime Database")]
     F -.-> ST[("Firebase Storage<br/>downloadURL")]
     F -.-> C[("Disk önbelleği")]
-    U -.-> AS[("App Store Lookup API")]
+    U -.-> CFG[("Realtime Database<br/>config/appUpdate/ios")]
 ```
 
 ### Temel kararlar
@@ -113,7 +113,8 @@ flowchart LR
   |---|---|---|
   | `ArchiveRepository` | `FirebaseArchiveRepository` | `MockArchiveRepository` |
   | `RemoteFileLoading` | `RemoteFileLoader` | `RemoteFileLoader` (paket içi örnek dosyalar) |
-  | `AppUpdateChecking` | `AppStoreUpdateChecker` | `StubUpdateChecker` |
+  | `AppUpdateChecking` | `RemoteAppUpdateChecker` (kaynak: `FirebaseRemoteConfigReader`) | `StubUpdateChecker` |
+  | `AppConfigReading` | `FirebaseRemoteConfigReader` | — (test double) |
   | `AnalyticsTracking` | `FirebaseAnalyticsTracker` | `NoOpAnalyticsTracker` |
   | `AuthServicing` | `FirebaseAuthService` | `MockAuthService` (kod: `111111`) |
   | `RequestAuthorizing` | `FirebaseRequestAuthorizer` | — (örnek dosyalar `file://`, yetki gerekmez) |

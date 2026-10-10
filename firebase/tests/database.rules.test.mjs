@@ -49,6 +49,11 @@ const seed = {
   poc: 'poc',
   '2DfjkeJxHJTkdhz5VNVwFJzAeuD': { anything: 1 },
   Announcements: { hello: 'world' },
+  config: {
+    appUpdate: {
+      ios: { minimumVersion: '3.0.0', latestVersion: '3.0.0', storeURL: 'https://apps.apple.com/app/id1', message: 'Güncelle' },
+    },
+  },
   pendingExams: {
     alice: { existing: { ...validSubmission('alice', 'existing'), createdAt: 1_700_000_000_000 } },
     bob: { theirs: { ...validSubmission('bob', 'theirs'), createdAt: 1_700_000_000_000 } },
@@ -214,6 +219,41 @@ describe('admin', () => {
     await assertFails(admin.ref('pendingExams/bob/theirs/extra').set('x'));
     await assertFails(admin.ref('pendingExams/bob/theirs/kind').set('PNG'));
     await assertFails(admin.ref('pendingExams/bob').set('not an object'));
+  });
+});
+
+describe('config (app update policy)', () => {
+  const validPolicy = {
+    minimumVersion: '3.1.0', latestVersion: '3.2.0', storeURL: 'https://apps.apple.com/app/id1', message: 'Güncelle',
+  };
+
+  test('anyone can read the policy, signed in or not', async () => {
+    await assertSucceeds(db(null).ref('config').get());
+    await assertSucceeds(db(null).ref('config/appUpdate/ios').get());
+    await assertSucceeds(db(users.alice).ref('config/appUpdate/ios').get());
+    await assertSucceeds(db(users.usPhone).ref('config/appUpdate/ios').get());
+  });
+
+  test('nobody but an admin can write it', async () => {
+    await assertFails(db(null).ref('config/appUpdate/ios').set(validPolicy));
+    await assertFails(db(users.alice).ref('config/appUpdate/ios').set(validPolicy));
+    await assertFails(db(users.fakeAdmin).ref('config/appUpdate/ios').set(validPolicy));
+    await assertFails(db(users.alice).ref('config/appUpdate/ios/minimumVersion').set('9.9.9'));
+  });
+
+  test('an admin can write a valid policy', async () => {
+    const admin = db(users.admin);
+    await assertSucceeds(admin.ref('config/appUpdate/ios').set(validPolicy));
+    await assertSucceeds(admin.ref('config/appUpdate/ios/minimumVersion').set('3.3.0'));
+  });
+
+  test('the admin is still bound by the schema', async () => {
+    const admin = db(users.admin);
+    await assertFails(admin.ref('config/appUpdate/ios/minimumVersion').set('three'));
+    await assertFails(admin.ref('config/appUpdate/ios/minimumVersion').set(3));
+    await assertFails(admin.ref('config/appUpdate/ios/storeURL').set('http://insecure.example'));
+    await assertFails(admin.ref('config/appUpdate/ios/extra').set('x'));
+    await assertFails(admin.ref('config/appUpdate/ios/message').set('x'.repeat(301)));
   });
 });
 

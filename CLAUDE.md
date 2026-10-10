@@ -162,6 +162,7 @@ cd firebase && firebase deploy --only database,storage --project vifi-831a8 --ac
 | `-ViFiMockData` | Firebase ve ağ olmadan paket içi örnek arşivle çalışır (yalnızca Debug; UI testleri bunu kullanır) |
 | `-ViFiSignedOut` | `-ViFiMockData` ile birlikte: giriş ekranından başlar (örnek modda kod `111111`) |
 | `-ViFiPhoneAuthTesting` | Yalnızca Debug: Phone Auth uygulama doğrulamasını kapatır; yalnızca Console'daki test numaralarıyla çalışır |
+| `-ViFiForceUpdate` | `-ViFiMockData` ile birlikte (yalnızca Debug): kapatılamayan zorunlu güncelleme ekranından başlar (UI testi) |
 
 ---
 
@@ -173,6 +174,7 @@ cd firebase && firebase deploy --only database,storage --project vifi-831a8 --ac
 | **Canlı iOS uygulaması** | Console'daki adı *"Vifi iOS Push Notification"* → `com.BuyukerYazilim.ViFi2` (adı yanıltıcı, asıl uygulama bu) |
 | **Diğer kayıtlar** | *"ViFiIOS"* → `com.BuyukerYazilim.ViFi` (eski kayıt, dokunma); Android `com.salticusteam.vifi` (henüz giriş/App Check yok, şu an kullanılmıyor) |
 | **Veritabanı** | `Universitiess/<üniversite>/<fakülte>/<bölüm>/<ders>/<sınav>/<JPG\|PDF>/<pushId>/downloadURL` |
+| **Güncelleme politikası** | `config/appUpdate/ios/{minimumVersion, latestVersion, storeURL, message}` — `RemoteAppUpdateChecker` okur. `minimumVersion`'ın altı kapatılamaz zorunlu ekran, `latestVersion`'dan eski kapatılabilir öneri. Herkese okunur (App Check korumalı), yazma yalnızca `admin`. `storeURL` App Store adresidir; `AppStoreLink.productURL` yedeğidir |
 | **Storage** | `imagess/<uuid>.jpg`, `pdfs/<uuid>.pdf`; ileride yükleme için `pending/<uid>/<submissionId>/<dosya>` |
 | **Erişim** | Arşivi (`Universitiess`, `imagess/`, `pdfs/`) yalnızca +90 numarayla giriş yapanlar ve admin okur; Storage'da yalnızca tek dosya okunur, listeleme yok. Arşive yazma yalnızca `admin: true` custom claim'i olanlarda |
 | **Gönderimler** | `pendingExams/<uid>/<submissionId>` ve Storage `pending/<uid>/…`: sahibi (+90) oluşturur ve okur, bekleyen kaydını silebilir; admin okur ve yazar. Kök ve tanımsız diğer düğümler herkese kapalı |

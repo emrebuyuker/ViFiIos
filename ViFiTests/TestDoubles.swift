@@ -314,35 +314,6 @@ final class TemporaryDefaults {
     }
 }
 
-/// A bundle on disk holding only an `Info.plist`, to control the identifier and version a component reads.
-///
-/// Every instance gets a unique bundle identifier, which tests can use as a key for stubbed requests.
-/// The directory is deleted when the instance is released.
-final class TemporaryBundle {
-    let bundle: Bundle
-    let identifier: String
-    private let directory: URL
-
-    init(version: String) throws {
-        identifier = "com.BuyukerYazilim.ViFi2.tests.\(UUID().uuidString)"
-        directory = URL.temporaryDirectory.appending(path: "\(UUID().uuidString).bundle", directoryHint: .isDirectory)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-
-        let info: [String: Any] = [
-            "CFBundleIdentifier": identifier,
-            "CFBundleShortVersionString": version,
-            "CFBundlePackageType": "BNDL",
-        ]
-        let plist = try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
-        try plist.write(to: directory.appending(path: "Info.plist"))
-        bundle = try #require(Bundle(url: directory))
-    }
-
-    deinit {
-        try? FileManager.default.removeItem(at: directory)
-    }
-}
-
 // MARK: - URL loading
 
 /// Answers requests with canned replies registered per URL, so tests never touch the network.

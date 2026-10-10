@@ -16,18 +16,8 @@ import os
 final class FirebaseArchiveRepository: ArchiveRepository {
     private static let rootKey = "Universitiess"
 
-    /// The default database, configured once before its first use.
-    ///
-    /// Firebase only accepts these settings before the first reference is created, so they are applied
-    /// in a lazily initialised static, which Swift runs exactly once per process.
-    private static let database: Database = {
-        let database = Database.database()
-        database.isPersistenceEnabled = true
-        // Synced data is never evicted; the headroom keeps recently browsed nodes around as well.
-        database.persistenceCacheSizeBytes = 50 * 1024 * 1024
-        database.callbackQueue = DispatchQueue(label: "com.BuyukerYazilim.ViFi.database", qos: .userInitiated)
-        return database
-    }()
+    /// The shared database, configured once by `ViFiDatabase` before its first reference is created.
+    private static var database: Database { ViFiDatabase.shared }
 
     private let root: DatabaseReference
     private let timeout: Duration
