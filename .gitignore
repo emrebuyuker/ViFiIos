@@ -36,3 +36,6 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output/
+
+# Internal roadmap / backlog — kept local, not published to the public repo.
+ROADMAP.md
