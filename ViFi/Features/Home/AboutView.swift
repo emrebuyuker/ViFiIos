@@ -15,7 +15,7 @@ struct AboutView: View {
                 Section {
                     Text("""
                         ViFi, üniversitelerin geçmiş sınavlarını tek bir arşivde toplar. \
-                        Üniversiteni, fakülteni, bölümünü ve dersini seç; sınavları görsel ya da PDF olarak incele ve paylaş.
+                        Üniversiteni, fakülteni, bölümünü ve dersini seç; sınavları görsel ya da PDF olarak incele.
                         """)
                     .fixedSize(horizontal: false, vertical: true)
                 }
@@ -24,7 +24,6 @@ struct AboutView: View {
                     Label("Görsel ve PDF sınavlar tek yerde", systemImage: "doc.richtext")
                     Label("Yakınlaştırarak ayrıntılı inceleme", systemImage: "plus.magnifyingglass")
                     Label("Son görüntülenen sınavlara hızlı erişim", systemImage: "clock.arrow.circlepath")
-                    Label("Sınavları kolayca paylaşma", systemImage: "square.and.arrow.up")
                 }
 
                 Section("Veri Kaynağı") {

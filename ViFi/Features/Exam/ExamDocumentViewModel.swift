@@ -68,12 +68,6 @@ final class ExamDocumentViewModel {
         await load()
     }
 
-    /// Reports that the exam, or one of its pages, was shared.
-    func recordShare() {
-        guard let kind = state.value?.kind else { return }
-        analytics.track(.examShared(kind: kind))
-    }
-
     // MARK: - Private
 
     private func recordVisitIfNeeded(of document: ExamDocument) {
@@ -95,21 +89,17 @@ final class ExamDocumentViewModel {
     }
 }
 
-// MARK: - Shared file names
+// MARK: - File names
 
 extension ExamDocument {
-    /// "2019 FİNAL - Sayfa 2.jpg": the name of an image page saved for sharing.
-    func pageFileName(at index: Int) -> String {
-        String(localized: "\(fileNameStem) - Sayfa \(index + 1)") + ".jpg"
-    }
-
     /// "2018 VİZE.pdf", or "2018 VİZE - Dosya 2.pdf" when the exam has several PDFs.
+    /// Gives the cached download a readable name on disk.
     func pdfFileName(at index: Int) -> String {
         guard fileURLs.count > 1 else { return fileNameStem + ".pdf" }
         return String(localized: "\(fileNameStem) - Dosya \(index + 1)") + ".pdf"
     }
 
-    /// The title without characters that are path separators on iOS or in shared destinations.
+    /// The title without characters that are path separators on iOS or on disk.
     private var fileNameStem: String {
         let stem = title
             .components(separatedBy: CharacterSet(charactersIn: "/\\:"))

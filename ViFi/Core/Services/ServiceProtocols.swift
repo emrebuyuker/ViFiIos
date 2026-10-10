@@ -57,7 +57,6 @@ nonisolated enum AnalyticsEvent: Equatable, Sendable {
     case screenView(name: String)
     case browse(level: ArchiveLevel)
     case examOpened(kind: ExamKind)
-    case examShared(kind: ExamKind)
     case recentExamOpened
 }
 

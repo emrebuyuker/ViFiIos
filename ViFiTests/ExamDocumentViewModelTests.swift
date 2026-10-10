@@ -145,20 +145,6 @@ final class ExamDocumentViewModelTests {
         #expect(analytics.events == [.examOpened(kind: .images)])
     }
 
-    // MARK: - Sharing
-
-    @Test("Sharing is tracked with the document's kind once it has loaded")
-    func recordShare() async {
-        let document = Fixture.document(kind: .pdf, at: Fixture.pdfExam, fileCount: 1)
-        let viewModel = makeViewModel(path: Fixture.pdfExam, repository: StubArchiveRepository(documents: [.success(document)]))
-
-        viewModel.recordShare()
-        await viewModel.load()
-        viewModel.recordShare()
-
-        #expect(analytics.events == [.examOpened(kind: .pdf), .examShared(kind: .pdf)])
-    }
-
     // MARK: - Helpers
 
     private func makeViewModel(

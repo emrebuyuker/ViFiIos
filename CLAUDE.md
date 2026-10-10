@@ -34,7 +34,7 @@
 | Konu | Değer |
 |---|---|
 | **Platform** | iOS / iPadOS 17+, Swift 6 (strict concurrency), Xcode 26 |
-| **UI** | SwiftUI. UIKit yalnızca `UIViewRepresentable` sarmalayıcılarında (`PDFKitView`, `ZoomableImageView`, `PhoneNumberTextField`, paylaşım sayfası) |
+| **UI** | SwiftUI. UIKit yalnızca `UIViewRepresentable` sarmalayıcılarında (`PDFKitView`, `ZoomableImageView`, `PhoneNumberTextField`) |
 | **Mimari** | MVVM + Observation: `@Observable` view model, view tarafından `@State` ile sahiplenilir |
 | **İzolasyon** | `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`; ağır iş `@concurrent nonisolated static` fonksiyonlarda |
 | **DI** | `AppEnvironment` → `.environment(_:)`; `live()` (Firebase) / `mock()` (örnek veri, yalnızca Debug) |

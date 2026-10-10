@@ -53,7 +53,6 @@ sınav dosyaları ise Firebase Storage'da tutulur.
 | **Son görüntülenenler** | Ana sayfada son açılan sınavlar; tek dokunuşla tekrar aç, listeden kaldır ya da tümünü temizle. |
 | **Görsel sınav görüntüleyici** | Sayfa kartları, tam ekran sayfalayıcı, 1–5x yakınlaştırma, çift dokunarak yakınlaştır/sıfırla. |
 | **Uygulama içi PDF** | PDFKit ile sürekli kaydırma, sayfa göstergesi ve birden fazla dosya arasında geçiş. |
-| **Paylaşım** | Sınavın tamamını ya da tek bir sayfayı dosya olarak paylaş. |
 | **Çevrimdışı önbellek** | Açılan sınav dosyaları cihazda saklanır; daha önce açılan sınavlar tekrar indirilmeden açılır. |
 | **Karanlık mod** | Tüm ekranlar sistem renkleriyle açık ve koyu temaya uyum sağlar. |
 | **Erişilebilirlik** | Dynamic Type, VoiceOver etiketleri ve iPad'de okunabilir satır genişlikleri. |
@@ -430,8 +429,7 @@ commit'lenmez; depo herkese açıktır.
 - Tüm listelerde Türkçe karakter duyarsız arama.
 - Ana sayfada son görüntülenen sınavlar.
 - PDF sınavlar artık Safari yerine uygulama içinde, PDFKit ile sayfa göstergesiyle açılıyor.
-- Yakınlaştırma, çift dokunma ve sayfa paylaşımı destekleyen yeni tam ekran görüntüleyici.
-- Sınavların tamamını dosya olarak paylaşma.
+- Yakınlaştırma ve çift dokunma destekleyen yeni tam ekran görüntüleyici.
 - Açılan sınavlar için çevrimdışı önbellek.
 - Yeni sürüm bildirimi.
 - Dynamic Type, VoiceOver ve iPad için iyileştirilmiş erişilebilirlik.

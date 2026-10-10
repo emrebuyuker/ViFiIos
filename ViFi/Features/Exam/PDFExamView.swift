@@ -3,7 +3,7 @@ import PDFKit
 import SwiftUI
 
 /// The viewer of a PDF exam: downloads the file, shows it with PDFKit and a floating page indicator,
-/// shares it, and switches between files when the exam has several.
+/// and switches between files when the exam has several.
 struct PDFExamView: View {
     let path: ArchivePath
 
@@ -45,11 +45,10 @@ private struct PDFExamScreen: View {
             .navigationTitle(viewModel.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    if let document = viewModel.document, document.fileURLs.count > 1 {
+                if let document = viewModel.document, document.fileURLs.count > 1 {
+                    ToolbarItem(placement: .topBarTrailing) {
                         filePicker(fileCount: document.fileURLs.count)
                     }
-                    shareButton
                 }
             }
             .task(id: loadAttempt) {
@@ -162,26 +161,6 @@ private struct PDFExamScreen: View {
         .accessibilityIdentifier("exam.files")
     }
 
-    @ViewBuilder
-    private var shareButton: some View {
-        if let pdf = file.value {
-            ShareLink(item: pdf.fileURL) {
-                Label("Paylaş", systemImage: "square.and.arrow.up")
-            }
-            // ShareLink reports no completion, so this records the intent to share.
-            .simultaneousGesture(TapGesture().onEnded { viewModel.recordShare() })
-            .accessibilityAddTraits(.isButton)
-            .accessibilityIdentifier("exam.share")
-        } else {
-            // Holds the place of the share button while the file downloads.
-            Button {} label: {
-                Label("Paylaş", systemImage: "square.and.arrow.up")
-            }
-            .disabled(true)
-            .accessibilityIdentifier("exam.share")
-        }
-    }
-
     // MARK: - File loading
 
     /// The file to show; `nil` until the document is loaded.
@@ -233,7 +212,7 @@ private struct FileRequest: Hashable {
 private struct LoadedPDF {
     /// The download URL the file came from.
     let remoteURL: URL
-    /// The local copy, shown and shared.
+    /// The local copy, shown by the viewer.
     let fileURL: URL
     let document: PDFDocument
 }

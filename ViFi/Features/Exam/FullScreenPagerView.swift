@@ -2,13 +2,11 @@ import OSLog
 import SwiftUI
 
 /// The pages of an image exam full screen on black: swipe between pages, pinch or double-tap to zoom,
-/// tap to hide the controls, share the current page. Presented with `.fullScreenCover`.
+/// tap to hide the controls. Presented with `.fullScreenCover`.
 struct FullScreenPagerView: View {
     let document: ExamDocument
     /// Images already shown in the page list, displayed until the sharper full-screen version loads.
     let previews: [Int: UIImage]
-    /// Called when the user starts sharing a page.
-    let onShare: () -> Void
 
     @Environment(AppEnvironment.self) private var environment
     @Environment(\.dismiss) private var dismiss
@@ -17,19 +15,14 @@ struct FullScreenPagerView: View {
     @State private var selection: Int
     @State private var isChromeHidden = false
     @State private var screenLength: CGFloat = 0
-    @State private var shareFiles: [Int: URL] = [:]
-    @State private var failedShareFiles: Set<Int> = []
-    @State private var shareAttempt = 0
 
     init(
         document: ExamDocument,
         initialPage: Int = 0,
-        previews: [Int: UIImage] = [:],
-        onShare: @escaping () -> Void = {}
+        previews: [Int: UIImage] = [:]
     ) {
         self.document = document
         self.previews = previews
-        self.onShare = onShare
         let lastPage = max(document.fileURLs.count - 1, 0)
         _selection = State(initialValue: min(max(initialPage, 0), lastPage))
     }
@@ -55,9 +48,6 @@ struct FullScreenPagerView: View {
             .accessibilityIdentifier("viewer.fullscreen")
             .accessibilityAction(.escape) { dismiss() }
             .onAppear { environment.analytics.track(.screenView(name: "ExamViewer")) }
-            .task(id: ShareFileRequest(page: selection, attempt: shareAttempt)) { [page = selection] in
-                await prepareShareFile(forPage: page)
-            }
     }
 
     // MARK: - Pager
@@ -104,34 +94,23 @@ struct FullScreenPagerView: View {
     // MARK: - Controls
 
     private var topBar: some View {
-        HStack(spacing: 12) {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .viewerControlLabel()
-            }
-            .viewerSurface(in: Circle(), interactive: true)
-            .accessibilityLabel("Kapat")
-            .accessibilityShowsLargeContentViewer()
-            .accessibilityIdentifier("viewer.close")
+        ZStack {
+            pageCounter
 
-            Spacer(minLength: 0)
-
-            Text("\(selection + 1) / \(pageCount)")
-                .font(.subheadline.weight(.semibold))
-                .monospacedDigit()
-                .contentTransition(.numericText())
-                .padding(.horizontal, 16)
-                .frame(minHeight: 36)
-                .viewerSurface(in: Capsule())
-                .animation(.snappy, value: selection)
+            HStack {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .viewerControlLabel()
+                }
+                .viewerSurface(in: Circle(), interactive: true)
+                .accessibilityLabel("Kapat")
                 .accessibilityShowsLargeContentViewer()
-                .accessibilityIdentifier("viewer.counter")
+                .accessibilityIdentifier("viewer.close")
 
-            Spacer(minLength: 0)
-
-            shareControl
+                Spacer(minLength: 0)
+            }
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 16)
@@ -140,56 +119,17 @@ struct FullScreenPagerView: View {
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
-    /// A `ShareLink` once the current page is saved as a file; a spinner (or a retry after an error) before.
-    @ViewBuilder
-    private var shareControl: some View {
-        Group {
-            if let file = shareFiles[selection] {
-                ShareLink(item: file) {
-                    Image(systemName: "square.and.arrow.up")
-                        .viewerControlLabel()
-                }
-                // ShareLink reports no completion, so this records the intent to share.
-                .simultaneousGesture(TapGesture().onEnded(onShare))
-                .accessibilityAddTraits(.isButton)
-            } else {
-                let hasFailed = failedShareFiles.contains(selection)
-                Button {
-                    shareAttempt += 1
-                } label: {
-                    if hasFailed {
-                        Image(systemName: "square.and.arrow.up")
-                            .viewerControlLabel()
-                    } else {
-                        ProgressView()
-                            .tint(.white)
-                            .frame(width: 44, height: 44)
-                    }
-                }
-                .disabled(!hasFailed)
-            }
-        }
-        .viewerSurface(in: Circle(), interactive: true)
-        .accessibilityLabel("Sayfayı paylaş")
-        .accessibilityIdentifier("viewer.share")
-    }
-
-    // MARK: - Sharing
-
-    private func prepareShareFile(forPage page: Int) async {
-        guard shareFiles[page] == nil, document.fileURLs.indices.contains(page) else { return }
-        failedShareFiles.remove(page)
-        do {
-            shareFiles[page] = try await environment.fileLoader.localFile(
-                from: document.fileURLs[page],
-                fileName: document.pageFileName(at: page)
-            )
-        } catch {
-            // Swiping on cancels the preparation; it restarts when the user comes back to the page.
-            guard !Task.isCancelled, !(error is CancellationError) else { return }
-            Logger.files.error("Preparing page \(page + 1) for sharing failed: \(error.localizedDescription, privacy: .public)")
-            failedShareFiles.insert(page)
-        }
+    private var pageCounter: some View {
+        Text("\(selection + 1) / \(pageCount)")
+            .font(.subheadline.weight(.semibold))
+            .monospacedDigit()
+            .contentTransition(.numericText())
+            .padding(.horizontal, 16)
+            .frame(minHeight: 36)
+            .viewerSurface(in: Capsule())
+            .animation(.snappy, value: selection)
+            .accessibilityShowsLargeContentViewer()
+            .accessibilityIdentifier("viewer.counter")
     }
 }
 
@@ -297,11 +237,6 @@ private struct ZoomablePage: View {
 private struct LoadRequest: Hashable {
     let url: URL
     let pixelSize: CGFloat
-    let attempt: Int
-}
-
-private struct ShareFileRequest: Hashable {
-    let page: Int
     let attempt: Int
 }
 

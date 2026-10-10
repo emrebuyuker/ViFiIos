@@ -20,7 +20,6 @@ private extension AnalyticsEvent {
         case .screenView: AnalyticsEventScreenView
         case .browse: "browse_level"
         case .examOpened: "exam_open"
-        case .examShared: "exam_share"
         case .recentExamOpened: "recent_exam_open"
         }
     }
@@ -31,7 +30,7 @@ private extension AnalyticsEvent {
             [AnalyticsParameterScreenName: name]
         case let .browse(level):
             ["level": level.analyticsName]
-        case let .examOpened(kind), let .examShared(kind):
+        case let .examOpened(kind):
             ["kind": kind.rawValue]
         case .recentExamOpened:
             nil
