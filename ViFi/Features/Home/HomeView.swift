@@ -16,6 +16,7 @@ private struct HomeScreen: View {
     @Environment(Router.self) private var router
     @State private var viewModel: BrowseViewModel
     @State private var isShowingAbout = false
+    @State private var isShowingAccount = false
 
     init(repository: any ArchiveRepository) {
         _viewModel = State(initialValue: BrowseViewModel(path: .root, repository: repository))
@@ -58,9 +59,19 @@ private struct HomeScreen: View {
                 }
                 .accessibilityIdentifier("toolbar.about")
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Hesap", systemImage: "person.crop.circle") {
+                    showAccount()
+                }
+                .accessibilityIdentifier("toolbar.account")
+            }
         }
         .sheet(isPresented: $isShowingAbout, onDismiss: trackScreen) {
             AboutView()
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $isShowingAccount, onDismiss: trackScreen) {
+            AccountView()
                 .presentationDragIndicator(.visible)
         }
         .task {
@@ -135,7 +146,12 @@ private struct HomeScreen: View {
         isShowingAbout = true
     }
 
-    /// Logged on every appearance (and after the About sheet closes) so time is credited to Home.
+    private func showAccount() {
+        environment.analytics.track(.screenView(name: "Account"))
+        isShowingAccount = true
+    }
+
+    /// Logged on every appearance (and after the About and Account sheets close) so time is credited to Home.
     private func trackScreen() {
         environment.analytics.track(.screenView(name: "Home"))
     }

@@ -11,12 +11,20 @@ import UIKit
 /// - Images are decoded and downsampled off the main actor, then kept in memory per URL and size.
 /// - Files handed out for PDF rendering and sharing are written under a per-URL folder, with a readable name.
 /// - Concurrent requests for the same URL share a single download.
+///
+/// Firebase Storage files are downloaded with the signed-in user's credentials (see `RequestAuthorizing`)
+/// and identified by their canonical URL, without the `token=` query parameter of the stored download URLs:
+/// tokens are being revoked, and a URL with another token still names the same file. Local `file://` URLs
+/// (sample data) are read directly.
 final class RemoteFileLoader: RemoteFileLoading {
     private static let memoryCacheCapacity = 64 * 1024 * 1024
     private static let diskCacheCapacity = 512 * 1024 * 1024
     private static let decodedImageCostLimit = 128 * 1024 * 1024
 
     private let session: URLSession
+    /// The session's response cache, read and written explicitly under each file's canonical URL.
+    private let responseCache: URLCache?
+    private let authorizer: (any RequestAuthorizing)?
     private let filesDirectory: URL
     private let images = NSCache<NSString, UIImage>()
     private var downloads: [URL: Task<Data, any Error>] = [:]
@@ -25,15 +33,21 @@ final class RemoteFileLoader: RemoteFileLoading {
     ///   - session: The session to download with. `nil` creates one backed by a large on-disk cache that
     ///     prefers cached responses over the network (`.returnCacheDataElseLoad`).
     ///   - cacheDirectory: Root folder of the on-disk caches. `nil` uses `Caches/ExamFiles`.
-    init(session: URLSession? = nil, cacheDirectory: URL? = nil) {
+    ///   - authorizer: Adds the user's credentials to Firebase Storage downloads. Without one, such downloads
+    ///     fail with `ArchiveError.permissionDenied`.
+    init(session: URLSession? = nil, cacheDirectory: URL? = nil, authorizer: (any RequestAuthorizing)? = nil) {
         let directory = cacheDirectory ?? URL.cachesDirectory.appending(path: "ExamFiles", directoryHint: .isDirectory)
         let responsesDirectory = directory.appending(path: "Responses", directoryHint: .isDirectory)
-        self.session = session ?? Self.makeSession(cacheDirectory: responsesDirectory)
+        let session = session ?? Self.makeSession(cacheDirectory: responsesDirectory)
+        self.session = session
+        responseCache = session.configuration.urlCache
+        self.authorizer = authorizer
         filesDirectory = directory.appending(path: "Files", directoryHint: .isDirectory)
         images.totalCostLimit = Self.decodedImageCostLimit
     }
 
     func image(from url: URL, maxPixelSize: CGFloat) async throws -> UIImage {
+        let url = Self.canonicalURL(for: url)
         let key = Self.imageCacheKey(for: url, maxPixelSize: maxPixelSize)
         if let cached = images.object(forKey: key) {
             return cached
@@ -56,6 +70,7 @@ final class RemoteFileLoader: RemoteFileLoading {
     }
 
     func localFile(from url: URL, fileName: String) async throws -> URL {
+        let url = Self.canonicalURL(for: url)
         let destination = Self.localFileURL(for: url, fileName: fileName, in: filesDirectory)
         if await Self.fileExists(at: destination) {
             return destination
@@ -69,7 +84,7 @@ final class RemoteFileLoader: RemoteFileLoading {
 // MARK: - Downloading
 
 private extension RemoteFileLoader {
-    /// The file's bytes, joining an in-flight download of the same URL when there is one.
+    /// The file's bytes, joining an in-flight download of the same (canonical) URL when there is one.
     ///
     /// Downloads are not cancelled when a caller goes away: finishing them warms the cache for the
     /// next request (scrolling back, opening the viewer, sharing).
@@ -78,8 +93,8 @@ private extension RemoteFileLoader {
             return try await download.value
         }
 
-        let download = Task { [session] in
-            try await Self.fetch(url, using: session)
+        let download = Task { [session, responseCache, authorizer] in
+            try await Self.download(url, session: session, cache: responseCache, authorizer: authorizer)
         }
         downloads[url] = download
         defer { downloads[url] = nil }
@@ -100,7 +115,7 @@ private extension RemoteFileLoader {
     }
 
     func evictCachedResponse(for url: URL) {
-        session.configuration.urlCache?.removeCachedResponse(for: URLRequest(url: url))
+        responseCache?.removeCachedResponse(for: Self.cacheKey(for: url))
     }
 
     static func makeSession(cacheDirectory: URL) -> URLSession {
@@ -117,20 +132,55 @@ private extension RemoteFileLoader {
         return URLSession(configuration: configuration)
     }
 
-    @concurrent
-    nonisolated static func fetch(_ url: URL, using session: URLSession) async throws -> Data {
+    /// Reads a local file, or downloads a remote one: Firebase Storage files with the user's credentials
+    /// (answered from the response cache first), anything else as a plain request.
+    static func download(
+        _ url: URL,
+        session: URLSession,
+        cache: URLCache?,
+        authorizer: (any RequestAuthorizing)?
+    ) async throws -> Data {
         if url.isFileURL {
-            do {
-                return try Data(contentsOf: url, options: .mappedIfSafe)
-            } catch {
-                throw ArchiveError.notFound
-            }
+            return try await readLocalFile(at: url)
+        }
+        guard isFirebaseStorageURL(url) else {
+            return try await fetch(URLRequest(url: url), using: session, cache: nil)
+        }
+        if let cache, let cached = await cachedData(for: url, in: cache) {
+            return cached
+        }
+        guard let authorizer else { throw ArchiveError.permissionDenied }
+
+        do {
+            let request = try await authorizer.authorizedRequest(for: url, forceRefresh: false)
+            return try await fetch(request, using: session, cache: cache)
+        } catch let error as ArchiveError where error.isAuthorizationFailure {
+            // An expired or revoked ID token: retry once with a fresh one.
+            Logger.files.info("Download of \(url, privacy: .private) was rejected; retrying with a fresh token")
+        }
+        do {
+            let request = try await authorizer.authorizedRequest(for: url, forceRefresh: true)
+            return try await fetch(request, using: session, cache: cache)
+        } catch let error as ArchiveError where error.isAuthorizationFailure {
+            throw ArchiveError.permissionDenied
+        }
+    }
+
+    /// Sends `request` and returns the body of a 2xx response, storing that response in `cache` under the
+    /// request's (credential-free) URL.
+    @concurrent
+    nonisolated static func fetch(_ request: URLRequest, using session: URLSession, cache: URLCache?) async throws -> Data {
+        var request = request
+        if cache != nil {
+            // The cache was consulted under the canonical key already; responses are stored explicitly below
+            // rather than relying on automatic caching of requests with an `Authorization` header.
+            request.cachePolicy = .reloadIgnoringLocalCacheData
         }
 
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await session.data(from: url)
+            (data, response) = try await session.data(for: request)
         } catch {
             throw mapped(error)
         }
@@ -138,7 +188,29 @@ private extension RemoteFileLoader {
         if let response = response as? HTTPURLResponse, !(200..<300).contains(response.statusCode) {
             throw ArchiveError.fileUnavailable(statusCode: response.statusCode)
         }
+        if let cache, let url = request.url {
+            cache.storeCachedResponse(CachedURLResponse(response: response, data: data), for: cacheKey(for: url))
+        }
         return data
+    }
+
+    @concurrent
+    nonisolated static func readLocalFile(at url: URL) async throws -> Data {
+        do {
+            return try Data(contentsOf: url, options: .mappedIfSafe)
+        } catch {
+            throw ArchiveError.notFound
+        }
+    }
+
+    /// The body of a cached successful response for `url`; disk access, so off the main actor.
+    @concurrent
+    nonisolated static func cachedData(for url: URL, in cache: URLCache) async -> Data? {
+        guard let cached = cache.cachedResponse(for: cacheKey(for: url)) else { return nil }
+        if let response = cached.response as? HTTPURLResponse, !(200..<300).contains(response.statusCode) {
+            return nil
+        }
+        return cached.data
     }
 
     /// Translates transport errors into the errors the UI knows how to present.
@@ -153,6 +225,49 @@ private extension RemoteFileLoader {
         default:
             return ArchiveError.unknown(message: urlError.localizedDescription)
         }
+    }
+}
+
+// MARK: - Canonical URLs
+
+extension RemoteFileLoader {
+    /// The host of Firebase Storage download URLs.
+    nonisolated static let firebaseStorageHost = "firebasestorage.googleapis.com"
+
+    nonisolated static func isFirebaseStorageURL(_ url: URL) -> Bool {
+        url.scheme?.lowercased() == "https" && url.host()?.lowercased() == firebaseStorageHost
+    }
+
+    /// `url` without its `token` query item when it is a Firebase Storage download URL (`alt=media` and
+    /// any other item are kept, encoded as they were); any other URL is returned unchanged.
+    ///
+    /// The canonical URL is the file's identity everywhere: in-flight downloads, the memory and response
+    /// caches and the local file folders. It is also the URL that is requested, with the user's credentials.
+    nonisolated static func canonicalURL(for url: URL) -> URL {
+        guard isFirebaseStorageURL(url),
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let items = components.percentEncodedQueryItems else {
+            return url
+        }
+        let kept = items.filter { $0.name != "token" }
+        guard kept.count != items.count else { return url }
+        components.percentEncodedQueryItems = kept.isEmpty ? nil : kept
+        return components.url ?? url
+    }
+
+    /// The header-less request a response is cached under.
+    nonisolated static func cacheKey(for url: URL) -> URLRequest {
+        URLRequest(url: url)
+    }
+}
+
+private extension ArchiveError {
+    /// Firebase Storage answers 401 for a missing or invalid token and 403 when rules deny the read.
+    nonisolated var isAuthorizationFailure: Bool {
+        if case let .fileUnavailable(statusCode) = self {
+            return statusCode == 401 || statusCode == 403
+        }
+        return false
     }
 }
 

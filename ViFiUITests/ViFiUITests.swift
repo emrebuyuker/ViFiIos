@@ -173,6 +173,132 @@ nonisolated final class ViFiUITests: XCTestCase {
         XCTAssertTrue(app.element("state.noResults").waitForExistence(timeout: Timeout.transition))
         XCTAssertFalse(app.element("row.BOZOK ÜNİVERSİTESİ").exists)
     }
+
+    // MARK: - Login
+
+    @MainActor
+    func testSignedOutLaunchShowsLoginInsteadOfTheArchive() {
+        let app = launchSignedOutApp()
+
+        XCTAssertTrue(app.element("login.phone").exists)
+        XCTAssertFalse(app.element("home.list").exists)
+        XCTAssertFalse(app.element("login.sendCode").isEnabled, "Sending needs a complete number")
+    }
+
+    @MainActor
+    func testLoginWithPhoneNumberAndCodeOpensHome() {
+        let app = launchSignedOutApp()
+
+        enterPhoneNumber("05321234567", in: app)
+        tapElement("login.sendCode", in: app)
+
+        let codeField = app.element("login.code")
+        XCTAssertTrue(codeField.waitForExistence(timeout: Timeout.content), "The code step did not appear")
+        XCTAssertFalse(app.element("login.resend").isEnabled, "A new code has to wait for the cooldown")
+        codeField.typeText("111111")
+
+        XCTAssertTrue(app.element("home.list").waitForExistence(timeout: Timeout.content), "Home did not appear after signing in")
+        XCTAssertTrue(app.element("login.phone").waitForNonExistence(timeout: Timeout.transition))
+        XCTAssertTrue(app.element("row.BOZOK ÜNİVERSİTESİ").waitForExistence(timeout: Timeout.content))
+    }
+
+    @MainActor
+    func testWrongCodeShowsErrorAndTheRightCodeStillWorks() {
+        let app = launchSignedOutApp()
+        enterPhoneNumber("5321234567", in: app)
+        tapElement("login.sendCode", in: app)
+        let codeField = app.element("login.code")
+        XCTAssertTrue(codeField.waitForExistence(timeout: Timeout.content))
+
+        codeField.typeText("000000")
+
+        XCTAssertTrue(app.element("login.error").waitForExistence(timeout: Timeout.content), "No error for a wrong code")
+        XCTAssertFalse(app.element("home.list").exists)
+
+        codeField.typeText("111111")
+
+        XCTAssertTrue(app.element("home.list").waitForExistence(timeout: Timeout.content))
+    }
+
+    @MainActor
+    func testChangeNumberReturnsToNumberStep() {
+        let app = launchSignedOutApp()
+        enterPhoneNumber("5321234567", in: app)
+        tapElement("login.sendCode", in: app)
+        XCTAssertTrue(app.element("login.code").waitForExistence(timeout: Timeout.content))
+
+        tapElement("login.changeNumber", in: app)
+
+        XCTAssertTrue(app.element("login.phone").waitForExistence(timeout: Timeout.transition))
+        XCTAssertTrue(app.element("login.code").waitForNonExistence(timeout: Timeout.transition))
+        XCTAssertTrue(app.element("login.sendCode").isEnabled, "The typed number is kept for editing")
+    }
+
+    // MARK: - Account
+
+    @MainActor
+    func testAccountSheetShowsNumberAndSignOutReturnsToLogin() {
+        let app = launchApp()
+
+        tapElement("toolbar.account", in: app)
+
+        XCTAssertTrue(app.element("account.sheet").waitForExistence(timeout: Timeout.transition))
+        let phone = app.element("account.phone")
+        XCTAssertTrue(phone.waitForExistence(timeout: Timeout.transition))
+        XCTAssertTrue(phone.label.contains("532 123 45 67"), "The account should show the signed-in number, was \(phone.label)")
+
+        tapElement("account.signOut", in: app)
+        tapElement("account.signOut.confirm", in: app)
+
+        XCTAssertTrue(app.element("login.phone").waitForExistence(timeout: Timeout.content), "Sign-out did not show the login screen")
+        XCTAssertFalse(app.element("home.list").exists)
+        XCTAssertFalse(app.element("account.sheet").exists)
+    }
+
+    @MainActor
+    func testSignOutThenSignInStartsOnHome() {
+        let app = launchApp()
+        openRows(Array(MockArchive.engineeringMathematics.prefix(2)), in: app)
+        XCTAssertTrue(app.element("row.BİLGİSAYAR MÜHENDİSLİĞİ").waitForExistence(timeout: Timeout.content))
+        tapElement("toolbar.home", in: app)
+        tapElement("toolbar.account", in: app)
+        tapElement("account.signOut", in: app)
+        tapElement("account.signOut.confirm", in: app)
+        XCTAssertTrue(app.element("login.phone").waitForExistence(timeout: Timeout.content))
+
+        enterPhoneNumber("5321234567", in: app)
+        tapElement("login.sendCode", in: app)
+        let codeField = app.element("login.code")
+        XCTAssertTrue(codeField.waitForExistence(timeout: Timeout.content))
+        codeField.typeText("111111")
+
+        XCTAssertTrue(app.element("home.list").waitForExistence(timeout: Timeout.content))
+        XCTAssertTrue(app.element("browse.list").waitForNonExistence(timeout: Timeout.transition))
+    }
+
+    @MainActor
+    func testDeletingTheAccountReturnsToLogin() {
+        let app = launchApp()
+        tapElement("toolbar.account", in: app)
+        tapElement("account.delete", in: app)
+
+        tapElement("account.delete.confirm", in: app)
+
+        XCTAssertTrue(app.element("login.phone").waitForExistence(timeout: Timeout.content), "Deleting did not show the login screen")
+        XCTAssertFalse(app.element("home.list").exists)
+    }
+
+    @MainActor
+    func testAccountSheetCloses() {
+        let app = launchApp()
+        tapElement("toolbar.account", in: app)
+        XCTAssertTrue(app.element("account.sheet").waitForExistence(timeout: Timeout.transition))
+
+        tapElement("account.done", in: app)
+
+        XCTAssertTrue(app.element("account.sheet").waitForNonExistence(timeout: Timeout.transition))
+        XCTAssertTrue(app.element("home.list").exists)
+    }
 }
 
 // MARK: - Steps
@@ -204,6 +330,24 @@ private extension ViFiUITests {
         app.launch()
         XCTAssertTrue(app.element("home.list").waitForExistence(timeout: Timeout.content), "The home list did not appear")
         return app
+    }
+
+    /// Launches the app on the mock archive without a signed-in user and waits for the login screen.
+    func launchSignedOutApp() -> XCUIApplication {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ViFiMockData", "-ViFiSignedOut"]
+        app.launch()
+        XCTAssertTrue(app.element("login.phone").waitForExistence(timeout: Timeout.content), "The login screen did not appear")
+        return app
+    }
+
+    /// Types `number` into the login screen's number field.
+    func enterPhoneNumber(_ number: String, in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        let field = app.element("login.phone")
+        XCTAssertTrue(field.waitForExistence(timeout: Timeout.transition), "No number field", file: file, line: line)
+        field.tap()
+        field.typeText(number)
     }
 
     /// Taps the archive rows `row.<name>` one after another, drilling down the archive.

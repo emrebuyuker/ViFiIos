@@ -1,0 +1,62 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "Universitiess": {
+      ".read": "auth != null && (auth.token.admin === true || (auth.token.phone_number != null && auth.token.phone_number.matches(/^\\+90[0-9]{10}$/)))",
+      ".write": "auth != null && auth.token.admin === true"
+    },
+    "pendingExams": {
+      ".read": "auth != null && auth.token.admin === true",
+      ".write": "auth != null && auth.token.admin === true",
+      ".validate": "newData.hasChildren()",
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid && auth.token.phone_number != null && auth.token.phone_number.matches(/^\\+90[0-9]{10}$/)",
+        ".validate": "newData.hasChildren()",
+        "$submissionId": {
+          ".write": "auth != null && auth.uid === $uid && auth.token.phone_number != null && auth.token.phone_number.matches(/^\\+90[0-9]{10}$/) && (!data.exists() || (!newData.exists() && data.child('status').val() === 'pending'))",
+          ".validate": "newData.hasChildren(['university', 'faculty', 'department', 'lesson', 'exam', 'kind', 'status', 'createdAt', 'files'])",
+          "university": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 120 && !newData.val().matches(/[.$#\\[\\]\\/]/) && newData.val().matches(/^[ -~¡-¬®-ɏ–—‘’“”…]+$/) && newData.val().matches(/[^ ]/)"
+          },
+          "faculty": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 120 && !newData.val().matches(/[.$#\\[\\]\\/]/) && newData.val().matches(/^[ -~¡-¬®-ɏ–—‘’“”…]+$/) && newData.val().matches(/[^ ]/)"
+          },
+          "department": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 120 && !newData.val().matches(/[.$#\\[\\]\\/]/) && newData.val().matches(/^[ -~¡-¬®-ɏ–—‘’“”…]+$/) && newData.val().matches(/[^ ]/)"
+          },
+          "lesson": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 120 && !newData.val().matches(/[.$#\\[\\]\\/]/) && newData.val().matches(/^[ -~¡-¬®-ɏ–—‘’“”…]+$/) && newData.val().matches(/[^ ]/)"
+          },
+          "exam": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 120 && !newData.val().matches(/[.$#\\[\\]\\/]/) && newData.val().matches(/^[ -~¡-¬®-ɏ–—‘’“”…]+$/) && newData.val().matches(/[^ ]/)"
+          },
+          "kind": {
+            ".validate": "newData.isString() && (newData.val() === 'JPG' || newData.val() === 'PDF')"
+          },
+          "status": {
+            ".validate": "newData.isString() && (newData.val() === 'pending' || (auth != null && auth.token.admin === true && (newData.val() === 'approved' || newData.val() === 'rejected')))"
+          },
+          "createdAt": {
+            ".validate": "newData.isNumber() && (newData.val() === now || (auth != null && auth.token.admin === true))"
+          },
+          "files": {
+            ".validate": "newData.hasChildren()",
+            "$fileIndex": {
+              ".validate": "$fileIndex.matches(/^(0|[1-9]|[1-4][0-9])$/) && newData.hasChildren(['storagePath'])",
+              "storagePath": {
+                ".validate": "newData.isString() && newData.val().length <= 300 && newData.val().beginsWith('pending/' + $uid + '/' + $submissionId + '/') && newData.val().matches(/^pending\\/[^\\/]+\\/[^\\/]+\\/[^\\/]+$/)"
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    }
+  }
+}

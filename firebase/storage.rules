@@ -1,0 +1,73 @@
+rules_version = '2';
+
+// ViFi Cloud Storage security rules.
+//
+// - The published archive (imagess/, pdfs/) is readable one file at a time by signed-in
+//   Turkish phone users (+90) and admins. Nobody can list it from a client; only admins write it.
+// - pending/{uid}/{submissionId}/ holds files a user submitted for review. The owner may upload
+//   new JPEG/PDF files (max 15 MiB) and delete them; nobody overwrites them. Admins read and delete.
+// - Every other path is denied: there is intentionally no catch-all match.
+//
+// Admin tooling (approval, token revocation) runs with the Admin SDK / service credentials,
+// which bypass these rules.
+//
+// Known limits that rules cannot close (accepted; see scripts/revoke-download-tokens.mjs):
+// - Firebase Storage attaches a download token to every object a client uploads or reads through
+//   the Firebase API (getMetadata/getDownloadURL mint one when none exists). Anyone allowed to `get`
+//   a file can therefore obtain a public ?alt=media&token= link to it, which needs no ID token and
+//   no App Check. Revoking tokens only kills links that already leaked.
+// - Rules cannot see the RTDB submission status, so an owner may delete a pending file and upload
+//   new bytes at the same path. Approval tooling must pin the generation/md5Hash the admin reviewed
+//   (copy with ifGenerationMatch) and copy only the bytes, with fresh metadata.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Signed in with Firebase Phone Auth using a Turkish (+90) mobile number.
+    function isTurkishPhoneUser() {
+      return request.auth != null
+        && request.auth.token.get('phone_number', null) is string
+        && request.auth.token.get('phone_number', '').matches('^[+]90[0-9]{10}$');
+    }
+
+    // Carries the `admin: true` custom claim set by the Admin SDK.
+    function isAdmin() {
+      return request.auth != null && request.auth.token.get('admin', false) == true;
+    }
+
+    function canReadArchive() {
+      return isTurkishPhoneUser() || isAdmin();
+    }
+
+    match /imagess/{fileName} {
+      allow get: if canReadArchive();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /pdfs/{fileName} {
+      allow get: if canReadArchive();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /pending/{uid}/{submissionId}/{fileName} {
+      function isOwner() {
+        return isTurkishPhoneUser() && request.auth.uid == uid;
+      }
+
+      allow get: if isOwner() || isAdmin();
+      // Owners never replace a file they uploaded. `update` is not granted at all, and
+      // `resource == null` also rejects an overwrite that is evaluated as `create`
+      // (the Storage emulator, for one, evaluates every upload as `create`).
+      // The uploader controls no other metadata: no served filename (Content-Disposition), no
+      // Content-Encoding (the size limit would apply to compressed bytes) and no custom metadata.
+      allow create: if isOwner()
+        && resource == null
+        && request.resource.size > 0
+        && request.resource.size <= 15 * 1024 * 1024
+        && request.resource.contentType in ['image/jpeg', 'application/pdf']
+        && request.resource.contentDisposition == null
+        && request.resource.contentEncoding == null
+        && (request.resource.metadata == null || request.resource.metadata.size() == 0);
+      allow delete: if isOwner() || isAdmin();
+    }
+  }
+}

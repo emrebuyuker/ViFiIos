@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Silent pushes let Firebase Auth verify the app before sending an SMS code. The App Store
+	     distribution profile switches this to production when the app is exported. -->
+	<key>aps-environment</key>
+	<string>development</string>
+	<!-- App Check: Firebase only accepts attestations from the production App Attest environment. -->
+	<key>com.apple.developer.devicecheck.appattest-environment</key>
+	<string>production</string>
+</dict>
+</plist>

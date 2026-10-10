@@ -31,6 +31,17 @@ protocol RemoteFileLoading: AnyObject {
     func localFile(from url: URL, fileName: String) async throws -> URL
 }
 
+/// Adds the signed-in user's credentials to downloads of protected exam files.
+protocol RequestAuthorizing: AnyObject {
+    /// A request for `url` carrying the user's ID token and, when available, an App Check token.
+    ///
+    /// - Parameter forceRefresh: Fetches a fresh ID token instead of the cached one, after the server
+    ///   rejected a request.
+    /// - Throws: `ArchiveError.permissionDenied` when nobody is signed in, `ArchiveError.offline` when the
+    ///   token cannot be refreshed for lack of a connection.
+    func authorizedRequest(for url: URL, forceRefresh: Bool) async throws -> URLRequest
+}
+
 /// A newer App Store release than the installed version.
 nonisolated struct AppUpdate: Equatable, Sendable {
     let version: String

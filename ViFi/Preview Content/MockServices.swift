@@ -7,13 +7,15 @@ import os
 extension AppEnvironment {
     /// Bundled sample data with no Firebase or network access, for previews, UI tests and demos.
     ///
-    /// Recents are stored in a separate defaults suite that starts empty on every launch.
-    static func mock() -> AppEnvironment {
+    /// Recents are stored in a separate defaults suite that starts empty on every launch. The user is signed in
+    /// unless `arguments` contain `-ViFiSignedOut`.
+    static func mock(arguments: [String] = []) -> AppEnvironment {
         AppEnvironment(
             repository: MockArchiveRepository(),
             fileLoader: RemoteFileLoader(),
             updateChecker: StubUpdateChecker(),
             analytics: NoOpAnalyticsTracker(),
+            auth: MockAuthService(isSignedIn: !arguments.contains(LaunchArgument.signedOut)),
             recents: RecentExamsStore(defaults: .mockSuite)
         )
     }
@@ -214,6 +216,113 @@ private extension ArchiveLevel {
 private extension String {
     func leftPadded(toLength length: Int, with pad: Character) -> String {
         String(repeating: pad, count: max(0, length - count)) + self
+    }
+}
+
+// MARK: - Auth
+
+/// Phone sign-in without Firebase: any Turkish mobile number gets a code, and the code is always `111111`.
+final class MockAuthService: AuthServicing {
+    /// The only code accepted.
+    static let validCode = "111111"
+    /// The user signed in at launch.
+    static let defaultUser = AuthUser(id: "mock-user", phoneNumber: "+905321234567")
+
+    private(set) var currentUser: AuthUser?
+
+    private let latency: Duration
+    private let requiresRecentLoginForDeletion: Bool
+    private var isRecentlyAuthenticated = false
+    /// Numbers that codes were sent to, by verification id.
+    private var pendingNumbers: [String: String] = [:]
+    private var continuations: [UUID: AsyncStream<AuthUser?>.Continuation] = [:]
+
+    /// - Parameters:
+    ///   - isSignedIn: Starts with `defaultUser` signed in.
+    ///   - latency: Simulated network delay of every call.
+    ///   - requiresRecentLoginForDeletion: Deleting needs a fresh code first, like an old Firebase session.
+    init(isSignedIn: Bool = true, latency: Duration = .milliseconds(300), requiresRecentLoginForDeletion: Bool = false) {
+        currentUser = isSignedIn ? Self.defaultUser : nil
+        self.latency = latency
+        self.requiresRecentLoginForDeletion = requiresRecentLoginForDeletion
+    }
+
+    func userChanges() -> AsyncStream<AuthUser?> {
+        let id = UUID()
+        return AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
+            continuations[id] = continuation
+            continuation.yield(currentUser)
+            continuation.onTermination = { @Sendable [weak self] _ in
+                Task { @MainActor in
+                    self?.continuations[id] = nil
+                }
+            }
+        }
+    }
+
+    func sendVerificationCode(to phoneNumber: String) async throws -> String {
+        try await simulateLatency()
+        guard PhoneNumber(e164: phoneNumber) != nil else { throw AuthError.invalidPhoneNumber }
+        let verificationID = "mock-verification-\(UUID().uuidString)"
+        pendingNumbers[verificationID] = phoneNumber
+        return verificationID
+    }
+
+    @discardableResult
+    func signIn(verificationID: String, code: String) async throws -> AuthUser {
+        let phoneNumber = try await verify(verificationID: verificationID, code: code)
+        let user = AuthUser(id: Self.defaultUser.id, phoneNumber: phoneNumber)
+        isRecentlyAuthenticated = true
+        update(user)
+        return user
+    }
+
+    func reauthenticate(verificationID: String, code: String) async throws {
+        _ = try await verify(verificationID: verificationID, code: code)
+        guard currentUser != nil else { throw AuthError.notSignedIn }
+        isRecentlyAuthenticated = true
+    }
+
+    func signOut() throws {
+        update(nil)
+    }
+
+    func deleteAccount() async throws {
+        try await simulateLatency()
+        guard currentUser != nil else { throw AuthError.notSignedIn }
+        guard isRecentlyAuthenticated || !requiresRecentLoginForDeletion else { throw AuthError.requiresRecentLogin }
+        update(nil)
+    }
+
+    func canHandle(_ url: URL) -> Bool {
+        false
+    }
+
+    // MARK: - Private
+
+    /// The number the code was sent to, once `code` is the valid one.
+    private func verify(verificationID: String, code: String) async throws -> String {
+        try await simulateLatency()
+        guard let phoneNumber = pendingNumbers[verificationID] else { throw AuthError.codeExpired }
+        guard code == Self.validCode else { throw AuthError.invalidCode }
+        pendingNumbers[verificationID] = nil
+        return phoneNumber
+    }
+
+    private func update(_ user: AuthUser?) {
+        if user == nil {
+            isRecentlyAuthenticated = false
+        }
+        currentUser = user
+        for continuation in continuations.values {
+            continuation.yield(user)
+        }
+    }
+
+    private func simulateLatency() async throws {
+        if latency > .zero {
+            try await Task.sleep(for: latency)
+        }
     }
 }
 

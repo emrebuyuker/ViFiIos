@@ -35,6 +35,17 @@
         }
       }
     },
+    "%@ numarasına gönderilen 6 haneli kodu gir." : {
+      "comment" : "Login code step; the argument is the formatted number, e.g. “+90 532 123 45 67”.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter the 6-digit code sent to %@."
+          }
+        }
+      }
+    },
     "%lld / %lld" : {
       "comment" : "Page counter, e.g. “2 / 3”. Language-neutral; UI tests match it.",
       "localizations" : {
@@ -212,6 +223,17 @@
         }
       }
     },
+    "Arşive tekrar ulaşmak için numaranı yeniden doğrulaman gerekir." : {
+      "comment" : "Sign-out confirmation message.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You’ll need to verify your number again to access the archive."
+          }
+        }
+      }
+    },
     "Belge indiriliyor…" : {
       "comment" : "Loading indicator while a PDF exam is downloaded.",
       "localizations" : {
@@ -230,6 +252,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Something Went Wrong"
+          }
+        }
+      }
+    },
+    "Bir sorun oluştu. Lütfen tekrar dene." : {
+      "comment" : "Generic sign-in or account error.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Something went wrong. Please try again."
           }
         }
       }
@@ -300,6 +333,17 @@
         }
       }
     },
+    "Bu hesap devre dışı bırakıldı." : {
+      "comment" : "Sign-in error: an admin disabled the account.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This account has been disabled."
+          }
+        }
+      }
+    },
     "Bu içeriğe şu anda erişilemiyor." : {
       "comment" : "Error: the database refused the read.",
       "localizations" : {
@@ -355,6 +399,50 @@
         }
       }
     },
+    "Cihaz doğrulanamadı. Lütfen daha sonra tekrar dene." : {
+      "comment" : "Sign-in error: Firebase could not verify the app (APNs, reCAPTCHA or App Check).",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your device couldn’t be verified. Please try again later."
+          }
+        }
+      }
+    },
+    "Çıkış Yap" : {
+      "comment" : "Button that signs the user out.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign Out"
+          }
+        }
+      }
+    },
+    "Çıkış yapılsın mı?" : {
+      "comment" : "Sign-out confirmation title.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign out?"
+          }
+        }
+      }
+    },
+    "Çok fazla deneme yapıldı. Lütfen bir süre sonra tekrar dene." : {
+      "comment" : "Sign-in error: rate limited or SMS quota exceeded.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Too many attempts. Please try again later."
+          }
+        }
+      }
+    },
     "Daha Sonra" : {
       "comment" : "Update alert button that dismisses the alert.",
       "localizations" : {
@@ -384,6 +472,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Search courses"
+          }
+        }
+      }
+    },
+    "Doğrula" : {
+      "comment" : "Login button that signs in with the entered code.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verify"
+          }
+        }
+      }
+    },
+    "Doğrula ve Hesabı Sil" : {
+      "comment" : "Button that confirms the re-verification code and deletes the account.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verify and Delete Account"
+          }
+        }
+      }
+    },
+    "Doğrulama iptal edildi. Kod almak için tekrar dene." : {
+      "comment" : "Sign-in error: the user closed the reCAPTCHA page.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verification was cancelled. Try again to get a code."
+          }
+        }
+      }
+    },
+    "Doğrulama kodu" : {
+      "comment" : "Label of the 6-digit verification code field.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verification code"
           }
         }
       }
@@ -476,6 +608,17 @@
         }
       }
     },
+    "Giriş Yap" : {
+      "comment" : "Title of the login screen.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign In"
+          }
+        }
+      }
+    },
     "Görsel" : {
       "comment" : "Format badge of an exam made of scanned image pages (the other format is “PDF”).",
       "localizations" : {
@@ -509,6 +652,28 @@
         }
       }
     },
+    "Güvenliğin için %@ numarasına gönderilen 6 haneli kodu gir." : {
+      "comment" : "Re-verification footer; the argument is the formatted number, e.g. “+90 532 123 45 67”.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For your security, enter the 6-digit code sent to %@."
+          }
+        }
+      }
+    },
+    "Güvenliğin için numaranı yeniden doğrulaman gerekiyor." : {
+      "comment" : "Account error: deleting the account needs a recent sign-in.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For your security, you need to verify your number again."
+          }
+        }
+      }
+    },
     "Hakkında" : {
       "comment" : "Toolbar button and screen title: information about the app.",
       "localizations" : {
@@ -527,6 +692,61 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No Universities Yet"
+          }
+        }
+      }
+    },
+    "Hesabı Sil" : {
+      "comment" : "Button that deletes the account.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete Account"
+          }
+        }
+      }
+    },
+    "Hesabın kalıcı olarak silinsin mi?" : {
+      "comment" : "Account deletion confirmation title.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permanently delete your account?"
+          }
+        }
+      }
+    },
+    "Hesabın ve telefon numaran ViFi'den kalıcı olarak silinir; bu işlem geri alınamaz. Uygulamayı yeniden kullanmak istersen numaranı baştan doğrulaman gerekir." : {
+      "comment" : "Account deletion confirmation message.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your account and phone number will be permanently deleted from ViFi; this can’t be undone. To use the app again, you’ll need to verify your number from scratch."
+          }
+        }
+      }
+    },
+    "Hesabını sildiğinde oturumun kapanır ve hesabın kalıcı olarak silinir." : {
+      "comment" : "Footer of the Delete Account button.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deleting your account signs you out and removes your account permanently."
+          }
+        }
+      }
+    },
+    "Hesap" : {
+      "comment" : "Account screen title and the home toolbar button that opens it.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account"
           }
         }
       }
@@ -564,6 +784,72 @@
         }
       }
     },
+    "Kod Gönder" : {
+      "comment" : "Login button that sends the SMS verification code.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send Code"
+          }
+        }
+      }
+    },
+    "Kod hatalı. SMS ile gelen 6 haneli kodu kontrol edip tekrar dene." : {
+      "comment" : "Sign-in error: wrong verification code.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The code is incorrect. Check the 6-digit code from the SMS and try again."
+          }
+        }
+      }
+    },
+    "Kodu Gir" : {
+      "comment" : "Title of the login screen's code step.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter Code"
+          }
+        }
+      }
+    },
+    "Kodu tekrar gönder" : {
+      "comment" : "Button that sends a new verification code.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resend code"
+          }
+        }
+      }
+    },
+    "Kodu tekrar gönder (%lld sn)" : {
+      "comment" : "Resend button during the cooldown; the argument is the seconds left.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resend code (%lld s)"
+          }
+        }
+      }
+    },
+    "Kodun süresi doldu. Yeni bir kod iste." : {
+      "comment" : "Sign-in error: the verification code or session expired.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The code has expired. Request a new one."
+          }
+        }
+      }
+    },
     "Konum" : {
       "comment" : "Accessibility label of the breadcrumb trail showing the current location in the archive.",
       "localizations" : {
@@ -586,6 +872,50 @@
         }
       }
     },
+    "Lütfen bekle" : {
+      "comment" : "VoiceOver value of a button while its request is running.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Please wait"
+          }
+        }
+      }
+    },
+    "Numarana tek kullanımlık bir doğrulama kodu SMS ile gönderilir. Standart SMS ücretleri uygulanabilir." : {
+      "comment" : "Login footnote under the Send Code button.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A one-time verification code will be sent to your number by SMS. Standard SMS rates may apply."
+          }
+        }
+      }
+    },
+    "Numaranı Doğrula" : {
+      "comment" : "Header of the re-verification section before account deletion.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verify Your Number"
+          }
+        }
+      }
+    },
+    "Numarayı değiştir" : {
+      "comment" : "Login button that goes back to the phone number step.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Change number"
+          }
+        }
+      }
+    },
     "Öne Çıkanlar" : {
       "comment" : "About screen section header: the app’s main features.",
       "localizations" : {
@@ -593,6 +923,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Highlights"
+          }
+        }
+      }
+    },
+    "Oturumun sona erdi. Lütfen yeniden giriş yap." : {
+      "comment" : "Account error: the user is no longer signed in.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your session has ended. Please sign in again."
           }
         }
       }
@@ -774,6 +1115,17 @@
         }
       }
     },
+    "Sınav arşivine ulaşmak için cep telefonu numaranı doğrula." : {
+      "comment" : "Subtitle of the login screen.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verify your mobile number to access the exam archive."
+          }
+        }
+      }
+    },
     "Sınav belgeleri ViFi'nin çevrim içi arşivinden yüklenir; görüntülemek için internet bağlantısı gerekir. Açtığın sınavlar daha hızlı açılması için cihazında önbelleğe alınır." : {
       "comment" : "About screen: data source and caching note.",
       "localizations" : {
@@ -908,6 +1260,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Try Again"
+          }
+        }
+      }
+    },
+    "Telefon numarası" : {
+      "comment" : "Label of the phone number field and of the number on the account screen.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phone number"
+          }
+        }
+      }
+    },
+    "Telefon numarası geçersiz. 5 ile başlayan 10 haneli cep telefonu numaranı gir." : {
+      "comment" : "Sign-in error: the phone number was rejected.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The phone number is invalid. Enter your 10-digit mobile number starting with 5."
+          }
+        }
+      }
+    },
+    "Telefon numarası yok" : {
+      "comment" : "Account screen when the account has no phone number.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No phone number"
+          }
+        }
+      }
+    },
+    "Telefon numarası, %@" : {
+      "comment" : "VoiceOver label of the phone number field; the argument is the fixed country code “+90”.",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phone number, %@"
           }
         }
       }

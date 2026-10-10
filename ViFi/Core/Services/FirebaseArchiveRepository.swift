@@ -7,6 +7,10 @@ import os
 /// The `Universitiess` tree is persisted on disk and kept in sync, so every list the user has opened
 /// (and, after the first full sync, the whole archive) stays available offline.
 ///
+/// Reading requires a signed-in user. Keep-synced is therefore armed lazily, the first time the archive is
+/// used while signed in, and re-armed after every sign-out: the server cancels a listener the rules reject,
+/// and the database never restarts it on its own.
+///
 /// Snapshots are delivered on a background queue and parsed there into `Sendable` models: reading a
 /// node materialises its whole subtree, which must not happen on the main actor.
 final class FirebaseArchiveRepository: ArchiveRepository {
@@ -27,15 +31,31 @@ final class FirebaseArchiveRepository: ArchiveRepository {
 
     private let root: DatabaseReference
     private let timeout: Duration
+    private let auth: any AuthServicing
+    /// Whether keep-synced is armed for the current sign-in.
+    private var isKeepSyncedArmed = false
+    private var sessionTask: Task<Void, Never>?
 
-    /// - Parameter timeout: How long a read may wait for data before failing with `ArchiveError.offline`.
-    init(timeout: Duration = .seconds(15)) {
+    /// - Parameters:
+    ///   - auth: The sign-in state; the archive is only kept in sync while a user is signed in.
+    ///   - timeout: How long a read may wait for data before failing with `ArchiveError.offline`.
+    init(auth: any AuthServicing, timeout: Duration = .seconds(15)) {
+        self.auth = auth
         self.timeout = timeout
         root = Self.database.reference(withPath: Self.rootKey)
-        root.keepSynced(true)
+        sessionTask = Task { [weak self, auth] in
+            for await user in auth.userChanges() where user == nil {
+                self?.disarmKeepSynced()
+            }
+        }
+    }
+
+    deinit {
+        sessionTask?.cancel()
     }
 
     func items(at path: ArchivePath) async throws -> [ArchiveItem] {
+        armKeepSyncedIfNeeded()
         // An empty archive is just an empty list; a missing child means the path no longer exists.
         let allowsMissingNode = path.isRoot
         return try await readNode(at: path) { snapshot in
@@ -45,7 +65,8 @@ final class FirebaseArchiveRepository: ArchiveRepository {
     }
 
     func document(at path: ArchivePath) async throws -> ExamDocument {
-        try await readNode(at: path) { snapshot in
+        armKeepSyncedIfNeeded()
+        return try await readNode(at: path) { snapshot in
             guard let document = ArchiveParser.document(in: snapshot.value, at: path) else {
                 throw ArchiveError.notFound
             }
@@ -57,6 +78,7 @@ final class FirebaseArchiveRepository: ArchiveRepository {
     /// cache before the server sync lands. A live listener on the root fires again once fresh data
     /// arrives (and on every later edit), so visible lists can re-read.
     func archiveChanges() -> AsyncStream<Void> {
+        armKeepSyncedIfNeeded()
         // `DatabaseReference` is thread-safe but not annotated `Sendable`.
         nonisolated(unsafe) let root = root
         return AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
@@ -69,6 +91,30 @@ final class FirebaseArchiveRepository: ArchiveRepository {
                 root.removeObserver(withHandle: handle)
             }
         }
+    }
+}
+
+// MARK: - Keep-synced
+
+private extension FirebaseArchiveRepository {
+    /// Keeps the archive synced for the signed-in user, once per sign-in.
+    ///
+    /// When the server rejects a kept-synced listener (signed out, revoked token), the database drops the
+    /// listener but still remembers the location as kept-synced, so `keepSynced(true)` alone would be a no-op.
+    /// Clearing it first re-registers exactly one listener; both calls run in order on the database queue,
+    /// and the database never registers the same location twice.
+    func armKeepSyncedIfNeeded() {
+        guard !isKeepSyncedArmed, auth.currentUser != nil else { return }
+        isKeepSyncedArmed = true
+        root.keepSynced(false)
+        root.keepSynced(true)
+    }
+
+    /// Stops syncing on sign-out; the next use after signing in arms it again.
+    func disarmKeepSynced() {
+        guard isKeepSyncedArmed else { return }
+        isKeepSyncedArmed = false
+        root.keepSynced(false)
     }
 }
 

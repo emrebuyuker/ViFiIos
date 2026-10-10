@@ -1,0 +1,18 @@
+{
+  "name": "vifi-firebase",
+  "private": true,
+  "description": "Security rules, rules tests and maintenance scripts for the ViFi Firebase project.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "firebase emulators:exec --only auth,database,storage --project demo-vifi \"node --test --test-concurrency=1 tests/*.test.mjs\"",
+    "test:script": "node --test tests/revoke-download-tokens.test.mjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "@google-cloud/storage": "^8.4.0",
+    "firebase": "^13.0.0"
+  }
+}

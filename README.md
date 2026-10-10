@@ -27,6 +27,7 @@
 - [Kurulum](#kurulum)
 - [Örnek Veriyle Çalıştırma](#örnek-veriyle-çalıştırma)
 - [Testler ve Kod Kalitesi](#testler-ve-kod-kalitesi)
+- [Firebase Güvenlik Kuralları](#firebase-güvenlik-kuralları)
 - [Sürüm Notları](#sürüm-notları)
 - [Bilinen Durumlar](#bilinen-durumlar)
 
@@ -55,6 +56,8 @@ sınav dosyaları ise Firebase Storage'da tutulur.
 | **Çevrimdışı önbellek** | Açılan sınav dosyaları cihazda saklanır; daha önce açılan sınavlar tekrar indirilmeden açılır. |
 | **Karanlık mod** | Tüm ekranlar sistem renkleriyle açık ve koyu temaya uyum sağlar. |
 | **Erişilebilirlik** | Dynamic Type, VoiceOver etiketleri ve iPad'de okunabilir satır genişlikleri. |
+| **Telefonla giriş** | Uygulamanın tamamı telefon numarasıyla (SMS kodu, yalnızca +90) girişi gerektirir; kod son hane girilince otomatik gönderilir, tekrar gönderme 60 sn bekletilir. |
+| **Hesap** | Ana sayfadaki kişi simgesinden numaranı gör, çıkış yap ya da hesabını kalıcı olarak sil. |
 | **Güncelleme bildirimi** | App Store'da yeni sürüm olduğunda kullanıcı nazikçe bilgilendirilir. |
 | **Gizlilik** | Reklam yok, reklam kimliği (IDFA) yok, takip izni istenmez. |
 
@@ -102,8 +105,8 @@ flowchart LR
   `@State` ile sahiplenilir. Combine ve `ObservableObject` kullanılmaz; asenkron işler `async/await` ile yürür.
 - **Swift 6 ve MainActor varsayılanı.** Proje `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` ile derlenir; görsel
   çözme, dosya ve JSON işlemleri gibi ağır işler `nonisolated` fonksiyonlarla ana iş parçacığının dışında yapılır.
-- **Protokol arkasındaki servisler.** Veri katmanı `ArchiveRepository`, `RemoteFileLoading`, `AppUpdateChecking`
-  ve `AnalyticsTracking` protokolleri üzerinden kullanılır. Böylece Firebase, App Store ve ağ erişimi testlerde ve
+- **Protokol arkasındaki servisler.** Veri katmanı `ArchiveRepository`, `RemoteFileLoading`, `AppUpdateChecking`,
+  `AnalyticsTracking`, `AuthServicing` ve `RequestAuthorizing` protokolleri üzerinden kullanılır. Böylece Firebase, App Store ve ağ erişimi testlerde ve
   önizlemelerde örnek implementasyonlarla değiştirilebilir.
 
   | Protokol | Canlı implementasyon | Örnek (DEBUG) implementasyon |
@@ -112,10 +115,22 @@ flowchart LR
   | `RemoteFileLoading` | `RemoteFileLoader` | `RemoteFileLoader` (paket içi örnek dosyalar) |
   | `AppUpdateChecking` | `AppStoreUpdateChecker` | `StubUpdateChecker` |
   | `AnalyticsTracking` | `FirebaseAnalyticsTracker` | `NoOpAnalyticsTracker` |
+  | `AuthServicing` | `FirebaseAuthService` | `MockAuthService` (kod: `111111`) |
+  | `RequestAuthorizing` | `FirebaseRequestAuthorizer` | — (örnek dosyalar `file://`, yetki gerekmez) |
+
+- **Giriş zorunlu.** Uygulamanın tamamı telefon numarasıyla (SMS kodu, yalnızca +90) giriş gerektirir. `SessionStore`
+  oturum durumunu (`unknown` / `signedOut` / `signedIn`) tutar; `RootView` buna göre `LoginView` ya da arşivi
+  gösterir. Hesap ekranı (`AccountView`) çıkış ve kalıcı hesap silme sunar. `AppDelegate`, APNs belirtecini ve
+  sessiz bildirimleri Firebase Auth'a iletir (swizzling kapalı); reCAPTCHA dönüşü `onOpenURL` ile iletilir.
+- **App Check.** `live()` Firebase'i yapılandırmadan önce App Check sağlayıcısını kurar: Release'te App Attest
+  (desteklenmeyen cihazda DeviceCheck), Debug ve simülatörde debug sağlayıcısı.
+- **Yetkili dosya indirme.** Storage dosyaları `downloadURL` içindeki `token=` parametresiyle değil, kullanıcının
+  ID belirteci (`Authorization: Firebase …`) ve App Check belirteci (`X-Firebase-AppCheck`) ile indirilir. Önbellek
+  anahtarı `token` parametresi çıkarılmış kanonik URL'dir.
 
 - **AppEnvironment ile bağımlılık enjeksiyonu.** Tüm servisler tek bir `AppEnvironment` nesnesinde toplanır ve
   `.environment(_:)` ile view hiyerarşisine verilir. `live()` üretim servislerini, `mock()` örnek veriyi kurar;
-  `makeDefault()` başlatma argümanına göre ikisinden birini seçer.
+  `makeDefault()` başlatma argümanına göre ikisinden birini seçer. Ortam `AppDelegate` tarafından ilk erişimde (`didFinishLaunching` içinde) kurulur; Firebase Auth'un APNs yöneticileri `UIApplication` varken oluşsun diye bu sıra önemlidir.
 - **Router.** Gezinme durumu `NavigationStack` yolunu tutan `@Observable Router` nesnesindedir. `Route` enum'u
   (`browse`, `exam`) tüm hedefleri tanımlar; breadcrumb'a dokunmak `popTo(_:)`, son görüntülenen bir sınavı açmak
   ise `openExam(at:kind:)` ile tüm üst seviyeleri yığına yerleştirir, böylece Geri tuşu arşivde yukarı yürür.
@@ -143,14 +158,17 @@ gerçek arşiv düğümleri her zaman nesne olduğundan bu yaprak değerler list
 ViFi-iOS/
 ├── project.yml              # XcodeGen tanımı — Xcode projesinin tek kaynağı
 ├── .swiftlint.yml           # Lint kuralları
+├── firebase/                # Güvenlik kuralları, kural testleri, belirteç iptal betiği (bkz. firebase/README.md)
 ├── ViFi/
-│   ├── App/                 # Uygulama girişi, RootView, Router, AppEnvironment
+│   ├── App/                 # Uygulama girişi, AppDelegate, RootView, Router, AppEnvironment
 │   ├── Core/
-│   │   ├── Models/          # ArchivePath, ArchiveItem, ExamDocument
-│   │   ├── Services/        # Servis protokolleri, ArchiveParser, Firebase / App Store servisleri, RecentExamsStore
+│   │   ├── Models/          # ArchivePath, ArchiveItem, ExamDocument, PhoneNumber
+│   │   ├── Services/        # Servis protokolleri, ArchiveParser, Firebase / App Store servisleri, AuthServicing, SessionStore, App Check, RecentExamsStore
 │   │   └── Utilities/       # Loadable, Logger
 │   ├── DesignSystem/        # IconBadge, durum görünümleri, seviye stilleri
 │   ├── Features/
+│   │   ├── Auth/            # Telefon numarasıyla giriş (SMS kodu)
+│   │   ├── Account/         # Hesap: çıkış ve hesap silme
 │   │   ├── Home/            # Ana sayfa, son görüntülenenler, Hakkında
 │   │   ├── Browse/          # Fakülte → sınav listeleri, breadcrumb
 │   │   └── Exam/            # Görsel ve PDF sınav görüntüleyicileri
@@ -173,7 +191,7 @@ ViFi-iOS/
 | [SwiftLint](https://github.com/realm/SwiftLint) | Önerilir (derleme sırasında çalışır) |
 
 Bağımlılıklar Swift Package Manager ile yönetilir: Firebase iOS SDK 12 (`FirebaseDatabase`,
-`FirebaseAnalyticsCore`). CocoaPods kullanılmaz. Paket sürümleri depodaki `Package.resolved` ile sabitlenir
+`FirebaseAnalyticsCore`, `FirebaseAuth`, `FirebaseAppCheck`). CocoaPods kullanılmaz. Paket sürümleri depodaki `Package.resolved` ile sabitlenir
 (Firebase 12.19.2); güncellemek için Xcode'da *File › Packages › Update to Latest Package Versions*.
 
 ## Kurulum
@@ -199,6 +217,21 @@ open ViFi.xcodeproj
 - **GoogleService-Info.plist.** Canlı Firebase yapılandırması `ViFi/Resources/GoogleService-Info.plist` dosyasındadır.
   Kendi Firebase projenizle çalışacaksanız bu dosyayı kendi projenizin dosyasıyla değiştirin. Örnek veri modu
   Firebase'e hiç bağlanmaz ve bu dosyaya ihtiyaç duymaz.
+- **Firebase Konsolu (proje sahibi yapar).**
+  - *Authentication › Sign-in method*: **Phone** sağlayıcısını etkinleştirin. *Settings › SMS region policy*
+    altında yalnızca Türkiye (TR) için izin listesi tanımlayın.
+  - *Authentication › Phone*: geliştirme ve App Review için sahte test numaraları ekleyin (ör. `+90 555 000 00 01`,
+    kod `111111`). Debug'da `-ViFiPhoneAuthTesting` ile bu numaralarda uygulama doğrulaması atlanır.
+  - *Project settings › Cloud Messaging*: Apple'dan APNs Auth Key (`.p8`) oluşturup Key ID ve Team ID ile yükleyin.
+    Sessiz bildirimle doğrulama buna dayanır; yoksa giriş her zaman reCAPTCHA'ya düşer.
+  - *App Check › Apps*: iOS uygulamasını **App Attest** sağlayıcısıyla kaydedin (yedek olarak DeviceCheck).
+    Debug derlemesini ya da simülatörü bir kez çalıştırıp Xcode konsolundaki *Firebase App Check debug token*
+    değerini *Manage debug tokens* altına ekleyin (CI için `FIRAAppCheckDebugToken`).
+  - *App Check › APIs*: Realtime Database ve Storage için zorunlu kılmayı yalnızca yeni sürüm yayınlandıktan ve
+    debug belirteçleri eklendikten sonra açın.
+- **Apple Developer.** `com.BuyukerYazilim.ViFi2` kimliğinde **Push Notifications** ve **App Attest**
+  yeteneklerini etkinleştirip provisioning profillerini yenileyin (`ViFi.entitlements` bunları gerektirir).
+  App Store Connect gizlilik etiketlerine *Telefon Numarası* ve *Kullanıcı Kimliği* ekleyin.
 - **İmzalama.** Simülatör derlemeleri imza gerektirmez. Gerçek cihazda çalıştırmak için `project.yml` içindeki
   `DEVELOPMENT_TEAM` ve provisioning profili ayarlarını kendi hesabınıza göre güncelleyin.
 
@@ -226,6 +259,13 @@ xcrun simctl launch booted com.BuyukerYazilim.ViFi2 -ViFiMockData
 Örnek arşiv; görsel ve PDF sınavlar, uzun isimli bir üniversite, sınavı olmayan bir ders ve dosyası olmayan bir
 sınav gibi uç durumları içerir. SwiftUI önizlemeleri de aynı veriyi `AppEnvironment.mock()` üzerinden kullanır.
 
+Örnek veri modunda kullanıcı oturum açmış olarak başlar. Diğer Debug başlatma argümanları:
+
+| Argüman | Etki |
+|---|---|
+| `-ViFiSignedOut` | `-ViFiMockData` ile birlikte: oturum kapalı başlar (giriş ekranı). Her numara kabul edilir, kod `111111`. |
+| `-ViFiPhoneAuthTesting` | Canlı Firebase ile: telefon doğrulamasında uygulama doğrulamasını (APNs / reCAPTCHA) kapatır. Yalnızca Firebase konsolunda tanımlı test numaralarıyla çalışır. |
+
 ## Testler ve Kod Kalitesi
 
 ```bash
@@ -246,6 +286,60 @@ swiftlint --fix
 - **SwiftLint** her derlemede çalışır. `print` yerine `Logger`, Combine yerine Observation kullanımı gibi proje
   kuralları da lint ile denetlenir.
 
+## Firebase Güvenlik Kuralları
+
+Kurallar ve testleri `firebase/` klasöründedir (operasyon özeti: [firebase/README.md](firebase/README.md)).
+Varsayılan her şey kapalıdır; aşağıdaki izinler dışında kimse hiçbir şeye erişemez.
+
+| Yol | Kim ne yapabilir |
+|---|---|
+| Realtime DB `/Universitiess` | +90 telefonla girişli kullanıcılar ve yöneticiler okur; yalnızca yönetici yazar. |
+| Realtime DB `/pendingExams/<uid>` | Kullanıcı yalnızca kendi kaydını okur; yeni gönderim oluşturur, kendi `pending` gönderimini siler, var olanı değiştiremez. Yönetici hepsini okur ve yazar. Alanlar sıkı doğrulanır. |
+| Realtime DB diğer tüm düğümler | Kimseye açık değil (yönetici dahil). |
+| Storage `imagess/`, `pdfs/` | Tek dosya okuma: +90 kullanıcı ve yönetici. Listeleme kimseye açık değil; yalnızca yönetici yazar. |
+| Storage `pending/<uid>/<gönderim>/` | Yalnızca sahibi yeni JPEG/PDF (1 bayt – 15 MiB) yükler, üzerine yazamaz; sahibi ve yönetici okur ve siler. |
+
+Yönetici, `admin: true` özel talebi (custom claim) taşıyan hesaptır: `setCustomUserClaims(uid, { admin: true })`.
+Yükleme arayüzü henüz yoktur; kurallar şimdiden hazırdır.
+
+**Emülatör testleri** (Firebase CLI ve Java 21 gerekir; proje kimliği `demo-vifi`, gerçek projeye dokunulmaz):
+
+```bash
+cd firebase
+npm install
+JAVA_HOME=/opt/homebrew/opt/openjdk@21 npm test
+```
+
+**Yayınlama** (yalnızca giriş ve App Check içeren sürüm hazır olduğunda; eski sürümler anında bozulur):
+
+```bash
+cd firebase
+firebase deploy --only database,storage --project vifi-831a8 --account <sahip hesabı>
+```
+
+Yayından önce konsoldan gereksiz kök düğümleri (`poc`, `2DfjkeJxHJTkdhz5VNVwFJzAeuD`, `Announcements`) silin.
+
+**İndirme belirteçlerini iptal etme.** Mevcut `downloadURL` bağlantılarındaki `token=` parametresi kuralları
+atlar. Yeni sürüm yayınlandıktan sonra `firebase/scripts/revoke-download-tokens.mjs` ile iptal edin
+(`gcloud auth application-default login` ile proje sahibi olarak):
+
+```bash
+cd firebase
+node scripts/revoke-download-tokens.mjs backup  --out backups/tokens-<tarih>.json
+node scripts/revoke-download-tokens.mjs revoke  --backup backups/tokens-<tarih>.json           # deneme, değişiklik yapmaz
+node scripts/revoke-download-tokens.mjs revoke  --backup backups/tokens-<tarih>.json --apply
+node scripts/revoke-download-tokens.mjs restore --from   backups/tokens-<tarih>.json --apply   # geri al
+```
+
+> [!NOTE]
+> Uygulamanın kendi indirmeleri (`alt=media`, kimlik + App Check belirteciyle) yeni belirteç **üretmez**; bu,
+> 10.10.2026'daki iptal öncesinde canlı bucket'ta tek dosyayla ölçüldü. Ancak okuma yetkisi olan bir kullanıcı
+> `getMetadata`/`getDownloadURL` çağırarak belirteçsiz bir dosyaya yeni belirteç ürettirebilir ve kalıcı bir genel
+> bağlantı elde edebilir; bu kurallarla engellenemez. Bu yüzden iptal, sızmış bağlantıları temizleyen tek seferlik
+> bir işlemdir ve her çalıştırmadan önce yeni yedek gerekir. Yükleyen kullanıcılar da kendi `pending/` dosyaları için belirteç alabilir. Bunlar yalnızca kurallarla
+> kapatılamaz; ileride Cloud Functions (belirteç temizliği, kota) gerekebilir. Onay aracı, incelenen dosyanın
+> `generation`/`md5Hash` değerini sabitleyip yalnızca baytları kopyalamalıdır.
+
 ## Sürüm Notları
 
 ### 3.0.0
@@ -263,14 +357,17 @@ swiftlint --fix
 - Açılan sınavlar için çevrimdışı önbellek.
 - Yeni sürüm bildirimi.
 - Dynamic Type, VoiceOver ve iPad için iyileştirilmiş erişilebilirlik.
+- Telefon numarasıyla giriş (SMS kodu, yalnızca +90) ve hesap ekranı: çıkış yapma, hesabı silme.
+- Firebase App Check (App Attest) ve sıkılaştırılmış Realtime Database / Storage güvenlik kuralları.
 
 **Değişen**
 
 - UIKit / Storyboard tabanlı uygulama SwiftUI ile yeniden yazıldı (MVVM + Observation, Swift 6).
 - Sekme çubuğuyla gezinme yerine tek gezinme yığını ve breadcrumb kullanılıyor.
 - CocoaPods yerine Swift Package Manager; Xcode projesi XcodeGen ile üretiliyor.
-- Firebase 10'dan 12'ye güncellendi; yalnızca `FirebaseDatabase` ve `FirebaseAnalyticsCore` kullanılıyor.
-- Dosyalar Firebase Storage SDK'sı yerine `downloadURL` üzerinden `URLSession` ile indiriliyor.
+- Firebase 10'dan 12'ye güncellendi; `FirebaseDatabase`, `FirebaseAnalyticsCore`, `FirebaseAuth` ve `FirebaseAppCheck` kullanılıyor.
+- Dosyalar Firebase Storage SDK'sı yerine `downloadURL` üzerinden `URLSession` ile indiriliyor; indirme artık `token=` yerine kullanıcının ID belirteci ve App Check belirteciyle yapılıyor.
+- Uygulamanın tamamı giriş gerektiriyor; arşiv artık herkese açık değil.
 - Minimum sürüm iOS 14'ten iOS 17'ye yükseltildi.
 
 **Kaldırılan**
@@ -287,8 +384,12 @@ swiftlint --fix
 ## Bilinen Durumlar
 
 > [!WARNING]
-> **Firebase Storage — HTTP 402.** Firebase projesi ücretsiz **Spark** planındayken `appspot.com` uzantılı Storage
-> bucket'larına yapılan dosya istekleri `HTTP 402 Payment Required` ile reddedilir. Bu durumda listeler normal
-> yüklenir ancak sınav dosyaları açılamaz ve kullanıcıya *"Dosya şu anda sunucudan alınamıyor"* mesajı gösterilir
-> (`ArchiveError.fileUnavailable`). Sorun uygulamadan kaynaklanmaz; Firebase projesi **Blaze** (kullandıkça öde)
-> planına geçirildiğinde dosyalar kod değişikliği gerekmeden yeniden açılır.
+> **Eski sürümler çalışmaz.** Sıkı güvenlik kuralları yayınlandığında giriş ve App Check içermeyen eski uygulama
+> sürümleri arşive erişemez; bu bilinçli bir karardır. Kuralları ve belirteç iptalini yalnızca yeni sürüm
+> yayınlandıktan sonra devreye alın.
+
+> [!NOTE]
+> **Firebase Storage — HTTP 402 (çözüldü).** Proje ücretsiz **Spark** planındayken `appspot.com` uzantılı Storage
+> bucket'larına yapılan dosya istekleri `HTTP 402 Payment Required` ile reddediliyordu ve kullanıcıya *"Dosya şu
+> anda sunucudan alınamıyor"* mesajı gösteriliyordu (`ArchiveError.fileUnavailable`). Proje **Blaze** (kullandıkça
+> öde) planına geçirilerek sorun giderildi; kod değişikliği gerekmedi.

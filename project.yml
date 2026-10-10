@@ -62,6 +62,18 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         # Screen views are reported explicitly from SwiftUI.
         FirebaseAutomaticScreenReportingEnabled: false
+        # AppDelegate forwards the APNs token, silent pushes and URLs to Firebase Auth explicitly;
+        # swizzling is unreliable with the SwiftUI lifecycle.
+        FirebaseAppDelegateProxyEnabled: false
+        # Phone sign-in falls back to a reCAPTCHA page that returns through the encoded app id scheme.
+        CFBundleURLTypes:
+          - CFBundleTypeRole: Editor
+            CFBundleURLName: phone-auth-recaptcha
+            CFBundleURLSchemes:
+              - app-1-441043948320-ios-05fac6c5c1ec991258bd45
+        # Firebase Auth verifies the app with a silent push before sending the SMS code.
+        UIBackgroundModes:
+          - remote-notification
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.BuyukerYazilim.ViFi2
@@ -70,6 +82,8 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         DEVELOPMENT_ASSET_PATHS: "\"ViFi/Preview Content\""
         ENABLE_PREVIEWS: YES
+        # Push notifications (phone sign-in app verification) and App Attest (App Check).
+        CODE_SIGN_ENTITLEMENTS: ViFi/Resources/ViFi.entitlements
         # The SwiftLint phase reads sources outside the script's declared inputs.
         ENABLE_USER_SCRIPT_SANDBOXING: NO
         CODE_SIGN_STYLE: Manual
@@ -87,6 +101,10 @@ targets:
         product: FirebaseDatabase
       - package: Firebase
         product: FirebaseAnalyticsCore
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseAppCheck
     postCompileScripts:
       - name: SwiftLint
         basedOnDependencyAnalysis: false

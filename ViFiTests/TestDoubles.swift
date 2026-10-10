@@ -110,6 +110,192 @@ final class AnalyticsSpy: AnalyticsTracking {
     }
 }
 
+// MARK: - Auth
+
+/// An `AuthServicing` that answers with scripted replies and records every call.
+///
+/// Each reply list answers successive calls in order; once it runs out, its last reply is repeated.
+/// Successful sign-ins, sign-outs and deletions update `currentUser` and notify `userChanges()` like the real
+/// service does.
+final class StubAuthService: AuthServicing {
+    enum Call: Equatable {
+        case sendCode(phoneNumber: String)
+        case signIn(verificationID: String, code: String)
+        case reauthenticate(verificationID: String, code: String)
+        case signOut
+        case deleteAccount
+    }
+
+    var currentUser: AuthUser?
+    var sendReplies: [Result<String, any Error>] = [.success("verification-1")]
+    var signInReplies: [Result<AuthUser, any Error>] = [.success(Fixture.user)]
+    var reauthenticateReplies: [Result<Void, any Error>] = [.success(())]
+    var deleteReplies: [Result<Void, any Error>] = [.success(())]
+    var signOutError: (any Error)?
+    /// When set, every asynchronous call waits at the gate before it is answered.
+    var gate: AsyncGate?
+
+    private(set) var calls: [Call] = []
+    private var continuations: [AsyncStream<AuthUser?>.Continuation] = []
+
+    init(currentUser: AuthUser? = nil) {
+        self.currentUser = currentUser
+    }
+
+    /// The codes sent so far, as the numbers they were sent to.
+    var sentNumbers: [String] {
+        calls.compactMap { if case let .sendCode(number) = $0 { number } else { nil } }
+    }
+
+    /// The number of calls equal to `call`.
+    func count(of call: Call) -> Int {
+        calls.count(where: { $0 == call })
+    }
+
+    /// Number of `userChanges()` streams that were requested and not finished by `finishUserChanges()`.
+    var observerCount: Int {
+        continuations.count
+    }
+
+    func userChanges() -> AsyncStream<AuthUser?> {
+        let (stream, continuation) = AsyncStream.makeStream(of: AuthUser?.self)
+        continuation.yield(currentUser)
+        continuations.append(continuation)
+        return stream
+    }
+
+    /// Reports a sign-in or sign-out that happened elsewhere (e.g. the session was revoked).
+    func emit(_ user: AuthUser?) {
+        currentUser = user
+        for continuation in continuations {
+            continuation.yield(user)
+        }
+    }
+
+    /// Ends every `userChanges()` stream.
+    func finishUserChanges() {
+        for continuation in continuations {
+            continuation.finish()
+        }
+        continuations.removeAll()
+    }
+
+    func sendVerificationCode(to phoneNumber: String) async throws -> String {
+        let call = calls.count(where: { if case .sendCode = $0 { true } else { false } })
+        calls.append(.sendCode(phoneNumber: phoneNumber))
+        await gate?.pass()
+        return try Self.reply(to: call, from: sendReplies).get()
+    }
+
+    @discardableResult
+    func signIn(verificationID: String, code: String) async throws -> AuthUser {
+        let call = calls.count(where: { if case .signIn = $0 { true } else { false } })
+        calls.append(.signIn(verificationID: verificationID, code: code))
+        await gate?.pass()
+        let user = try Self.reply(to: call, from: signInReplies).get()
+        emit(user)
+        return user
+    }
+
+    func reauthenticate(verificationID: String, code: String) async throws {
+        let call = calls.count(where: { if case .reauthenticate = $0 { true } else { false } })
+        calls.append(.reauthenticate(verificationID: verificationID, code: code))
+        await gate?.pass()
+        try Self.reply(to: call, from: reauthenticateReplies).get()
+    }
+
+    func signOut() throws {
+        calls.append(.signOut)
+        if let signOutError {
+            throw signOutError
+        }
+        emit(nil)
+    }
+
+    func deleteAccount() async throws {
+        let call = calls.count(where: { $0 == .deleteAccount })
+        calls.append(.deleteAccount)
+        await gate?.pass()
+        try Self.reply(to: call, from: deleteReplies).get()
+        emit(nil)
+    }
+
+    func canHandle(_ url: URL) -> Bool {
+        false
+    }
+
+    private static func reply<Value>(
+        to call: Int,
+        from replies: [Result<Value, any Error>]
+    ) -> Result<Value, any Error> {
+        guard !replies.isEmpty else {
+            return .failure(AuthError.unknown(message: "No stubbed reply for call \(call)."))
+        }
+        return replies[min(call, replies.count - 1)]
+    }
+}
+
+/// A `RequestAuthorizing` that adds fixed credentials and records every request for them.
+///
+/// The ID token is `cached-token`, or `refreshed-token` after a forced refresh; the App Check token is
+/// `app-check-token`.
+final class StubRequestAuthorizer: RequestAuthorizing {
+    struct Call: Equatable {
+        let url: URL
+        let forceRefresh: Bool
+    }
+
+    /// When set, every request fails with it (e.g. `ArchiveError.permissionDenied` when signed out).
+    var failure: (any Error)?
+    /// When set, every request waits at the gate before it is answered.
+    var gate: AsyncGate?
+
+    private(set) var calls: [Call] = []
+
+    func authorizedRequest(for url: URL, forceRefresh: Bool) async throws -> URLRequest {
+        calls.append(Call(url: url, forceRefresh: forceRefresh))
+        await gate?.pass()
+        if let failure {
+            throw failure
+        }
+        var request = URLRequest(url: url)
+        request.setValue(forceRefresh ? "Firebase refreshed-token" : "Firebase cached-token", forHTTPHeaderField: "Authorization")
+        request.setValue("app-check-token", forHTTPHeaderField: "X-Firebase-AppCheck")
+        return request
+    }
+}
+
+// MARK: - Time & waiting
+
+/// A clock the test moves by hand, to read through `now`.
+final class TestClock {
+    private(set) var date: Date
+
+    init(_ date: Date = Date(timeIntervalSince1970: 1_700_000_000)) {
+        self.date = date
+    }
+
+    /// The injectable clock function.
+    var now: () -> Date {
+        { [self] in date }
+    }
+
+    func advance(by interval: TimeInterval) {
+        date = date.addingTimeInterval(interval)
+    }
+}
+
+/// Whether `condition` becomes true within `timeout`, polled between yields (for state that changes in
+/// tasks the test cannot await).
+func eventually(timeout: Duration = .seconds(5), _ condition: () -> Bool) async -> Bool {
+    let deadline = ContinuousClock.now + timeout
+    while !condition() {
+        guard ContinuousClock.now < deadline else { return false }
+        try? await Task.sleep(for: .milliseconds(5))
+    }
+    return true
+}
+
 // MARK: - Isolated storage
 
 /// A `UserDefaults` suite private to one test; its contents are deleted when it is released.
@@ -161,7 +347,7 @@ final class TemporaryBundle {
 
 /// Answers requests with canned replies registered per URL, so tests never touch the network.
 ///
-/// Replies live in a process-wide table keyed by URL: tests running in parallel stay independent as
+/// Replies live in process-wide tables keyed by URL: tests running in parallel stay independent as
 /// long as each one registers a URL of its own.
 nonisolated final class StubURLProtocol: URLProtocol {
     enum Reply: Sendable {
@@ -169,7 +355,14 @@ nonisolated final class StubURLProtocol: URLProtocol {
         case failure(URLError.Code)
     }
 
+    /// Replies answered in order (the last one repeats), and the requests that were received.
+    private struct Script {
+        var replies: [Reply]
+        var requests: [URLRequest] = []
+    }
+
     private static let replies = OSAllocatedUnfairLock(initialState: [String: Reply]())
+    private static let scripts = OSAllocatedUnfairLock(initialState: [String: Script]())
 
     /// An ephemeral session whose requests to `url` get `reply`; any other request fails.
     static func session(answering url: URL, with reply: Reply) -> URLSession {
@@ -179,6 +372,22 @@ nonisolated final class StubURLProtocol: URLProtocol {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubURLProtocol.self]
         return URLSession(configuration: configuration)
+    }
+
+    /// A session whose successive requests to `url` get `replies` in order (the last one repeats), with a log of
+    /// the requests as they arrived (headers included). The session has an in-memory response cache.
+    static func session(answering url: URL, inOrder replies: [Reply]) -> (session: URLSession, log: RequestLog) {
+        let key = url.absoluteString
+        scripts.withLock { $0[key] = Script(replies: replies) }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StubURLProtocol.self]
+        configuration.urlCache = URLCache(memoryCapacity: 20 * 1024 * 1024, diskCapacity: 0)
+        return (URLSession(configuration: configuration), RequestLog(key: key))
+    }
+
+    fileprivate static func requests(for key: String) -> [URLRequest] {
+        scripts.withLock { $0[key]?.requests ?? [] }
     }
 
     override static func canInit(with request: URLRequest) -> Bool {
@@ -194,8 +403,7 @@ nonisolated final class StubURLProtocol: URLProtocol {
             client?.urlProtocol(self, didFailWithError: URLError(.badURL))
             return
         }
-        let key = url.absoluteString
-        switch Self.replies.withLock({ $0[key] }) {
+        switch Self.nextReply(for: url, request: request) {
         case let .response(statusCode, body):
             guard let response = HTTPURLResponse(
                 url: url,
@@ -217,12 +425,56 @@ nonisolated final class StubURLProtocol: URLProtocol {
     }
 
     override func stopLoading() {}
+
+    /// The reply for `request`, recording the request when its URL has a script.
+    private static func nextReply(for url: URL, request: URLRequest) -> Reply? {
+        let key = url.absoluteString
+        let scripted: Reply?? = scripts.withLock { scripts in
+            guard var script = scripts[key], !script.replies.isEmpty else { return nil }
+            let index = min(script.requests.count, script.replies.count - 1)
+            script.requests.append(request)
+            scripts[key] = script
+            return .some(script.replies[index])
+        }
+        if let scripted {
+            return scripted
+        }
+        return replies.withLock { $0[key] }
+    }
+}
+
+/// The requests a scripted `StubURLProtocol` URL received, oldest first.
+nonisolated final class RequestLog: Sendable {
+    private let key: String
+
+    fileprivate init(key: String) {
+        self.key = key
+    }
+
+    var requests: [URLRequest] {
+        StubURLProtocol.requests(for: key)
+    }
+
+    var count: Int {
+        requests.count
+    }
+
+    /// The value of header `name` on the request at `index`, or `nil`.
+    func header(_ name: String, at index: Int) -> String? {
+        let requests = requests
+        guard requests.indices.contains(index) else { return nil }
+        return requests[index].value(forHTTPHeaderField: name)
+    }
 }
 
 // MARK: - Fixtures
 
 /// Archive values shared by the suites, named after the bundled mock archive.
 enum Fixture {
+    /// A signed-in user with a Turkish number.
+    static let user = AuthUser(id: "user-1", phoneNumber: "+905321234567")
+    static let phoneNumber = "+905321234567"
+
     static let lesson = ArchivePath(components: [
         "BOZOK ÜNİVERSİTESİ",
         "MÜHENDİSLİK MİMARLIK FAKÜLTESİ",
