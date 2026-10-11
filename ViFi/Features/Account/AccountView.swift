@@ -7,7 +7,7 @@ struct AccountView: View {
     var body: some View {
         // Signing out or deleting replaces the whole archive (and this sheet) with the login screen.
         if let user = environment.session.user {
-            AccountScreen(user: user, auth: environment.auth)
+            AccountScreen(user: user, auth: environment.auth, profileName: environment.profile.profile?.fullName)
         }
     }
 }
@@ -19,14 +19,21 @@ private struct AccountScreen: View {
     @State private var isConfirmingSignOut = false
     @State private var isConfirmingDeletion = false
     @FocusState private var isCodeFocused: Bool
+    /// The signed-in user, for the edit-profile link (the view model already holds it too).
+    private let user: AuthUser
+    /// The current profile's display name, shown on the edit-profile row.
+    private let profileName: String?
 
-    init(user: AuthUser, auth: any AuthServicing) {
+    init(user: AuthUser, auth: any AuthServicing, profileName: String?) {
         _viewModel = State(initialValue: AccountViewModel(user: user, auth: auth))
+        self.user = user
+        self.profileName = profileName
     }
 
     var body: some View {
         NavigationStack {
             List {
+                profileSection
                 phoneSection
                 signOutSection
                 deleteSection
@@ -87,6 +94,28 @@ private struct AccountScreen: View {
     }
 
     // MARK: - Sections
+
+    private var profileSection: some View {
+        Section {
+            NavigationLink {
+                EditProfileView(user: user)
+            } label: {
+                HStack(spacing: 14) {
+                    IconBadge(systemName: "person.text.rectangle.fill")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Profil")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Text(profileName ?? String(localized: "Profili Düzenle"))
+                            .font(.headline)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            .disabled(viewModel.isWorking)
+            .accessibilityIdentifier("account.editProfile")
+        }
+    }
 
     private var phoneSection: some View {
         Section {

@@ -300,6 +300,58 @@ nonisolated final class ViFiUITests: XCTestCase {
         XCTAssertTrue(app.element("home.list").exists)
     }
 
+    // MARK: - Profile
+
+    @MainActor
+    func testProfileCompletionGateBlocksUntilFilledThenOpensArchive() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["-ViFiMockData", "-ViFiProfileIncomplete"]
+        app.launch()
+
+        // The completion gate replaces the archive until the profile is filled in.
+        XCTAssertTrue(app.element("profile.name").waitForExistence(timeout: Timeout.content), "The profile completion screen did not appear")
+        XCTAssertFalse(app.element("home.list").exists, "The archive must stay gated until the profile is complete")
+
+        let nameField = app.element("profile.name")
+        nameField.tap()
+        nameField.typeText("Deneme")
+        let surnameField = app.element("profile.surname")
+        surnameField.tap()
+        surnameField.typeText("Kullanici")
+
+        // University, faculty and department from the bundled lists (opening each picker confirms the push works).
+        chooseFirstCatalogOption(prefix: "profile.university", in: app)
+        chooseFirstCatalogOption(prefix: "profile.faculty", in: app)
+        chooseFirstCatalogOption(prefix: "profile.department", in: app)
+
+        app.buttons["Kadın"].tap()
+
+        // Save lives in the navigation bar (always visible); tapping it is a no-op until every field is valid.
+        tapElement("profile.save", in: app)
+
+        XCTAssertTrue(app.element("home.list").waitForExistence(timeout: Timeout.content), "Home did not appear after saving the profile")
+        XCTAssertTrue(app.element("row.BOZOK ÜNİVERSİTESİ").waitForExistence(timeout: Timeout.content))
+    }
+
+    @MainActor
+    func testEditProfileFromAccountSavesAndReturns() {
+        let app = launchApp()
+
+        tapElement("toolbar.account", in: app)
+        tapElement("account.editProfile", in: app)
+
+        // The editor is prefilled with the existing profile.
+        XCTAssertTrue(app.element("profile.name").waitForExistence(timeout: Timeout.transition), "The edit-profile screen did not appear")
+        let save = app.element("editProfile.save")
+        XCTAssertTrue(save.waitForExistence(timeout: Timeout.transition))
+        XCTAssertTrue(save.isEnabled, "A prefilled, valid profile should be savable")
+
+        save.tap()
+
+        XCTAssertTrue(app.element("account.sheet").waitForExistence(timeout: Timeout.transition), "Saving should return to the account sheet")
+    }
+
     // MARK: - Update gate
 
     @MainActor
@@ -373,6 +425,14 @@ private extension ViFiUITests {
             scrollIntoView(row, in: app)
             row.tap()
         }
+    }
+
+    /// Opens the catalog picker `prefix` and taps its first listed option.
+    func chooseFirstCatalogOption(prefix: String, in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
+        tapElement(prefix, in: app, file: file, line: line)
+        let option = app.element("\(prefix).option")
+        XCTAssertTrue(option.waitForExistence(timeout: Timeout.content), "The \(prefix) picker showed no options", file: file, line: line)
+        option.tap()
     }
 
     /// Waits for the element with `identifier`, then taps it.

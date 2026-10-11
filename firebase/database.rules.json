@@ -81,6 +81,65 @@
           }
         }
       }
+    },
+    "users": {
+      ".read": "auth != null && auth.token.admin === true",
+      ".indexOn": ["profile/universityId", "profile/facultyId", "profile/departmentId", "profile/gender"],
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid && auth.token.phone_number != null && auth.token.phone_number.matches(/^\\+90[0-9]{10}$/)",
+        "profile": {
+          ".write": "auth != null && auth.uid === $uid && auth.token.phone_number != null && auth.token.phone_number.matches(/^\\+90[0-9]{10}$/)",
+          ".validate": "newData.hasChildren(['name', 'surname', 'university', 'universityId', 'universityIsCustom', 'faculty', 'facultyId', 'facultyIsCustom', 'department', 'departmentId', 'departmentIsCustom', 'gender', 'phoneNumber', 'updatedAt'])",
+          "name": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 60 && !newData.val().matches(/[.$#\\[\\]\\/]/) && newData.val().matches(/[^ ]/)"
+          },
+          "surname": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 60 && !newData.val().matches(/[.$#\\[\\]\\/]/) && newData.val().matches(/[^ ]/)"
+          },
+          "university": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 120 && !newData.val().matches(/[.$#\\[\\]\\/]/) && newData.val().matches(/[^ ]/)"
+          },
+          "universityId": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 140 && newData.val().matches(/^[a-z0-9-]+$/)"
+          },
+          "universityIsCustom": {
+            ".validate": "newData.isBoolean()"
+          },
+          "faculty": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 120 && !newData.val().matches(/[.$#\\[\\]\\/]/) && newData.val().matches(/[^ ]/)"
+          },
+          "facultyId": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 140 && newData.val().matches(/^[a-z0-9-]+$/)"
+          },
+          "facultyIsCustom": {
+            ".validate": "newData.isBoolean()"
+          },
+          "department": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 120 && !newData.val().matches(/[.$#\\[\\]\\/]/) && newData.val().matches(/[^ ]/)"
+          },
+          "departmentId": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 140 && newData.val().matches(/^[a-z0-9-]+$/)"
+          },
+          "departmentIsCustom": {
+            ".validate": "newData.isBoolean()"
+          },
+          "gender": {
+            ".validate": "newData.isString() && (newData.val() === 'female' || newData.val() === 'male')"
+          },
+          "phoneNumber": {
+            ".validate": "newData.isString() && newData.val() === auth.token.phone_number && newData.val().matches(/^\\+90[0-9]{10}$/)"
+          },
+          "updatedAt": {
+            ".validate": "newData.isNumber() && newData.val() === now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
     }
   }
 }

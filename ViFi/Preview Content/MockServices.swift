@@ -16,8 +16,16 @@ extension AppEnvironment {
             updateChecker: StubUpdateChecker(status: mockUpdateStatus(arguments: arguments)),
             analytics: NoOpAnalyticsTracker(),
             auth: MockAuthService(isSignedIn: !arguments.contains(LaunchArgument.signedOut)),
+            profileService: MockProfileService(profile: mockProfile(arguments: arguments)),
+            catalog: .bundled(),
             recents: RecentExamsStore(defaults: .mockSuite)
         )
+    }
+
+    /// No stored profile with `-ViFiProfileIncomplete` (the completion gate is shown), otherwise a sample one
+    /// (so the archive opens straight away).
+    private static func mockProfile(arguments: [String]) -> UserProfile? {
+        arguments.contains(LaunchArgument.profileIncomplete) ? nil : .mockDefault
     }
 
     /// A blocking required update with `-ViFiForceUpdate`, otherwise up to date.
@@ -324,6 +332,57 @@ final class MockAuthService: AuthServicing {
         for continuation in continuations.values {
             continuation.yield(user)
         }
+    }
+
+    private func simulateLatency() async throws {
+        if latency > .zero {
+            try await Task.sleep(for: latency)
+        }
+    }
+}
+
+// MARK: - Profile
+
+/// A sample profile for the signed-in mock user, so the archive opens without the completion gate.
+extension UserProfile {
+    static let mockDefault = UserProfile(
+        name: "Ayşe",
+        surname: "Yılmaz",
+        university: "Boğaziçi Üniversitesi",
+        universityId: "bogazici-universitesi",
+        universityIsCustom: false,
+        faculty: "Mühendislik Fakültesi",
+        facultyId: "muhendislik-fakultesi",
+        facultyIsCustom: false,
+        department: "Bilgisayar Mühendisliği",
+        departmentId: "bilgisayar-muhendisligi",
+        departmentIsCustom: false,
+        gender: .female,
+        phoneNumber: MockAuthService.defaultUser.phoneNumber ?? "+905321234567"
+    )
+}
+
+/// Profile storage in memory, for previews and UI tests.
+final class MockProfileService: ProfileServicing {
+    private var profile: UserProfile?
+    private let latency: Duration
+
+    /// - Parameters:
+    ///   - profile: The stored profile, or `nil` to start on the completion gate.
+    ///   - latency: Simulated network delay of every call.
+    init(profile: UserProfile?, latency: Duration = .milliseconds(300)) {
+        self.profile = profile
+        self.latency = latency
+    }
+
+    func loadProfile(uid: String) async throws -> UserProfile? {
+        try await simulateLatency()
+        return profile
+    }
+
+    func saveProfile(_ profile: UserProfile, uid: String) async throws {
+        try await simulateLatency()
+        self.profile = profile
     }
 
     private func simulateLatency() async throws {

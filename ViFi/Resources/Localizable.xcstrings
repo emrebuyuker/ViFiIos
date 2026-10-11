@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "tr",
   "strings" : {
+    "\"%@\" kullan" : {
+
+    },
     "%@ - Dosya %lld" : {
       "comment" : "File name of a shared PDF when an exam has several, e.g. “2018 VİZE - Dosya 2”. Avoid / \\ : characters.",
       "localizations" : {
@@ -156,6 +159,9 @@
         }
       }
     },
+    "Ad" : {
+
+    },
     "Ana Sayfa" : {
       "comment" : "Toolbar button (house icon) that returns to the university list.",
       "localizations" : {
@@ -167,6 +173,12 @@
         }
       }
     },
+    "Ara" : {
+
+    },
+    "Aradığın listede yoksa, yazdığın metni olduğu gibi kullanabilirsin." : {
+
+    },
     "Arşive tekrar ulaşmak için numaranı yeniden doğrulaman gerekir." : {
       "comment" : "Sign-out confirmation message.",
       "localizations" : {
@@ -177,6 +189,9 @@
           }
         }
       }
+    },
+    "Arşive ulaşmak için birkaç bilgini tamamla. Bu bilgiler profilinde saklanır." : {
+
     },
     "Belge indiriliyor…" : {
       "comment" : "Loading indicator while a PDF exam is downloaded.",
@@ -221,6 +236,9 @@
           }
         }
       }
+    },
+    "Bölüm" : {
+
     },
     "Bölümler" : {
       "comment" : "List title: the departments of a faculty.",
@@ -332,6 +350,9 @@
         }
       }
     },
+    "Bu sürümü atla" : {
+
+    },
     "Bu üniversitede henüz fakülte yok" : {
       "comment" : "Empty state title: a university without faculties.",
       "localizations" : {
@@ -353,6 +374,9 @@
           }
         }
       }
+    },
+    "Cinsiyet" : {
+
     },
     "Çıkış Yap" : {
       "comment" : "Button that signs the user out.",
@@ -530,6 +554,15 @@
         }
       }
     },
+    "Eğitim" : {
+
+    },
+    "Erkek" : {
+
+    },
+    "Fakülte" : {
+
+    },
     "Fakülteler" : {
       "comment" : "List title: the faculties of a university.",
       "localizations" : {
@@ -595,6 +628,9 @@
           }
         }
       }
+    },
+    "Güncelleme Gerekli" : {
+
     },
     "Güvenliğin için %@ numarasına gönderilen 6 haneli kodu gir." : {
       "comment" : "Re-verification footer; the argument is the formatted number, e.g. “+90 532 123 45 67”.",
@@ -717,6 +753,9 @@
         }
       }
     },
+    "Kadın" : {
+
+    },
     "Kapat" : {
       "comment" : "Accessibility label of the button that closes the full-screen viewer.",
       "localizations" : {
@@ -727,6 +766,12 @@
           }
         }
       }
+    },
+    "Kaydet" : {
+
+    },
+    "Kişisel Bilgiler" : {
+
     },
     "Kod Gönder" : {
       "comment" : "Login button that sends the SMS verification code.",
@@ -827,6 +872,9 @@
         }
       }
     },
+    "Numaran giriş sırasında doğrulandı ve değiştirilemez." : {
+
+    },
     "Numarana tek kullanımlık bir doğrulama kodu SMS ile gönderilir. Standart SMS ücretleri uygulanabilir." : {
       "comment" : "Login footnote under the Send Code button.",
       "localizations" : {
@@ -903,6 +951,18 @@
           }
         }
       }
+    },
+    "Profil" : {
+
+    },
+    "Profili Düzenle" : {
+
+    },
+    "Profilin şu anda kaydedilemiyor. Lütfen daha sonra tekrar dene." : {
+
+    },
+    "Profilini Tamamla" : {
+
     },
     "Sayfa %lld" : {
       "comment" : "Accessibility label of a page image in the full-screen viewer.",
@@ -993,6 +1053,9 @@
         }
       }
     },
+    "Seç" : {
+
+    },
     "Sınav" : {
       "comment" : "Fallback file name of a shared exam whose name is empty.",
       "localizations" : {
@@ -1081,6 +1144,9 @@
         }
       }
     },
+    "Son bir adım" : {
+
+    },
     "Son görüntülenen sınavlara hızlı erişim" : {
       "comment" : "About screen feature.",
       "localizations" : {
@@ -1114,6 +1180,9 @@
         }
       }
     },
+    "Soyad" : {
+
+    },
     "Sürüm %@ (%@)" : {
       "comment" : "App version and build number, e.g. “Sürüm 3.0.0 (6)”.",
       "localizations" : {
@@ -1133,6 +1202,7 @@
     },
     "Tamam" : {
       "comment" : "Button that dismisses an alert.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1152,6 +1222,9 @@
           }
         }
       }
+    },
+    "Telefon" : {
+
     },
     "Telefon numarası" : {
       "comment" : "Label of the phone number field and of the number on the account screen.",
@@ -1219,6 +1292,9 @@
         }
       }
     },
+    "Üniversite" : {
+
+    },
     "Üniversite ara" : {
       "comment" : "Search field prompt on the university list.",
       "localizations" : {
@@ -1276,6 +1352,7 @@
     },
     "ViFi %@ App Store'da. En iyi deneyim için uygulamayı güncelle." : {
       "comment" : "Update alert message. The argument is the new version number, e.g. “3.1.0”.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1287,6 +1364,7 @@
     },
     "ViFi, üniversitelerin geçmiş sınavlarını tek bir arşivde toplar. Üniversiteni, fakülteni, bölümünü ve dersini seç; sınavları görsel ya da PDF olarak incele ve paylaş." : {
       "comment" : "About screen: what the app does.",
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1295,6 +1373,9 @@
           }
         }
       }
+    },
+    "ViFi, üniversitelerin geçmiş sınavlarını tek bir arşivde toplar. Üniversiteni, fakülteni, bölümünü ve dersini seç; sınavları görsel ya da PDF olarak incele." : {
+
     },
     "Yakınlaştırarak ayrıntılı inceleme" : {
       "comment" : "About screen feature: pages can be zoomed in.",

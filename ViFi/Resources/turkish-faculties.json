@@ -1,0 +1,202 @@
+[
+  {
+    "id": "muhendislik-fakultesi",
+    "name": "Mühendislik Fakültesi"
+  },
+  {
+    "id": "muhendislik-ve-doga-bilimleri-fakultesi",
+    "name": "Mühendislik ve Doğa Bilimleri Fakültesi"
+  },
+  {
+    "id": "muhendislik-mimarlik-fakultesi",
+    "name": "Mühendislik-Mimarlık Fakültesi"
+  },
+  {
+    "id": "muhendislik-ve-mimarlik-fakultesi",
+    "name": "Mühendislik ve Mimarlık Fakültesi"
+  },
+  {
+    "id": "mimarlik-fakultesi",
+    "name": "Mimarlık Fakültesi"
+  },
+  {
+    "id": "mimarlik-ve-tasarim-fakultesi",
+    "name": "Mimarlık ve Tasarım Fakültesi"
+  },
+  {
+    "id": "tip-fakultesi",
+    "name": "Tıp Fakültesi"
+  },
+  {
+    "id": "dis-hekimligi-fakultesi",
+    "name": "Diş Hekimliği Fakültesi"
+  },
+  {
+    "id": "eczacilik-fakultesi",
+    "name": "Eczacılık Fakültesi"
+  },
+  {
+    "id": "saglik-bilimleri-fakultesi",
+    "name": "Sağlık Bilimleri Fakültesi"
+  },
+  {
+    "id": "hemsirelik-fakultesi",
+    "name": "Hemşirelik Fakültesi"
+  },
+  {
+    "id": "veteriner-fakultesi",
+    "name": "Veteriner Fakültesi"
+  },
+  {
+    "id": "hukuk-fakultesi",
+    "name": "Hukuk Fakültesi"
+  },
+  {
+    "id": "iktisadi-ve-idari-bilimler-fakultesi",
+    "name": "İktisadi ve İdari Bilimler Fakültesi"
+  },
+  {
+    "id": "iktisadi-idari-ve-sosyal-bilimler-fakultesi",
+    "name": "İktisadi, İdari ve Sosyal Bilimler Fakültesi"
+  },
+  {
+    "id": "isletme-fakultesi",
+    "name": "İşletme Fakültesi"
+  },
+  {
+    "id": "iktisat-fakultesi",
+    "name": "İktisat Fakültesi"
+  },
+  {
+    "id": "siyasal-bilgiler-fakultesi",
+    "name": "Siyasal Bilgiler Fakültesi"
+  },
+  {
+    "id": "ticari-bilimler-fakultesi",
+    "name": "Ticari Bilimler Fakültesi"
+  },
+  {
+    "id": "yonetim-bilimleri-fakultesi",
+    "name": "Yönetim Bilimleri Fakültesi"
+  },
+  {
+    "id": "fen-fakultesi",
+    "name": "Fen Fakültesi"
+  },
+  {
+    "id": "fen-edebiyat-fakultesi",
+    "name": "Fen-Edebiyat Fakültesi"
+  },
+  {
+    "id": "fen-bilimleri-fakultesi",
+    "name": "Fen Bilimleri Fakültesi"
+  },
+  {
+    "id": "edebiyat-fakultesi",
+    "name": "Edebiyat Fakültesi"
+  },
+  {
+    "id": "insan-ve-toplum-bilimleri-fakultesi",
+    "name": "İnsan ve Toplum Bilimleri Fakültesi"
+  },
+  {
+    "id": "sosyal-ve-beseri-bilimler-fakultesi",
+    "name": "Sosyal ve Beşeri Bilimler Fakültesi"
+  },
+  {
+    "id": "dil-ve-tarih-cografya-fakultesi",
+    "name": "Dil ve Tarih-Coğrafya Fakültesi"
+  },
+  {
+    "id": "egitim-fakultesi",
+    "name": "Eğitim Fakültesi"
+  },
+  {
+    "id": "egitim-bilimleri-fakultesi",
+    "name": "Eğitim Bilimleri Fakültesi"
+  },
+  {
+    "id": "iletisim-fakultesi",
+    "name": "İletişim Fakültesi"
+  },
+  {
+    "id": "guzel-sanatlar-fakultesi",
+    "name": "Güzel Sanatlar Fakültesi"
+  },
+  {
+    "id": "guzel-sanatlar-tasarim-ve-mimarlik-fakultesi",
+    "name": "Güzel Sanatlar, Tasarım ve Mimarlık Fakültesi"
+  },
+  {
+    "id": "sanat-ve-tasarim-fakultesi",
+    "name": "Sanat ve Tasarım Fakültesi"
+  },
+  {
+    "id": "ilahiyat-fakultesi",
+    "name": "İlahiyat Fakültesi"
+  },
+  {
+    "id": "islami-ilimler-fakultesi",
+    "name": "İslami İlimler Fakültesi"
+  },
+  {
+    "id": "ziraat-fakultesi",
+    "name": "Ziraat Fakültesi"
+  },
+  {
+    "id": "orman-fakultesi",
+    "name": "Orman Fakültesi"
+  },
+  {
+    "id": "su-urunleri-fakultesi",
+    "name": "Su Ürünleri Fakültesi"
+  },
+  {
+    "id": "teknoloji-fakultesi",
+    "name": "Teknoloji Fakültesi"
+  },
+  {
+    "id": "teknik-egitim-fakultesi",
+    "name": "Teknik Eğitim Fakültesi"
+  },
+  {
+    "id": "uygulamali-bilimler-fakultesi",
+    "name": "Uygulamalı Bilimler Fakültesi"
+  },
+  {
+    "id": "uygulamali-bilimler-yuksekokulu",
+    "name": "Uygulamalı Bilimler Yüksekokulu"
+  },
+  {
+    "id": "spor-bilimleri-fakultesi",
+    "name": "Spor Bilimleri Fakültesi"
+  },
+  {
+    "id": "turizm-fakultesi",
+    "name": "Turizm Fakültesi"
+  },
+  {
+    "id": "denizcilik-fakultesi",
+    "name": "Denizcilik Fakültesi"
+  },
+  {
+    "id": "deniz-bilimleri-fakultesi",
+    "name": "Deniz Bilimleri Fakültesi"
+  },
+  {
+    "id": "havacilik-ve-uzay-bilimleri-fakultesi",
+    "name": "Havacılık ve Uzay Bilimleri Fakültesi"
+  },
+  {
+    "id": "acik-ve-uzaktan-egitim-fakultesi",
+    "name": "Açık ve Uzaktan Eğitim Fakültesi"
+  },
+  {
+    "id": "saglik-hizmetleri-meslek-yuksekokulu",
+    "name": "Sağlık Hizmetleri Meslek Yüksekokulu"
+  },
+  {
+    "id": "meslek-yuksekokulu",
+    "name": "Meslek Yüksekokulu"
+  }
+]

@@ -57,7 +57,8 @@ sınav dosyaları ise Firebase Storage'da tutulur.
 | **Karanlık mod** | Tüm ekranlar sistem renkleriyle açık ve koyu temaya uyum sağlar. |
 | **Erişilebilirlik** | Dynamic Type, VoiceOver etiketleri ve iPad'de okunabilir satır genişlikleri. |
 | **Telefonla giriş** | Uygulamanın tamamı telefon numarasıyla (SMS kodu, yalnızca +90) girişi gerektirir; kod son hane girilince otomatik gönderilir, tekrar gönderme 60 sn bekletilir. |
-| **Hesap** | Ana sayfadaki kişi simgesinden numaranı gör, çıkış yap ya da hesabını kalıcı olarak sil. |
+| **Profil** | Girişten sonra zorunlu "Profilini Tamamla" kapısı: ad, soyad, üniversite, fakülte, bölüm, cinsiyet. Üniversite/fakülte/bölüm uygulamaya gömülü listeden aranıp seçilir, listede yoksa serbest yazılır; telefon numarası doğrulanmış hâliyle salt-okunur gösterilir. Profil `users/<uid>/profile` altında saklanır ve Hesap'tan düzenlenebilir. |
+| **Hesap** | Ana sayfadaki kişi simgesinden profilini düzenle, numaranı gör, çıkış yap ya da hesabını kalıcı olarak sil. |
 | **Güncelleme kapısı** | Sürüm politikası uzaktan (Realtime Database) yönetilir: yeni bir sürüm için kapatılabilir öneri (bu sürümü atlama seçeneğiyle), minimum sürümün altındakiler için kapatılamayan zorunlu güncelleme ekranı. |
 | **Gizlilik** | Reklam yok, reklam kimliği (IDFA) yok, takip izni istenmez. |
 
@@ -148,10 +149,26 @@ flowchart LR
 
 ```
 Universitiess/<üniversite>/<fakülte>/<bölüm>/<ders>/<sınav>/<JPG|PDF>/<pushId>/downloadURL
+users/<uid>/profile/{ name, surname,
+                       university, universityId, universityIsCustom,
+                       faculty,    facultyId,    facultyIsCustom,
+                       department, departmentId, departmentIsCustom,
+                       gender, phoneNumber, updatedAt }
 ```
 
-Her düğüm kendi adını da metin değeri olarak saklar (`uniname`, `fakname`, `bolname`, `lessonname`, `imagename`);
-gerçek arşiv düğümleri her zaman nesne olduğundan bu yaprak değerler listelenmez.
+Her arşiv düğümü kendi adını da metin değeri olarak saklar (`uniname`, `fakname`, `bolname`, `lessonname`,
+`imagename`); gerçek arşiv düğümleri her zaman nesne olduğundan bu yaprak değerler listelenmez.
+
+Kullanıcı profili `users/<uid>/profile` altında tutulur: `gender` yalnızca `female`/`male`, `phoneNumber` auth
+token'ındaki doğrulanmış numarayla aynı olmak zorunda, `updatedAt` her yazımda sunucu zaman damgası. Sahibi (+90)
+yalnızca kendi profilini okur/yazar; admin tüm profilleri okur. Giriş sonrası `ProfileStore` profili yükler ve
+`RootView` profil tamamlanana kadar arşivi açmaz.
+
+Üniversite/fakülte/bölüm hem **görünen ad** hem **kanonik id** (slug) olarak saklanır. Kanonik id'ler, ileride
+üniversite / üniversite+fakülte / üniversite+bölüm / üniversite+cinsiyet bazlı **bildirim segmentleri** (FCM
+topic'leri) için kullanılır; listeden seçilince id kanonik olur, serbest yazılınca `*IsCustom=true` ve `Slug` ile
+best-effort bir id üretilir. `users` düğümü `profile/universityId`, `facultyId`, `departmentId`, `gender`
+üzerinde indekslidir (admin segment sorguları için).
 
 ## Klasör Yapısı
 
@@ -163,17 +180,18 @@ ViFi-iOS/
 ├── ViFi/
 │   ├── App/                 # Uygulama girişi, AppDelegate, RootView, Router, AppEnvironment
 │   ├── Core/
-│   │   ├── Models/          # ArchivePath, ArchiveItem, ExamDocument, PhoneNumber
-│   │   ├── Services/        # Servis protokolleri, ArchiveParser, Firebase / App Store servisleri, AuthServicing, SessionStore, App Check, RecentExamsStore
-│   │   └── Utilities/       # Loadable, Logger
+│   │   ├── Models/          # ArchivePath, ArchiveItem, ExamDocument, PhoneNumber, UserProfile (+ Gender)
+│   │   ├── Services/        # Servis protokolleri, ArchiveParser, UserProfileParser, Firebase / App Store servisleri, AuthServicing, SessionStore, ProfileServicing, ProfileStore, UniversityCatalog, App Check, RecentExamsStore
+│   │   └── Utilities/       # Loadable, Logger, FirstOutcome
 │   ├── DesignSystem/        # IconBadge, durum görünümleri, seviye stilleri
 │   ├── Features/
 │   │   ├── Auth/            # Telefon numarasıyla giriş (SMS kodu)
-│   │   ├── Account/         # Hesap: çıkış ve hesap silme
+│   │   ├── Profile/         # Zorunlu profil tamamlama kapısı + profil düzenleme (ad/soyad/üniversite/fakülte/bölüm/cinsiyet)
+│   │   ├── Account/         # Hesap: profil düzenle, çıkış ve hesap silme
 │   │   ├── Home/            # Ana sayfa, son görüntülenenler, Hakkında
 │   │   ├── Browse/          # Fakülte → sınav listeleri, breadcrumb
 │   │   └── Exam/            # Görsel ve PDF sınav görüntüleyicileri
-│   ├── Resources/           # Assets, Info.plist, GoogleService-Info.plist
+│   ├── Resources/           # Assets, Info.plist, GoogleService-Info.plist, turkish-universities/-faculties/-departments.json
 │   └── Preview Content/     # Önizleme ve örnek veri dosyaları (yalnızca geliştirme)
 ├── ViFiTests/               # Birim testleri
 └── ViFiUITests/             # Arayüz testleri (örnek veriyle çalışır)
@@ -267,6 +285,7 @@ sınav gibi uç durumları içerir. SwiftUI önizlemeleri de aynı veriyi `AppEn
 |---|---|
 | `-ViFiSignedOut` | `-ViFiMockData` ile birlikte: oturum kapalı başlar (giriş ekranı). Her numara kabul edilir, kod `111111`. |
 | `-ViFiPhoneAuthTesting` | Canlı Firebase ile: telefon doğrulamasında uygulama doğrulamasını (APNs / reCAPTCHA) kapatır. Yalnızca Firebase konsolunda tanımlı test numaralarıyla çalışır. |
+| `-ViFiProfileIncomplete` | `-ViFiMockData` ile birlikte: profilsiz başlar, zorunlu "Profilini Tamamla" kapısından açılır. |
 
 ## Testler ve Kod Kalitesi
 
@@ -297,6 +316,7 @@ Varsayılan her şey kapalıdır; aşağıdaki izinler dışında kimse hiçbir 
 |---|---|
 | Realtime DB `/Universitiess` | +90 telefonla girişli kullanıcılar ve yöneticiler okur; yalnızca yönetici yazar. |
 | Realtime DB `/pendingExams/<uid>` | Kullanıcı yalnızca kendi kaydını okur; yeni gönderim oluşturur, kendi `pending` gönderimini siler, var olanı değiştiremez. Yönetici hepsini okur ve yazar. Alanlar sıkı doğrulanır. |
+| Realtime DB `/users/<uid>/profile` | Sahibi (+90) yalnızca kendi profilini okur ve yazar; yönetici tüm profilleri okur (yazamaz). Alanlar sıkı doğrulanır: `gender` yalnızca `female`/`male`, `phoneNumber` token'daki numarayla aynı, `updatedAt` sunucu zaman damgası. |
 | Realtime DB diğer tüm düğümler | Kimseye açık değil (yönetici dahil). |
 | Storage `imagess/`, `pdfs/` | Tek dosya okuma: +90 kullanıcı ve yönetici. Listeleme kimseye açık değil; yalnızca yönetici yazar. |
 | Storage `pending/<uid>/<gönderim>/` | Yalnızca sahibi yeni JPEG/PDF (1 bayt – 15 MiB) yükler, üzerine yazamaz; sahibi ve yönetici okur ve siler. |

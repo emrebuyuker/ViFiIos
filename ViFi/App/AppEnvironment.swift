@@ -12,8 +12,12 @@ final class AppEnvironment {
     @ObservationIgnored let updateChecker: any AppUpdateChecking
     @ObservationIgnored let analytics: any AnalyticsTracking
     @ObservationIgnored let auth: any AuthServicing
+    @ObservationIgnored let profileService: any ProfileServicing
+    /// The bundled lists backing the profile pickers (free text is always allowed on top).
+    @ObservationIgnored let catalog: UniversityCatalog
     let recents: RecentExamsStore
     let session: SessionStore
+    let profile: ProfileStore
 
     init(
         repository: any ArchiveRepository,
@@ -21,6 +25,8 @@ final class AppEnvironment {
         updateChecker: any AppUpdateChecking,
         analytics: any AnalyticsTracking,
         auth: any AuthServicing,
+        profileService: any ProfileServicing,
+        catalog: UniversityCatalog,
         recents: RecentExamsStore
     ) {
         self.repository = repository
@@ -28,8 +34,11 @@ final class AppEnvironment {
         self.updateChecker = updateChecker
         self.analytics = analytics
         self.auth = auth
+        self.profileService = profileService
+        self.catalog = catalog
         self.recents = recents
         session = SessionStore(auth: auth)
+        profile = ProfileStore(service: profileService)
     }
 
     /// Production services backed by Firebase and the App Store.
@@ -55,6 +64,8 @@ final class AppEnvironment {
             updateChecker: RemoteAppUpdateChecker(config: FirebaseRemoteConfigReader()),
             analytics: FirebaseAnalyticsTracker(),
             auth: auth,
+            profileService: FirebaseProfileService(auth: auth),
+            catalog: .bundled(),
             recents: RecentExamsStore()
         )
     }
@@ -90,5 +101,7 @@ enum LaunchArgument {
     static let phoneAuthTesting = "-ViFiPhoneAuthTesting"
     /// With `-ViFiMockData`: starts on the blocking required-update screen, to exercise the update gate.
     static let forceUpdate = "-ViFiForceUpdate"
+    /// With `-ViFiMockData`: starts with no stored profile, on the blocking profile-completion screen.
+    static let profileIncomplete = "-ViFiProfileIncomplete"
     #endif
 }

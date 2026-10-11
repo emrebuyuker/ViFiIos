@@ -265,6 +265,56 @@ final class StubRequestAuthorizer: RequestAuthorizing {
     }
 }
 
+// MARK: - Profile
+
+/// A `ProfileServicing` that answers with scripted replies and records every call.
+///
+/// Each reply list answers successive calls in order; once it runs out, its last reply is repeated.
+final class StubProfileService: ProfileServicing {
+    enum Call: Equatable {
+        case load(uid: String)
+        case save(uid: String)
+    }
+
+    var loadReplies: [Result<UserProfile?, any Error>]
+    var saveReplies: [Result<Void, any Error>] = [.success(())]
+    /// When set, every call waits at the gate before it is answered.
+    var gate: AsyncGate?
+
+    private(set) var calls: [Call] = []
+    /// The profiles passed to successful `saveProfile(_:uid:)` calls, in order.
+    private(set) var savedProfiles: [UserProfile] = []
+
+    init(loadReplies: [Result<UserProfile?, any Error>] = [.success(nil)]) {
+        self.loadReplies = loadReplies
+    }
+
+    func loadProfile(uid: String) async throws -> UserProfile? {
+        let call = calls.count(where: { if case .load = $0 { true } else { false } })
+        calls.append(.load(uid: uid))
+        await gate?.pass()
+        return try Self.reply(to: call, from: loadReplies).get()
+    }
+
+    func saveProfile(_ profile: UserProfile, uid: String) async throws {
+        let call = calls.count(where: { if case .save = $0 { true } else { false } })
+        calls.append(.save(uid: uid))
+        await gate?.pass()
+        try Self.reply(to: call, from: saveReplies).get()
+        savedProfiles.append(profile)
+    }
+
+    private static func reply<Value>(
+        to call: Int,
+        from replies: [Result<Value, any Error>]
+    ) -> Result<Value, any Error> {
+        guard !replies.isEmpty else {
+            return .failure(ProfileError.unknown(message: "No stubbed reply for call \(call)."))
+        }
+        return replies[min(call, replies.count - 1)]
+    }
+}
+
 // MARK: - Time & waiting
 
 /// A clock the test moves by hand, to read through `now`.
@@ -445,6 +495,42 @@ enum Fixture {
     /// A signed-in user with a Turkish number.
     static let user = AuthUser(id: "user-1", phoneNumber: "+905321234567")
     static let phoneNumber = "+905321234567"
+
+    /// A complete profile for `user`.
+    static let profile = UserProfile(
+        name: "Ayşe",
+        surname: "Yılmaz",
+        university: "Boğaziçi Üniversitesi",
+        universityId: "bogazici-universitesi",
+        universityIsCustom: false,
+        faculty: "Mühendislik Fakültesi",
+        facultyId: "muhendislik-fakultesi",
+        facultyIsCustom: false,
+        department: "Bilgisayar Mühendisliği",
+        departmentId: "bilgisayar-muhendisligi",
+        departmentIsCustom: false,
+        gender: .female,
+        phoneNumber: phoneNumber
+    )
+
+    /// A small catalog for the profile pickers.
+    static let catalog = UniversityCatalog(
+        universities: [
+            CatalogItem(id: "bogazici-universitesi", name: "Boğaziçi Üniversitesi"),
+            CatalogItem(id: "ege-universitesi", name: "Ege Üniversitesi"),
+            CatalogItem(id: "hacettepe-universitesi", name: "Hacettepe Üniversitesi"),
+        ],
+        faculties: [
+            CatalogItem(id: "muhendislik-fakultesi", name: "Mühendislik Fakültesi"),
+            CatalogItem(id: "tip-fakultesi", name: "Tıp Fakültesi"),
+            CatalogItem(id: "hukuk-fakultesi", name: "Hukuk Fakültesi"),
+        ],
+        departments: [
+            CatalogItem(id: "bilgisayar-muhendisligi", name: "Bilgisayar Mühendisliği"),
+            CatalogItem(id: "isletme", name: "İşletme"),
+            CatalogItem(id: "tip", name: "Tıp"),
+        ]
+    )
 
     static let lesson = ArchivePath(components: [
         "BOZOK ÜNİVERSİTESİ",

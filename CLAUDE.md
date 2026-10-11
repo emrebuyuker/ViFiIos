@@ -62,17 +62,19 @@ ViFi-iOS/
 ├── ViFi/
 │   ├── App/                  # ViFiApp, AppDelegate (ortamı kurar), AppEnvironment, RootView (giriş kapısı), Router
 │   ├── Core/
-│   │   ├── Models/           # ArchivePath, ArchiveItem / ExamDocument, PhoneNumber
-│   │   ├── Services/         # Protokoller (ServiceProtocols, AuthServicing), Firebase servisleri, ArchiveParser,
-│   │   │                     # RemoteFileLoader, SessionStore, RecentExamsStore, App Check fabrikası
-│   │   └── Utilities/        # Loadable, Logger+ViFi
+│   │   ├── Models/           # ArchivePath, ArchiveItem / ExamDocument, PhoneNumber, UserProfile (+ Gender)
+│   │   ├── Services/         # Protokoller (ServiceProtocols, AuthServicing, ProfileServicing), Firebase servisleri,
+│   │   │                     # ArchiveParser, UserProfileParser, RemoteFileLoader, SessionStore, ProfileStore,
+│   │   │                     # UniversityCatalog, RecentExamsStore, App Check fabrikası
+│   │   └── Utilities/        # Loadable, Logger+ViFi, FirstOutcome, Slug (kanonik id üretimi)
 │   ├── DesignSystem/         # IconBadge, durum görünümleri (Loading/Error/Empty), seviye stilleri
 │   ├── Features/
 │   │   ├── Home/             # Ana sayfa, son görüntülenenler, Hakkında
 │   │   ├── Browse/           # Fakülte → sınav listeleri, breadcrumb
 │   │   ├── Exam/             # Görsel (sayfalayıcı, yakınlaştırma) ve PDF görüntüleyiciler
 │   │   ├── Auth/             # Telefon + SMS kodu ile giriş
-│   │   └── Account/          # Hesap: çıkış, hesap silme (yeniden doğrulamalı)
+│   │   ├── Profile/          # Zorunlu profil tamamlama kapısı + Hesap'tan düzenleme (ad/soyad/üniv./fakülte/bölüm/cinsiyet)
+│   │   └── Account/          # Hesap: profil düzenle, çıkış, hesap silme (yeniden doğrulamalı)
 │   ├── Resources/            # Assets, Info.plist (üretilir), String Catalog'lar, PrivacyInfo, ViFi.entitlements,
 │   │                         # GoogleService-Info.plist
 │   └── Preview Content/      # MockServices (örnek veri, MockAuthService) + örnek sınav dosyaları — yalnızca Debug
@@ -163,6 +165,7 @@ cd firebase && firebase deploy --only database,storage --project vifi-831a8 --ac
 | `-ViFiSignedOut` | `-ViFiMockData` ile birlikte: giriş ekranından başlar (örnek modda kod `111111`) |
 | `-ViFiPhoneAuthTesting` | Yalnızca Debug: Phone Auth uygulama doğrulamasını kapatır; yalnızca Console'daki test numaralarıyla çalışır |
 | `-ViFiForceUpdate` | `-ViFiMockData` ile birlikte (yalnızca Debug): kapatılamayan zorunlu güncelleme ekranından başlar (UI testi) |
+| `-ViFiProfileIncomplete` | `-ViFiMockData` ile birlikte (yalnızca Debug): profilsiz başlar, zorunlu "Profilini Tamamla" kapısından açılır (UI testi) |
 
 ---
 
@@ -174,6 +177,7 @@ cd firebase && firebase deploy --only database,storage --project vifi-831a8 --ac
 | **Canlı iOS uygulaması** | Console'daki adı *"Vifi iOS Push Notification"* → `com.BuyukerYazilim.ViFi2` (adı yanıltıcı, asıl uygulama bu) |
 | **Diğer kayıtlar** | *"ViFiIOS"* → `com.BuyukerYazilim.ViFi` (eski kayıt, dokunma); Android `com.salticusteam.vifi` (henüz giriş/App Check yok, şu an kullanılmıyor) |
 | **Veritabanı** | `Universitiess/<üniversite>/<fakülte>/<bölüm>/<ders>/<sınav>/<JPG\|PDF>/<pushId>/downloadURL` |
+| **Kullanıcı profili** | `users/<uid>/profile/{name, surname, university, universityId, universityIsCustom, faculty, facultyId, facultyIsCustom, department, departmentId, departmentIsCustom, gender(`female`\|`male`), phoneNumber, updatedAt}`. Sahibi (+90) okur/yazar, admin tüm profilleri okur. Giriş sonrası `ProfileStore` + `RootView` kapısı zorunlu kılar; `FirebaseProfileService` yazar. `updatedAt` sunucu zaman damgası. **Kanonik id'ler** (`*Id`, slug) bildirim segmentleri/FCM topic'leri içindir; listeden seçilince id kanonik, serbest yazılınca `*IsCustom=true` + best-effort slug (`Slug`). `users` düğümü `profile/universityId\|facultyId\|departmentId\|gender` üzerinde `.indexOn`'lu |
 | **Güncelleme politikası** | `config/appUpdate/ios/{minimumVersion, latestVersion, storeURL, message}` — `RemoteAppUpdateChecker` okur. `minimumVersion`'ın altı kapatılamaz zorunlu ekran, `latestVersion`'dan eski kapatılabilir öneri. Herkese okunur (App Check korumalı), yazma yalnızca `admin`. `storeURL` App Store adresidir; `AppStoreLink.productURL` yedeğidir |
 | **Storage** | `imagess/<uuid>.jpg`, `pdfs/<uuid>.pdf`; ileride yükleme için `pending/<uid>/<submissionId>/<dosya>` |
 | **Erişim** | Arşivi (`Universitiess`, `imagess/`, `pdfs/`) yalnızca +90 numarayla giriş yapanlar ve admin okur; Storage'da yalnızca tek dosya okunur, listeleme yok. Arşive yazma yalnızca `admin: true` custom claim'i olanlarda |

@@ -25,9 +25,11 @@ struct RootView: View {
         .task { await environment.session.observeUserChanges() }
         .task { await observeUpdateStatus() }
         .onChange(of: environment.session.state) { _, state in
-            // The next user starts on the home screen, not deep in the previous user's stack.
+            // The next user starts on the home screen, not deep in the previous user's stack, and with a
+            // clean profile read.
             if state == .signedOut {
                 router.popToRoot()
+                environment.profile.reset()
             }
         }
         .onOpenURL { url in
@@ -56,8 +58,9 @@ struct RootView: View {
             SessionLoadingView()
         case .signedOut:
             LoginView()
-        case .signedIn:
-            archive
+        case let .signedIn(user):
+            // The archive is gated a second time behind a completed profile.
+            ProfileGate(user: user) { archive }
         }
     }
 
@@ -123,6 +126,41 @@ private enum UpdatePromptDefaults {
     static var skippedVersion: String? {
         get { UserDefaults.standard.string(forKey: key) }
         set { UserDefaults.standard.set(newValue, forKey: key) }
+    }
+}
+
+/// Second gate behind sign-in: the archive is shown only once the signed-in user has completed their
+/// profile. Loads the profile when the user appears or changes, offering a retry if the read fails.
+private struct ProfileGate<Content: View>: View {
+    let user: AuthUser
+    @ViewBuilder let content: () -> Content
+
+    @Environment(AppEnvironment.self) private var environment
+
+    init(user: AuthUser, @ViewBuilder content: @escaping () -> Content) {
+        self.user = user
+        self.content = content
+    }
+
+    var body: some View {
+        gatedContent
+            .task(id: user.id) { await environment.profile.load(uid: user.id) }
+    }
+
+    @ViewBuilder
+    private var gatedContent: some View {
+        switch environment.profile.state {
+        case .loading:
+            SessionLoadingView()
+        case .absent:
+            ProfileCompletionView(user: user)
+        case .present:
+            content()
+        case let .failed(message):
+            ErrorStateView(message: message) {
+                Task { await environment.profile.load(uid: user.id) }
+            }
+        }
     }
 }
 
