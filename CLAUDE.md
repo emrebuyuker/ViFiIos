@@ -39,12 +39,12 @@
 | **İzolasyon** | `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`; ağır iş `@concurrent nonisolated static` fonksiyonlarda |
 | **DI** | `AppEnvironment` → `.environment(_:)`; `live()` (Firebase) / `mock()` (örnek veri, yalnızca Debug) |
 | **Gezinme** | `Router` + `NavigationStack` (`Route.browse`, `Route.exam`) |
-| **Veri** | Firebase Realtime Database (`FirebaseArchiveRepository`, disk kalıcılığı + `keepSynced`) |
+| **Veri** | **Arşiv:** Cloud Firestore (isimli `vifi` DB → `FirestoreArchiveRepository` + kalıcı önbellek; giriş sonrası `ArchivePrefetcher` ile çevrimdışı ısıtma). **Profil ve force-update config:** Realtime Database (RTDB). RTDB arşiv repo'su (`FirebaseArchiveRepository`) + `Universitiess` ağacı rollback için duruyor (bkz. `FIRESTORE-MIGRATION.md`) |
 | **Dosyalar** | `RemoteFileLoader`: URLSession + URLCache + disk; ID token ve App Check başlıklarıyla indirir |
 | **Giriş** | Firebase Phone Auth, yalnızca +90 → `AuthServicing`, `SessionStore` |
 | **Güvenlik** | App Check (Release'te App Attest, desteklemeyen cihazda DeviceCheck; Debug ve simülatörde debug provider), `firebase/` altındaki kurallar |
 | **Günlük** | OSLog: `Logger.archive`, `Logger.files`, `Logger.app` |
-| **Bağımlılık** | SwiftPM, Firebase 12 (`FirebaseDatabase`, `FirebaseAuth`, `FirebaseAppCheck`, `FirebaseAnalyticsCore`) |
+| **Bağımlılık** | SwiftPM, Firebase 12 (`FirebaseFirestore`, `FirebaseDatabase`, `FirebaseAuth`, `FirebaseAppCheck`, `FirebaseAnalyticsCore`) |
 | **Proje dosyası** | XcodeGen: `project.yml` tek kaynak; `ViFi.xcodeproj` üretilir ve depoda tutulmaz (yalnızca içindeki SwiftPM `Package.resolved` commit'lenir) |
 | **Test** | Swift Testing (`ViFiTests`), XCUITest (`ViFiUITests`), Firebase Emulator (`firebase/tests`) |
 | **❌ Yasak** | Combine / `ObservableObject` / `@Published`, `print`, force unwrap, CocoaPods, Storyboard/XIB, `downloadURL`'deki `token=` parametresine güvenmek |
@@ -103,16 +103,21 @@ ViFi-iOS/
   (`AuthServicing.swift`). Canlı implementasyon `Core/Services/Firebase…swift`, Debug örneği
   `Preview Content/MockServices.swift`, test double'ı `ViFiTests/TestDoubles.swift`. Hepsi `AppEnvironment` üzerinden verilir.
 - **Hatalar:** Kullanıcıya gösterilen hatalar `ArchiveError` / `AuthError` (Türkçe `errorDescription`). UI'da `error.userMessage`.
-- **Firebase callback'leri** arka plan kuyruğunda gelir. `DataSnapshot` callback dışına çıkmaz; orada `ArchiveParser`
-  ile `Sendable` modellere çevrilir. Modeller `nonisolated struct/enum … : Sendable`.
+- **Arşiv Cloud Firestore'dan okunur** (`FirestoreArchiveRepository`): `DocumentSnapshot.data()` sözlükleri
+  `FirestoreArchiveParser` ile `Sendable` modellere çevrilir (saf, Firestore'suz test edilir); dosya URL'leri
+  `storagePath`→`StorageURL`. Rollback RTDB yolunda (`FirebaseArchiveRepository`) `DataSnapshot` callback dışına
+  çıkmaz, `ArchiveParser` ile çevrilir. Firebase callback'leri arka plan kuyruğunda gelir; modeller
+  `nonisolated struct/enum … : Sendable`.
 - **Firebase başlatma sırası kritik:** `AppEnvironment.live()` yalnızca `AppDelegate.environment` → `makeDefault()`
   zinciriyle (yani `UIApplication` oluştuktan sonra) çağrılır. Aksi halde Phone Auth'un APNs/bildirim yöneticileri hiç kurulmaz.
   `AppCheck.setAppCheckProviderFactory` her zaman `FirebaseApp.configure()`'dan **önce** çalışır.
-- **Örnek veri modunda (`-ViFiMockData`) Firebase hiç yapılandırılmaz.** Bu modda `Auth.auth()` veya `Database.database()`
-  çağırmak çökme demektir; `FirebaseAuthService.configuredAuth` gibi korumalı yolları kullan.
-- **Dosya indirme:** Veritabanındaki `downloadURL`'lerin `token=` parametresi iptal edildi, kullanılmaz. Storage
-  dosyaları yalnızca `RemoteFileLoader` (`canonicalURL` + `RequestAuthorizing`) üzerinden indirilir. Yeni bir indirme
-  yolu eklenecekse bu yoldan geç; kimlik bilgisini yalnızca uygulamanın kendi bucket'ına gönder.
+- **Örnek veri modunda (`-ViFiMockData`) Firebase hiç yapılandırılmaz.** Bu modda `Auth.auth()`, `Database.database()`
+  veya `Firestore.firestore()` çağırmak çökme demektir; `FirebaseAuthService.configuredAuth` / `ViFiFirestore` gibi
+  korumalı yolları kullan.
+- **Dosya indirme:** Firestore `exams` dokümanları dosyayı `storagePath` olarak saklar; indirme URL'i
+  `StorageURL.canonical` ile kurulur (eski RTDB `downloadURL`'lerinin `token=` parametresi iptal edildi, kullanılmaz).
+  Storage dosyaları yalnızca `RemoteFileLoader` (`canonicalURL` + `RequestAuthorizing`) üzerinden indirilir. Yeni bir
+  indirme yolu eklenecekse bu yoldan geç; kimlik bilgisini yalnızca uygulamanın kendi bucket'ına gönder.
 
 ### Arayüz
 - **Metinler:** Kullanıcıya görünen metinler Türkçe literal (`Text("…")`, `String(localized: "…")`). String Catalog
@@ -176,13 +181,13 @@ cd firebase && firebase deploy --only database,storage --project vifi-831a8 --ac
 | **Proje** | `vifi-831a8` (Blaze planı; Storage bucket `vifi-831a8.appspot.com`) |
 | **Canlı iOS uygulaması** | Console'daki adı *"Vifi iOS Push Notification"* → `com.BuyukerYazilim.ViFi2` (adı yanıltıcı, asıl uygulama bu) |
 | **Diğer kayıtlar** | *"ViFiIOS"* → `com.BuyukerYazilim.ViFi` (eski kayıt, dokunma); Android `com.salticusteam.vifi` (henüz giriş/App Check yok, şu an kullanılmıyor) |
-| **Veritabanı** | `Universitiess/<üniversite>/<fakülte>/<bölüm>/<ders>/<sınav>/<JPG\|PDF>/<pushId>/downloadURL` |
+| **Arşiv (Firestore)** | isimli `vifi` DB: `catalogNodes/<id>` (university\|faculty\|department\|course, `parentId` zinciri, `status:published`) + `exams/<id>` (`courseId`, `kind`, `files:[{storagePath,order}]`). Şema+kurallar: `FIRESTORE-MIGRATION.md`, `firebase/firestore.rules`. **Rollback (RTDB, duruyor):** `Universitiess/<üniv>/<fak>/<böl>/<ders>/<sınav>/<JPG\|PDF>/<pushId>/downloadURL` |
 | **Kullanıcı profili** | `users/<uid>/profile/{name, surname, university, universityId, universityIsCustom, faculty, facultyId, facultyIsCustom, department, departmentId, departmentIsCustom, gender(`female`\|`male`), phoneNumber, updatedAt}`. Sahibi (+90) okur/yazar, admin tüm profilleri okur. Giriş sonrası `ProfileStore` + `RootView` kapısı zorunlu kılar; `FirebaseProfileService` yazar. `updatedAt` sunucu zaman damgası. **Kanonik id'ler** (`*Id`, slug) bildirim segmentleri/FCM topic'leri içindir; listeden seçilince id kanonik, serbest yazılınca `*IsCustom=true` + best-effort slug (`Slug`). `users` düğümü `profile/universityId\|facultyId\|departmentId\|gender` üzerinde `.indexOn`'lu |
 | **Güncelleme politikası** | `config/appUpdate/ios/{minimumVersion, latestVersion, storeURL, message}` — `RemoteAppUpdateChecker` okur. `minimumVersion`'ın altı kapatılamaz zorunlu ekran, `latestVersion`'dan eski kapatılabilir öneri. Herkese okunur (App Check korumalı), yazma yalnızca `admin`. `storeURL` App Store adresidir; `AppStoreLink.productURL` yedeğidir |
 | **Storage** | `imagess/<uuid>.jpg`, `pdfs/<uuid>.pdf`; ileride yükleme için `pending/<uid>/<submissionId>/<dosya>` |
-| **Erişim** | Arşivi (`Universitiess`, `imagess/`, `pdfs/`) yalnızca +90 numarayla giriş yapanlar ve admin okur; Storage'da yalnızca tek dosya okunur, listeleme yok. Arşive yazma yalnızca `admin: true` custom claim'i olanlarda |
+| **Erişim** | Arşivi (Firestore `catalogNodes`/`exams` + Storage `imagess/`, `pdfs/`) yalnızca +90 numarayla giriş yapanlar ve admin okur; Storage'da yalnızca tek dosya okunur, listeleme yok. Arşive yazma yalnızca `admin: true` custom claim'i olanlarda (RTDB `Universitiess` rollback'te kalan eski kopyadır) |
 | **Gönderimler** | `pendingExams/<uid>/<submissionId>` ve Storage `pending/<uid>/…`: sahibi (+90) oluşturur ve okur, bekleyen kaydını silebilir; admin okur ve yazar. Kök ve tanımsız diğer düğümler herkese kapalı |
-| **App Check** | Storage, Realtime Database ve Authentication için zorunlu (enforced). Yeni simülatör/cihaz → debug token Console'a eklenmeli |
+| **App Check** | Storage, Realtime Database ve Authentication için zorunlu (enforced); **Firestore enforce yeni sürüm yayınlandıktan sonra açılacak** (şu an monitoring — bkz. `FIRESTORE-MIGRATION.md`). Yeni simülatör/cihaz → debug token Console'a eklenmeli |
 | **İndirme token'ları** | Tümü iptal edildi; uygulamanın kendi indirmeleri yeni token üretmez. Yedek yalnızca yerelde (`firebase/backups/`) |
 | **Bilinen sınır** | Okuma yetkisi olan bir kullanıcı `getMetadata`/`getDownloadURL` ile tek bir dosyaya kalıcı genel bağlantı üretebilir; kurallarla kapatılamaz |
 

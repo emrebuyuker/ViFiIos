@@ -41,8 +41,8 @@ geliştirilmiş bir sınav arşividir. Arşiv beş seviyeden oluşur:
 Üniversite › Fakülte › Bölüm › Ders › Sınav
 ```
 
-Her sınav ya sayfa sayfa görsellerden (JPG) ya da bir PDF belgesinden oluşur. Arşiv Firebase Realtime Database'te,
-sınav dosyaları ise Firebase Storage'da tutulur.
+Her sınav ya sayfa sayfa görsellerden (JPG) ya da bir PDF belgesinden oluşur. Arşiv Cloud Firestore'da,
+sınav dosyaları ise Firebase Storage'da tutulur. (Kullanıcı profili ve güncelleme politikası Realtime Database'de kalır.)
 
 ## Özellikler
 
@@ -93,8 +93,8 @@ flowchart LR
     end
     V --> F & U & A
     VM --> R & S & A
-    R -->|"ham değer"| P["ArchiveParser"] -->|"ArchiveItem / ExamDocument"| VM
-    R -.-> DB[("Firebase Realtime Database")]
+    R -->|"ham değer"| P["FirestoreArchiveParser"] -->|"ArchiveItem / ExamDocument"| VM
+    R -.-> DB[("Cloud Firestore<br/>(vifi)")]
     F -.-> ST[("Firebase Storage<br/>downloadURL")]
     F -.-> C[("Disk önbelleği")]
     U -.-> CFG[("Realtime Database<br/>config/appUpdate/ios")]
@@ -112,7 +112,7 @@ flowchart LR
 
   | Protokol | Canlı implementasyon | Örnek (DEBUG) implementasyon |
   |---|---|---|
-  | `ArchiveRepository` | `FirebaseArchiveRepository` | `MockArchiveRepository` |
+  | `ArchiveRepository` | `FirestoreArchiveRepository` (rollback: `FirebaseArchiveRepository` / RTDB) | `MockArchiveRepository` |
   | `RemoteFileLoading` | `RemoteFileLoader` | `RemoteFileLoader` (paket içi örnek dosyalar) |
   | `AppUpdateChecking` | `RemoteAppUpdateChecker` (kaynak: `FirebaseRemoteConfigReader`) | `StubUpdateChecker` |
   | `AppConfigReading` | `FirebaseRemoteConfigReader` | — (test double) |
@@ -126,8 +126,9 @@ flowchart LR
   sessiz bildirimleri Firebase Auth'a iletir (swizzling kapalı); reCAPTCHA dönüşü `onOpenURL` ile iletilir.
 - **App Check.** `live()` Firebase'i yapılandırmadan önce App Check sağlayıcısını kurar: Release'te App Attest
   (desteklenmeyen cihazda DeviceCheck), Debug ve simülatörde debug sağlayıcısı.
-- **Yetkili dosya indirme.** Storage dosyaları `downloadURL` içindeki `token=` parametresiyle değil, kullanıcının
-  ID belirteci (`Authorization: Firebase …`) ve App Check belirteci (`X-Firebase-AppCheck`) ile indirilir. Önbellek
+- **Yetkili dosya indirme.** Storage dosyaları Firestore'da `storagePath` olarak saklanır; indirme URL'i
+  `StorageURL.canonical` ile kurulur. İndirme `downloadURL` içindeki `token=` parametresiyle değil, kullanıcının
+  ID belirteci (`Authorization: Firebase …`) ve App Check belirteci (`X-Firebase-AppCheck`) ile yapılır. Önbellek
   anahtarı `token` parametresi çıkarılmış kanonik URL'dir.
 
 - **AppEnvironment ile bağımlılık enjeksiyonu.** Tüm servisler tek bir `AppEnvironment` nesnesinde toplanır ve
@@ -136,11 +137,15 @@ flowchart LR
 - **Router.** Gezinme durumu `NavigationStack` yolunu tutan `@Observable Router` nesnesindedir. `Route` enum'u
   (`browse`, `exam`) tüm hedefleri tanımlar; breadcrumb'a dokunmak `popTo(_:)`, son görüntülenen bir sınavı açmak
   ise `openExam(at:kind:)` ile tüm üst seviyeleri yığına yerleştirir, böylece Geri tuşu arşivde yukarı yürür.
-- **ArchiveParser.** Realtime Database'ten gelen ham değerleri modellere çeviren, Firebase'e bağımlı olmayan saf bir
-  katmandır. İsim yer tutucularını (`uniname`, `fakname`…) atlar, dizi biçimindeki düğümleri normalize eder ve
-  listeleri Türkçe harf sıralaması ile sayı farkındalıklı sıralar (sınavlar en yeniden eskiye).
+- **Arşiv ayrıştırıcıları.** Canlı yolda `FirestoreArchiveParser`, Firestore dokümanı sözlüklerini
+  (`DocumentSnapshot.data()`) modellere çevirir; dosya URL'leri `storagePath`→`StorageURL`. Rollback RTDB yolunda
+  `ArchiveParser` ham değerleri çevirir (isim yer tutucularını `uniname`/`fakname`… atlar, dizileri normalize eder).
+  İkisi de Firebase'e bağımlı olmayan saf katmanlardır; listeler Türkçe harf sıralaması ile sayı farkındalıklı
+  sıralanır (sınavlar en yeniden eskiye).
 - **Çevrimdışı önbellek.** `RemoteFileLoader` dosyaları geniş bir `URLCache` ve `Caches/ExamFiles` altındaki disk
-  önbelleği ile indirir; görseller ekran boyutuna göre küçültülerek çözülür.
+  önbelleği ile indirir; görseller ekran boyutuna göre küçültülerek çözülür. Firestore'un `keepSynced`'i
+  olmadığından, arşiv listeleri için `ArchivePrefetcher` giriş sonrası (çevrimiçiyken, throttle'lı) tüm arşivi
+  Firestore kalıcı önbelleğine ısıtır; böylece ziyaret edilmemiş dallar da çevrimdışı açılır.
 - **Durum ve günlük.** Ekran içerikleri `Loadable` (`loading` / `loaded` / `failed`) ile modellenir; hatalar
   `ArchiveError` üzerinden kullanıcıya Türkçe mesajlarla gösterilir. Günlükler `print` yerine OSLog
   (`Logger.archive`, `Logger.files`, `Logger.app`) ile yazılır.
@@ -148,16 +153,24 @@ flowchart LR
 ### Veritabanı yapısı
 
 ```
-Universitiess/<üniversite>/<fakülte>/<bölüm>/<ders>/<sınav>/<JPG|PDF>/<pushId>/downloadURL
-users/<uid>/profile/{ name, surname,
-                       university, universityId, universityIsCustom,
-                       faculty,    facultyId,    facultyIsCustom,
-                       department, departmentId, departmentIsCustom,
-                       gender, phoneNumber, updatedAt }
+Cloud Firestore (isimli `vifi` veritabanı) — arşiv:
+  catalogNodes/<id>  { level: university|faculty|department|course, name, parentId, status: published, childCount, slug }
+  exams/<id>         { title, courseId, kind: JPG|PDF, status: published, files: [{ storagePath, order }], <denormalize adlar> }
+
+Realtime Database — profil + güncelleme politikası (Firestore'a taşınmadı):
+  users/<uid>/profile/{ name, surname,
+                        university, universityId, universityIsCustom,
+                        faculty,    facultyId,    facultyIsCustom,
+                        department, departmentId, departmentIsCustom,
+                        gender, phoneNumber, updatedAt }
+  config/appUpdate/ios/{ minimumVersion, latestVersion, storeURL, message }
 ```
 
-Her arşiv düğümü kendi adını da metin değeri olarak saklar (`uniname`, `fakname`, `bolname`, `lessonname`,
-`imagename`); gerçek arşiv düğümleri her zaman nesne olduğundan bu yaprak değerler listelenmez.
+Bir seviye `catalogNodes` içinde `where(parentId == <üst id>, status == published)`, bir dersin sınavları `exams`
+içinde `where(courseId == <ders id>, status == published)` ile listelenir; her ikisi de istemcide Türkçe sıralanır.
+Kanonik id'ler slug'dır (profil `*Id`'leri ve FCM topic'leriyle aynı üretilir). Eski RTDB arşivi
+(`Universitiess/<üniv>/…/<JPG|PDF>/<pushId>/downloadURL`, her düğüm adını `uniname`/`fakname`… yaprağında tutar)
+rollback için duruyor. Ayrıntı: [FIRESTORE-MIGRATION.md](FIRESTORE-MIGRATION.md).
 
 Kullanıcı profili `users/<uid>/profile` altında tutulur: `gender` yalnızca `female`/`male`, `phoneNumber` auth
 token'ındaki doğrulanmış numarayla aynı olmak zorunda, `updatedAt` her yazımda sunucu zaman damgası. Sahibi (+90)
@@ -209,7 +222,7 @@ ViFi-iOS/
 | [XcodeGen](https://github.com/yonaskolb/XcodeGen) | 2.42 veya üzeri |
 | [SwiftLint](https://github.com/realm/SwiftLint) | Önerilir (derleme sırasında çalışır) |
 
-Bağımlılıklar Swift Package Manager ile yönetilir: Firebase iOS SDK 12 (`FirebaseDatabase`,
+Bağımlılıklar Swift Package Manager ile yönetilir: Firebase iOS SDK 12 (`FirebaseFirestore`, `FirebaseDatabase`,
 `FirebaseAnalyticsCore`, `FirebaseAuth`, `FirebaseAppCheck`). CocoaPods kullanılmaz. Paket sürümleri depodaki `Package.resolved` ile sabitlenir
 (Firebase 12.19.2); güncellemek için Xcode'da *File › Packages › Update to Latest Package Versions*.
 
@@ -248,7 +261,8 @@ open ViFi.xcodeproj
     Debug derlemesini ya da simülatörü bir kez çalıştırıp Xcode konsolundaki *Firebase App Check debug token*
     değerini *Manage debug tokens* altına ekleyin (CI için `FIRAAppCheckDebugToken`).
   - *App Check › APIs*: Realtime Database ve Storage için zorunlu kılmayı yalnızca yeni sürüm yayınlandıktan ve
-    debug belirteçleri eklendikten sonra açın.
+    debug belirteçleri eklendikten sonra açın. **Firestore** için zorunlu kılmayı da Firestore-okuyan sürüm
+    yayınlanıp App Check panelinde trafiğin "verified" olduğu görüldükten sonra açın (bkz. `FIRESTORE-MIGRATION.md`).
 - **Apple Developer.** `com.BuyukerYazilim.ViFi2` kimliğinde **Push Notifications** ve **App Attest**
   yeteneklerini etkinleştirip provisioning profillerini yenileyin (`ViFi.entitlements` bunları gerektirir).
   App Store Connect gizlilik etiketlerine *Telefon Numarası* ve *Kullanıcı Kimliği* ekleyin.
@@ -314,7 +328,9 @@ Varsayılan her şey kapalıdır; aşağıdaki izinler dışında kimse hiçbir 
 
 | Yol | Kim ne yapabilir |
 |---|---|
-| Realtime DB `/Universitiess` | +90 telefonla girişli kullanıcılar ve yöneticiler okur; yalnızca yönetici yazar. |
+| Firestore `catalogNodes`, `exams` | +90 telefonla girişli kullanıcılar ve yöneticiler okur; yalnızca yönetici yazar. |
+| Firestore `submissions`, `wallets`, `subscriptions`, `users/<uid>/{unlocks,inbox,devices}` | Coin/gönderim/bildirim iskeleti: sahibi/yönetici okur; cüzdan + kilit yazımı yalnız sunucuda (istemci yazamaz). Ayrıntı: `firebase/firestore.rules`. |
+| Realtime DB `/Universitiess` (rollback) | +90 telefonla girişli kullanıcılar ve yöneticiler okur; yalnızca yönetici yazar. Arşiv Firestore'a taşındı; bu kopya rollback için duruyor. |
 | Realtime DB `/pendingExams/<uid>` | Kullanıcı yalnızca kendi kaydını okur; yeni gönderim oluşturur, kendi `pending` gönderimini siler, var olanı değiştiremez. Yönetici hepsini okur ve yazar. Alanlar sıkı doğrulanır. |
 | Realtime DB `/users/<uid>/profile` | Sahibi (+90) yalnızca kendi profilini okur ve yazar; yönetici tüm profilleri okur (yazamaz). Alanlar sıkı doğrulanır: `gender` yalnızca `female`/`male`, `phoneNumber` token'daki numarayla aynı, `updatedAt` sunucu zaman damgası. |
 | Realtime DB diğer tüm düğümler | Kimseye açık değil (yönetici dahil). |
@@ -336,7 +352,7 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 npm test
 
 ```bash
 cd firebase
-firebase deploy --only database,storage --project vifi-831a8 --account <sahip hesabı>
+firebase deploy --only database,storage,firestore --project vifi-831a8 --account <sahip hesabı>
 ```
 
 Yayından önce konsoldan gereksiz kök düğümleri (`poc`, `2DfjkeJxHJTkdhz5VNVwFJzAeuD`, `Announcements`) silin.
