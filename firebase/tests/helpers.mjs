@@ -57,6 +57,14 @@ export async function createStorageEnvironment() {
   });
 }
 
+export async function createFirestoreEnvironment() {
+  assertLocalEmulators('FIRESTORE_EMULATOR_HOST');
+  return initializeTestEnvironment({
+    projectId: PROJECT_ID,
+    firestore: { rules: await readFile(rulesPath('firestore.rules'), 'utf8') },
+  });
+}
+
 /** The context for one of `users`, or an unauthenticated one for `null`. */
 export function contextFor(env, user) {
   return user ? env.authenticatedContext(user.uid, user.token) : env.unauthenticatedContext();

@@ -65,6 +65,33 @@ final class ExamDocumentViewModelTests {
         #expect(analytics.events.isEmpty)
     }
 
+    // MARK: - Stale recents
+
+    @Test("Opening an exam that no longer exists drops it from recents")
+    func notFoundRemovesStaleRecent() async {
+        recents.record(path: Fixture.imagesExam, kind: .images)
+        let viewModel = makeViewModel(repository: StubArchiveRepository(documents: [.failure(ArchiveError.notFound)]))
+
+        await viewModel.load()
+
+        #expect(viewModel.state == .failed(message: ArchiveError.notFound.userMessage))
+        #expect(recents.exams.isEmpty)
+    }
+
+    @Test("A transient error keeps the exam in recents for a later retry", arguments: [
+        ArchiveError.offline,
+        .permissionDenied,
+        .fileUnavailable(statusCode: 500),
+    ])
+    func transientErrorKeepsRecent(_ error: ArchiveError) async {
+        recents.record(path: Fixture.imagesExam, kind: .images)
+        let viewModel = makeViewModel(repository: StubArchiveRepository(documents: [.failure(error)]))
+
+        await viewModel.load()
+
+        #expect(recents.exams.map(\.path) == [Fixture.imagesExam])
+    }
+
     @Test("A file host error shows its user-facing message")
     func fileUnavailable() async {
         let error = ArchiveError.fileUnavailable(statusCode: 402)

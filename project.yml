@@ -100,6 +100,8 @@ targets:
       - package: Firebase
         product: FirebaseDatabase
       - package: Firebase
+        product: FirebaseFirestore
+      - package: Firebase
         product: FirebaseAnalyticsCore
       - package: Firebase
         product: FirebaseAuth

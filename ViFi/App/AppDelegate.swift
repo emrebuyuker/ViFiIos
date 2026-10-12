@@ -21,10 +21,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         // Configures Firebase before the APNs callbacks below can arrive.
-        _ = environment
+        let environment = environment
         // Silent pushes need no permission prompt.
         if !AppEnvironment.usesMockData() {
             application.registerForRemoteNotifications()
+            // Trim the on-disk file cache back within budget once per launch, while the app is idle.
+            Task { await environment.fileLoader.pruneDiskCache() }
         }
         return true
     }

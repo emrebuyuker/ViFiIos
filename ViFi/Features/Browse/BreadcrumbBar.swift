@@ -59,7 +59,7 @@ struct BreadcrumbBar: View {
     }
 
     private func title(at index: Int) -> Text {
-        index == 0 ? Text("Üniversiteler") : Text(verbatim: path.components[index - 1])
+        index == 0 ? Text("Üniversiteler") : Text(verbatim: path.displayNames[index - 1])
     }
 }
 

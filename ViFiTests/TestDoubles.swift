@@ -14,8 +14,12 @@ final class StubArchiveRepository: ArchiveRepository {
     /// When set, every request waits at the gate before it is answered.
     var gate: AsyncGate?
 
+    /// Answers to successive `prefetchArchive()` calls, in order (the last one repeats).
+    var prefetchReplies: [Result<Void, any Error>] = [.success(())]
+
     private(set) var requestedItemPaths: [ArchivePath] = []
     private(set) var requestedDocumentPaths: [ArchivePath] = []
+    private(set) var prefetchCallCount = 0
 
     init(
         items: [Result<[ArchiveItem], any Error>] = [.success([])],
@@ -39,6 +43,13 @@ final class StubArchiveRepository: ArchiveRepository {
         requestedDocumentPaths.append(path)
         await gate?.pass()
         return try Self.reply(to: call, from: documentReplies).get()
+    }
+
+    func prefetchArchive() async throws {
+        let call = prefetchCallCount
+        prefetchCallCount += 1
+        await gate?.pass()
+        try Self.reply(to: call, from: prefetchReplies).get()
     }
 
     /// Archive change notifications the test drives; finishes immediately when unset.
@@ -556,7 +567,7 @@ enum Fixture {
     ) -> ExamDocument {
         let fileExtension = kind == .images ? "jpg" : "pdf"
         let urls = (0..<fileCount).map { index in
-            URL(filePath: "/exams/\(path.name ?? "exam")/file-\(index + 1).\(fileExtension)")
+            URL(filePath: "/exams/\(path.displayName ?? "exam")/file-\(index + 1).\(fileExtension)")
         }
         return ExamDocument(path: path, kind: kind, fileURLs: urls)
     }

@@ -365,3 +365,61 @@ struct AccountViewModelTests {
         AccountViewModel(user: user, auth: auth, now: clock.now)
     }
 }
+
+// MARK: - Cache purge on deletion
+
+@Suite("AccountViewModel deletion purge", .timeLimit(.minutes(1)))
+struct AccountDeletionPurgeTests {
+    private let auth = StubAuthService(currentUser: Fixture.user)
+
+    @Test("A successful deletion purges the user's cached data")
+    func deleteCallsOnDeleted() async {
+        let spy = CallSpy()
+        let viewModel = makeViewModel(onDeleted: spy.call)
+
+        await viewModel.deleteAccount()?.value
+
+        #expect(spy.calls == 1)
+        #expect(auth.currentUser == nil)
+    }
+
+    @Test("A failed deletion does not purge anything")
+    func failedDeleteDoesNotCallOnDeleted() async {
+        auth.deleteReplies = [.failure(AuthError.offline)]
+        let spy = CallSpy()
+        let viewModel = makeViewModel(onDeleted: spy.call)
+
+        await viewModel.deleteAccount()?.value
+
+        #expect(spy.calls == 0)
+        #expect(auth.currentUser == Fixture.user)
+    }
+
+    @Test("A deletion after re-verification also purges the cached data")
+    func reverifyThenDeleteCallsOnDeleted() async throws {
+        auth.deleteReplies = [.failure(AuthError.requiresRecentLogin), .success(())]
+        let spy = CallSpy()
+        let viewModel = makeViewModel(onDeleted: spy.call)
+        await viewModel.deleteAccount()?.value
+
+        let task = try #require(viewModel.updateCode("123456"))
+        await task.value
+
+        #expect(spy.calls == 1)
+        #expect(auth.currentUser == nil)
+    }
+
+    private func makeViewModel(onDeleted: @escaping @MainActor () async -> Void) -> AccountViewModel {
+        AccountViewModel(user: Fixture.user, auth: auth, onDeleted: onDeleted)
+    }
+}
+
+/// Counts how many times its `call` closure was invoked.
+@MainActor
+private final class CallSpy {
+    private(set) var calls = 0
+
+    func call() async {
+        calls += 1
+    }
+}

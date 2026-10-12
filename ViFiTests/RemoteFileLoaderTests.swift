@@ -154,33 +154,64 @@ final class RemoteFileLoaderAuthorizationTests {
         #expect(max(image.size.width, image.size.height) == 4)
     }
 
+    // MARK: - Network policy
+
+    @Test("A speculative (prefetch) load restricts the request to unmetered networks")
+    func speculativeLoadRestrictsNetwork() async throws {
+        let file = StorageFile(folder: "imagess", fileExtension: "jpg")
+        let (session, log) = StubURLProtocol.session(answering: file.canonicalURL, inOrder: [.response(statusCode: 200, body: Self.pngData())])
+        let loader = makeLoader(session: session)
+
+        _ = try await loader.image(from: file.canonicalURL, maxPixelSize: 1000, speculative: true)
+
+        let request = try #require(log.requests.first)
+        #expect(!request.allowsConstrainedNetworkAccess)
+        #expect(!request.allowsExpensiveNetworkAccess)
+    }
+
+    @Test("A normal load (the page on screen) is allowed on any network")
+    func normalLoadAllowsAnyNetwork() async throws {
+        let file = StorageFile(folder: "imagess", fileExtension: "jpg")
+        let (session, log) = StubURLProtocol.session(answering: file.canonicalURL, inOrder: [.response(statusCode: 200, body: Self.pngData())])
+        let loader = makeLoader(session: session)
+
+        _ = try await loader.image(from: file.canonicalURL, maxPixelSize: 1000)
+
+        let request = try #require(log.requests.first)
+        #expect(request.allowsConstrainedNetworkAccess)
+        #expect(request.allowsExpensiveNetworkAccess)
+    }
+
     // MARK: - Caching
 
-    @Test("A second load of the same file, even with another token, is served from the cache without credentials")
-    func secondLoadIsServedFromCache() async throws {
+    @Test("A file is stored once, as a local copy, not also in the response cache")
+    func fileIsNotAlsoStoredInResponseCache() async throws {
         let file = StorageFile()
         let (session, log) = StubURLProtocol.session(answering: file.canonicalURL, inOrder: [.response(statusCode: 200, body: body)])
         let loader = makeLoader(session: session)
-        _ = try await loader.localFile(from: file.url(token: "first"), fileName: "first.pdf")
-        #expect(session.configuration.urlCache?.cachedResponse(for: URLRequest(url: file.canonicalURL)) != nil)
 
-        // A different file name means a different local copy, so the response cache has to answer.
-        let second = try await loader.localFile(from: file.url(token: "second"), fileName: "second.pdf")
+        let first = try await loader.localFile(from: file.url(token: "first"), fileName: "exam.pdf")
+        #expect(try Data(contentsOf: first) == body)
+        // No double store: the bytes live only in the local file, never also in the URL response cache.
+        #expect(session.configuration.urlCache?.cachedResponse(for: URLRequest(url: file.canonicalURL)) == nil)
 
-        #expect(try Data(contentsOf: second) == body)
+        // Opening the same file again is served from the local copy, without another download.
+        let second = try await loader.localFile(from: file.url(token: "second"), fileName: "exam.pdf")
+        #expect(second == first)
         #expect(log.count == 1)
         #expect(authorizer.calls.count == 1)
     }
 
-    @Test("A cached file opens even when nobody is signed in any more")
+    @Test("A downloaded file opens even when nobody is signed in any more")
     func cachedFileOpensWithoutSession() async throws {
         let file = StorageFile()
         let (session, log) = StubURLProtocol.session(answering: file.canonicalURL, inOrder: [.response(statusCode: 200, body: body)])
         let loader = makeLoader(session: session)
-        _ = try await loader.localFile(from: file.url(token: "first"), fileName: "first.pdf")
+        _ = try await loader.localFile(from: file.url(token: "first"), fileName: "exam.pdf")
         authorizer.failure = ArchiveError.permissionDenied
 
-        let second = try await loader.localFile(from: file.url(token: "second"), fileName: "second.pdf")
+        // The local copy serves the file offline; no credentials are needed once it is on disk.
+        let second = try await loader.localFile(from: file.canonicalURL, fileName: "exam.pdf")
 
         #expect(try Data(contentsOf: second) == body)
         #expect(log.count == 1)
@@ -452,5 +483,179 @@ private struct StorageFile {
     /// The stored download URL, with `token` as its (soon revoked) download token.
     func url(token: String) -> URL {
         URL(string: "\(path)?alt=media&token=\(token)") ?? URL(filePath: "/invalid")
+    }
+}
+
+// MARK: - Maintenance (release & purge)
+
+@Suite("RemoteFileLoader maintenance", .timeLimit(.minutes(1)))
+final class RemoteFileLoaderMaintenanceTests {
+    private let authorizer = StubRequestAuthorizer()
+    private let cacheDirectory = URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+    private let body = Data("exam file contents".utf8)
+
+    deinit {
+        try? FileManager.default.removeItem(at: cacheDirectory)
+    }
+
+    @Test("Releasing a decoded image re-decodes it without downloading again")
+    func releaseImageDropsTheDecodedCopy() async throws {
+        let file = StorageFile(folder: "imagess", fileExtension: "jpg")
+        let (session, log) = StubURLProtocol.session(answering: file.canonicalURL, inOrder: [.response(statusCode: 200, body: Self.pngData())])
+        let loader = makeLoader(session: session)
+        let first = try await loader.image(from: file.canonicalURL, maxPixelSize: 1000)
+
+        loader.releaseImage(from: file.canonicalURL, maxPixelSize: 1000)
+        let second = try await loader.image(from: file.canonicalURL, maxPixelSize: 1000)
+
+        #expect(first !== second, "The decoded image was dropped, so it is decoded afresh")
+        #expect(log.count == 1, "The response bytes are still cached; no new download")
+    }
+
+    @Test("Purging deletes the local file so it is downloaded again")
+    func purgeDeletesLocalFiles() async throws {
+        let file = StorageFile()
+        let (session, log) = StubURLProtocol.session(
+            answering: file.canonicalURL,
+            inOrder: [.response(statusCode: 200, body: body), .response(statusCode: 200, body: body)]
+        )
+        let loader = makeLoader(session: session)
+        let local = try await loader.localFile(from: file.canonicalURL, fileName: "exam.pdf")
+        #expect(FileManager.default.fileExists(atPath: local.path(percentEncoded: false)))
+
+        await loader.purge()
+
+        #expect(!FileManager.default.fileExists(atPath: local.path(percentEncoded: false)))
+        _ = try await loader.localFile(from: file.canonicalURL, fileName: "exam.pdf")
+        #expect(log.count == 2, "After a purge the file is downloaded again, not served from a leftover copy")
+    }
+
+    @Test("A purge during a download leaves no file behind")
+    func purgeDuringDownloadWritesNothing() async throws {
+        let file = StorageFile()
+        let (session, _) = StubURLProtocol.session(answering: file.canonicalURL, inOrder: [.response(statusCode: 200, body: body)])
+        let loader = makeLoader(session: session)
+        let gate = AsyncGate()
+        authorizer.gate = gate
+        let task = Task { try await loader.localFile(from: file.canonicalURL, fileName: "exam.pdf") }
+        await gate.waitForArrival()
+
+        await loader.purge()
+        gate.open()
+
+        await #expect(throws: (any Error).self) {
+            try await task.value
+        }
+        // The download that finished mid-purge must not resurrect a file for the deleted account.
+        let filesDirectory = cacheDirectory.appending(path: "Files", directoryHint: .isDirectory)
+        #expect(RemoteFileLoader.directorySize(of: filesDirectory, fileManager: .default) == 0)
+    }
+
+    @Test("Purging drops cached responses and decoded images")
+    func purgeClearsImageCaches() async throws {
+        let file = StorageFile(folder: "imagess", fileExtension: "jpg")
+        let (session, log) = StubURLProtocol.session(
+            answering: file.canonicalURL,
+            inOrder: [.response(statusCode: 200, body: Self.pngData()), .response(statusCode: 200, body: Self.pngData())]
+        )
+        let loader = makeLoader(session: session)
+        _ = try await loader.image(from: file.canonicalURL, maxPixelSize: 1000)
+        #expect(session.configuration.urlCache?.cachedResponse(for: URLRequest(url: file.canonicalURL)) != nil)
+
+        await loader.purge()
+
+        #expect(session.configuration.urlCache?.cachedResponse(for: URLRequest(url: file.canonicalURL)) == nil)
+        _ = try await loader.image(from: file.canonicalURL, maxPixelSize: 1000)
+        #expect(log.count == 2, "The decoded image and the response were dropped, so the bytes are fetched again")
+    }
+
+    // MARK: - Helpers
+
+    private func makeLoader(session: URLSession) -> RemoteFileLoader {
+        RemoteFileLoader(session: session, cacheDirectory: cacheDirectory, authorizer: authorizer)
+    }
+
+    /// A small PNG (8 x 4 pixels).
+    private static func pngData() -> Data {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 8, height: 4), format: format)
+        return renderer.pngData { context in
+            UIColor.orange.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 8, height: 4))
+        }
+    }
+}
+
+// MARK: - Disk pruning
+
+@Suite("RemoteFileLoader disk pruning")
+final class RemoteFileLoaderPruningTests {
+    private let directory = URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+
+    deinit {
+        try? FileManager.default.removeItem(at: directory)
+    }
+
+    @Test("The oldest files are deleted first, until the total is within budget")
+    func prunesOldestFirst() async throws {
+        try writeFolder("f0", modified: date(0))
+        try writeFolder("f1", modified: date(1))
+        try writeFolder("f2", modified: date(2))
+        let oneSize = RemoteFileLoader.directorySize(of: folder("f0"), fileManager: .default)
+
+        await RemoteFileLoader.pruneFiles(in: directory, budget: 2 * oneSize, keepNewerThan: 0)
+
+        #expect(try remainingFolders() == ["f1", "f2"])
+    }
+
+    @Test("Nothing is deleted when the total is within budget")
+    func keepsEverythingUnderBudget() async throws {
+        try writeFolder("f0", modified: date(0))
+        try writeFolder("f1", modified: date(1))
+        let oneSize = RemoteFileLoader.directorySize(of: folder("f0"), fileManager: .default)
+
+        await RemoteFileLoader.pruneFiles(in: directory, budget: 10 * oneSize, keepNewerThan: 0)
+
+        #expect(try remainingFolders() == ["f0", "f1"])
+    }
+
+    @Test("A recently touched file is never pruned, even over budget")
+    func protectsRecentFiles() async throws {
+        try writeFolder("recent", modified: Date())
+        try writeFolder("old1", modified: date(0))
+        try writeFolder("old2", modified: date(1))
+
+        await RemoteFileLoader.pruneFiles(in: directory, budget: 0, keepNewerThan: 3600)
+
+        #expect(try remainingFolders() == ["recent"], "Only the file touched within the window survives")
+    }
+
+    @Test("Pruning a missing directory does nothing")
+    func missingDirectory() async {
+        await RemoteFileLoader.pruneFiles(in: directory, budget: 0, keepNewerThan: 0)
+        #expect(!FileManager.default.fileExists(atPath: directory.path(percentEncoded: false)))
+    }
+
+    // MARK: - Helpers
+
+    private func folder(_ name: String) -> URL {
+        directory.appending(path: name, directoryHint: .isDirectory)
+    }
+
+    /// Writes a 64 KB file in `directory/<name>/file.bin`, then stamps the folder's modification date.
+    private func writeFolder(_ name: String, modified: Date) throws {
+        let folderURL = folder(name)
+        try FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
+        try Data(count: 64 * 1024).write(to: folderURL.appending(path: "file.bin"))
+        try FileManager.default.setAttributes([.modificationDate: modified], ofItemAtPath: folderURL.path(percentEncoded: false))
+    }
+
+    private func remainingFolders() throws -> [String] {
+        try FileManager.default.contentsOfDirectory(atPath: directory.path(percentEncoded: false)).sorted()
+    }
+
+    private func date(_ offset: TimeInterval) -> Date {
+        Date(timeIntervalSinceReferenceDate: offset)
     }
 }

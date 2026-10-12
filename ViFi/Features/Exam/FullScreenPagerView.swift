@@ -5,8 +5,6 @@ import SwiftUI
 /// tap to hide the controls. Presented with `.fullScreenCover`.
 struct FullScreenPagerView: View {
     let document: ExamDocument
-    /// Images already shown in the page list, displayed until the sharper full-screen version loads.
-    let previews: [Int: UIImage]
 
     @Environment(AppEnvironment.self) private var environment
     @Environment(\.dismiss) private var dismiss
@@ -15,6 +13,9 @@ struct FullScreenPagerView: View {
     @State private var selection: Int
     @State private var isChromeHidden = false
     @State private var screenLength: CGFloat = 0
+    /// A frozen snapshot of the list's page images, shown until the sharper full-screen version loads.
+    /// Held in `@State` so later changes to the presenter's live dictionary cannot empty it mid-viewing.
+    @State private var previews: [Int: UIImage]
 
     init(
         document: ExamDocument,
@@ -22,7 +23,7 @@ struct FullScreenPagerView: View {
         previews: [Int: UIImage] = [:]
     ) {
         self.document = document
-        self.previews = previews
+        _previews = State(initialValue: previews)
         let lastPage = max(document.fileURLs.count - 1, 0)
         _selection = State(initialValue: min(max(initialPage, 0), lastPage))
     }
@@ -181,8 +182,10 @@ private struct ZoomablePage: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(.rect)
-        .task(id: LoadRequest(url: url, pixelSize: maxPixelSize, attempt: attempt)) { [maxPixelSize] in
-            await loadImage(maxPixelSize: maxPixelSize)
+        // `isCurrent` is part of the id so a neighbour that was only prefetched (or skipped on cellular)
+        // reloads for real the moment it becomes the page on screen.
+        .task(id: LoadRequest(url: url, pixelSize: maxPixelSize, attempt: attempt, isCurrent: isCurrent)) { [maxPixelSize, isCurrent] in
+            await loadImage(maxPixelSize: maxPixelSize, speculative: !isCurrent)
         }
         .onDisappear(perform: releaseImage)
     }
@@ -211,17 +214,24 @@ private struct ZoomablePage: View {
         .frame(maxWidth: 420)
     }
 
-    private func loadImage(maxPixelSize: CGFloat) async {
+    /// Loads the page. A neighbour (`speculative`) prefetch warms the cache on unmetered networks and is
+    /// silently skipped otherwise; the page the user is on (`speculative == false`) always loads and surfaces
+    /// errors.
+    private func loadImage(maxPixelSize: CGFloat, speculative: Bool) async {
         guard maxPixelSize > 0, image == nil || loadedPixelSize < maxPixelSize else { return }
-        errorMessage = nil
+        if !speculative {
+            errorMessage = nil
+        }
         do {
-            let loaded = try await environment.fileLoader.image(from: url, maxPixelSize: maxPixelSize)
+            let loaded = try await environment.fileLoader.image(from: url, maxPixelSize: maxPixelSize, speculative: speculative)
             // Cancelled because the page left the screen: do not keep a large image for it.
             guard !Task.isCancelled else { return }
             image = loaded
             loadedPixelSize = maxPixelSize
         } catch {
             guard !Task.isCancelled, !(error is CancellationError) else { return }
+            // A skipped neighbour prefetch (e.g. on cellular) is expected; it loads for real when swiped to.
+            guard !speculative else { return }
             Logger.files.error("Full-screen page \(pageNumber) failed: \(error.localizedDescription, privacy: .public)")
             // With a preview on screen the page stays readable; only an empty page shows the error.
             errorMessage = error.userMessage
@@ -229,6 +239,11 @@ private struct ZoomablePage: View {
     }
 
     private func releaseImage() {
+        // Evict the large full-screen bitmap from the shared cache too, not just this view's state: otherwise
+        // closed pages keep occupying the decoded-image budget and thrash the small list thumbnails.
+        if loadedPixelSize > 0 {
+            environment.fileLoader.releaseImage(from: url, maxPixelSize: loadedPixelSize)
+        }
         image = nil
         loadedPixelSize = 0
     }
@@ -238,6 +253,7 @@ private struct LoadRequest: Hashable {
     let url: URL
     let pixelSize: CGFloat
     let attempt: Int
+    let isCurrent: Bool
 }
 
 // MARK: - Viewer chrome

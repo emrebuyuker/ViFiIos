@@ -1,0 +1,153 @@
+rules_version = '2';
+
+// ViFi Cloud Firestore security rules.
+//
+// Built incrementally; each addition ships with emulator tests and deploys only with explicit approval:
+//   - item #6 (this): archive READ — catalogNodes + exams readable by +90 phone users and admins; admin-only writes.
+//   - item #7: submissions (owner create/read + admin moderation).
+//   - item #8: coin/entitlement/notification collections, locked server-only.
+// Everything not explicitly opened is denied by the catch-all at the bottom.
+//
+// App Check enforcement for Firestore is turned on in the console only after a Firestore-reading app version
+// has shipped (migration items #10/#11), never before (old versions would break).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Signed in with Firebase Phone Auth using a Turkish (+90) mobile number.
+    function isTurkishPhoneUser() {
+      return request.auth != null
+        && request.auth.token.get('phone_number', null) is string
+        && request.auth.token.get('phone_number', '').matches('^[+]90[0-9]{10}$');
+    }
+
+    // Carries the `admin: true` custom claim set by the Admin SDK (strict boolean, not the string 'true').
+    function isAdmin() {
+      return request.auth != null && request.auth.token.get('admin', false) == true;
+    }
+
+    function canReadArchive() {
+      return isTurkishPhoneUser() || isAdmin();
+    }
+
+    // The signed-in (+90) owner of a per-user document at `.../{uid}/...`.
+    function isOwner(uid) {
+      return isTurkishPhoneUser() && request.auth.uid == uid;
+    }
+
+    // The published taxonomy (university / faculty / department / course) and the exams under it. Readable
+    // (get + list) by signed-in +90 users and admins; written only by admins — the migration and approval
+    // tooling use the Admin SDK, which bypasses these rules. Exam/catalog field validation is added with the
+    // user-facing write paths later.
+    match /catalogNodes/{nodeId} {
+      allow read: if canReadArchive();
+      allow write: if isAdmin();
+    }
+
+    match /exams/{examId} {
+      allow read: if canReadArchive();
+      allow write: if isAdmin();
+    }
+
+    // User exam submissions awaiting moderation — the Firestore counterpart of RTDB `pendingExams`. The owner
+    // (+90) creates a pending submission and reads/deletes their own while it is pending; admins read all and
+    // moderate. The moderation/approval flow runs via the Admin SDK (which bypasses these rules), so the client
+    // `update` here is just defense-in-depth.
+    //
+    // Firestore rules cannot iterate an array, so each file's `storagePath` prefix cannot be validated here the
+    // way the RTDB rules did per child. That is enforced instead by the Storage rules (a user can only upload to
+    // `pending/<uid>/<submissionId>/…`) and by the approval Cloud Function (which copies only the owner's files).
+    // `createdAt` is client-provided and advisory; the authoritative review timestamps are set server-side.
+    match /submissions/{submissionId} {
+      function submissionText(value) {
+        return value is string && value.size() >= 1 && value.size() <= 120;
+      }
+
+      function isValidSubmission(data) {
+        return data.keys().hasOnly(
+            ['ownerId', 'university', 'faculty', 'department', 'lesson', 'exam', 'kind', 'status', 'createdAt', 'files'])
+          && data.ownerId is string
+          && submissionText(data.university)
+          && submissionText(data.faculty)
+          && submissionText(data.department)
+          && submissionText(data.lesson)
+          && submissionText(data.exam)
+          && (data.kind == 'JPG' || data.kind == 'PDF')
+          && data.createdAt is timestamp
+          && data.files is list
+          && data.files.size() >= 1
+          && data.files.size() <= 50;
+      }
+
+      // get + list: an owner may read only their own submissions (a list query must filter by `ownerId`);
+      // admins read all.
+      allow read: if isAdmin()
+        || (isTurkishPhoneUser() && resource.data.ownerId == request.auth.uid);
+
+      allow create: if isTurkishPhoneUser()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && isValidSubmission(request.resource.data);
+
+      // The owner may withdraw a submission only while it is still pending; admins may delete any.
+      allow delete: if isAdmin()
+        || (isTurkishPhoneUser() && resource.data.ownerId == request.auth.uid && resource.data.status == 'pending');
+
+      // Moderation is admin-only (the real transition runs via the Admin SDK).
+      allow update: if isAdmin();
+    }
+
+    // Coin economy, entitlements, subscriptions and notifications — the foundation for later roadmap items
+    // (coin earn/spend #4/#5/#6, coin purchase V2.2, unlocks #5, subscription V2.1, notifications #11/V2.5).
+    // Money and entitlement state is LOCKED to server-only writes NOW, before any coin logic exists, so a client
+    // can never forge a balance, a ledger entry, an unlock or a subscription. The logic arrives later via Cloud
+    // Functions / IAP validation, which use the Admin SDK and bypass these rules.
+
+    // A user's coin balance. Readable by the owner and admins; never written by a client.
+    match /wallets/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;
+
+      // The immutable coin ledger (earn / spend / purchase / refund). Read-only; no client writes, ever.
+      match /ledger/{entryId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow write: if false;
+      }
+    }
+
+    // Subscription state (set by IAP validation server-side).
+    match /subscriptions/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;
+    }
+
+    // Per-user state lives under `users/{uid}/…` in Firestore (the profile itself stays in the Realtime
+    // Database for now). The parent `users/{uid}` document is not used and stays denied by the catch-all.
+    match /users/{uid} {
+      // What the user has unlocked with coins (or via a subscription). Server-written only.
+      match /unlocks/{examId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow write: if false;
+      }
+
+      // The notification inbox. Messages are created server-side; the owner reads them and may only flip the
+      // `read` flag — nothing else, and never create or delete.
+      match /inbox/{messageId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create, delete: if false;
+        allow update: if isOwner(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+          && request.resource.data.read is bool;
+      }
+
+      // Push-notification device tokens; the owner manages their own.
+      match /devices/{token} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // Deny-by-default for every path not opened above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -21,13 +21,23 @@ final class AccountViewModel {
 
     @ObservationIgnored private let auth: any AuthServicing
     @ObservationIgnored private let now: () -> Date
+    /// Run once the account has been deleted, to wipe the user's locally cached exam data.
+    @ObservationIgnored private let onDeleted: @MainActor () async -> Void
     @ObservationIgnored private var verificationID: String?
 
-    /// - Parameter now: The clock the resend cooldown is measured with (injected by tests).
-    init(user: AuthUser, auth: any AuthServicing, now: @escaping () -> Date = Date.init) {
+    /// - Parameters:
+    ///   - now: The clock the resend cooldown is measured with (injected by tests).
+    ///   - onDeleted: Called after a successful deletion, to purge locally cached exam files.
+    init(
+        user: AuthUser,
+        auth: any AuthServicing,
+        now: @escaping () -> Date = Date.init,
+        onDeleted: @escaping @MainActor () async -> Void = {}
+    ) {
         self.user = user
         self.auth = auth
         self.now = now
+        self.onDeleted = onDeleted
     }
 
     /// `+90 532 123 45 67`.
@@ -68,9 +78,12 @@ final class AccountViewModel {
         errorMessage = nil
         let auth = auth
         let phoneNumber = user.phoneNumber
+        let onDeleted = onDeleted
         return Task { [weak self] in
             do {
                 try await auth.deleteAccount()
+                // Runs even if the sheet is already torn down by the session gate; captured, not via `self`.
+                await onDeleted()
             } catch AuthError.requiresRecentLogin {
                 // No SMS once the sheet is gone: nothing could take the code any more.
                 guard self != nil, !Task.isCancelled else { return }
@@ -105,10 +118,12 @@ final class AccountViewModel {
         errorMessage = nil
         let auth = auth
         let code = codeText
+        let onDeleted = onDeleted
         return Task { [weak self] in
             do {
                 try await auth.reauthenticate(verificationID: verificationID, code: code)
                 try await auth.deleteAccount()
+                await onDeleted()
             } catch {
                 self?.fail(with: error)
             }

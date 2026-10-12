@@ -12,7 +12,8 @@ struct ArchivePathTests {
 
         #expect(root.isRoot)
         #expect(root.depth == 0)
-        #expect(root.name == nil)
+        #expect(root.displayName == nil)
+        #expect(root.displayNames.isEmpty)
         #expect(root.level == nil)
         #expect(root.childLevel == .university)
         #expect(root.parent == nil)
@@ -34,10 +35,46 @@ struct ArchivePathTests {
         #expect(Fixture.imagesExam.childLevel == nil)
     }
 
-    @Test("The name is the last component")
-    func name() {
-        #expect(lesson.name == "MÜHENDİSLİK MATEMATİĞİ")
-        #expect(Fixture.imagesExam.name == "2019 FİNAL")
+    @Test("The display name is the last level's name")
+    func displayName() {
+        #expect(lesson.displayName == "MÜHENDİSLİK MATEMATİĞİ")
+        #expect(Fixture.imagesExam.displayName == "2019 FİNAL")
+    }
+
+    @Test("Without explicit display names, the ids are used as the display names")
+    func displayNamesDefaultToIds() {
+        #expect(lesson.displayNames == lesson.components)
+        #expect(lesson.displayName == lesson.components.last)
+    }
+
+    @Test("A distinct id and display name are carried per level and sliced together")
+    func idAndDisplayNameAreSeparate() {
+        let root = ArchivePath.root
+        let university = root.appending(id: "bogazici-universitesi", displayName: "Boğaziçi Üniversitesi")
+        let faculty = university.appending(id: "muhendislik-fakultesi", displayName: "Mühendislik Fakültesi")
+
+        #expect(faculty.components == ["bogazici-universitesi", "muhendislik-fakultesi"])
+        #expect(faculty.displayNames == ["Boğaziçi Üniversitesi", "Mühendislik Fakültesi"])
+        #expect(faculty.displayName == "Mühendislik Fakültesi")
+        // parent and prefix slice the display names alongside the ids.
+        #expect(faculty.parent?.displayNames == ["Boğaziçi Üniversitesi"])
+        #expect(faculty.prefix(1).displayNames == ["Boğaziçi Üniversitesi"])
+    }
+
+    @Test("Identity is the ids alone; display names do not affect equality or hashing")
+    func equalityIgnoresDisplayNames() {
+        let byId = ArchivePath(components: ["bogazici-universitesi"], displayNames: ["Boğaziçi Üniversitesi"])
+        let renamed = ArchivePath(components: ["bogazici-universitesi"], displayNames: ["BOĞAZİÇİ ÜNİVERSİTESİ"])
+
+        #expect(byId == renamed)
+        #expect(Set([byId, renamed]).count == 1)
+    }
+
+    @Test("A mismatched display-name count falls back to the ids")
+    func mismatchedDisplayNamesFallBack() {
+        let path = ArchivePath(components: ["a", "b"], displayNames: ["only-one"])
+
+        #expect(path.displayNames == ["a", "b"])
     }
 
     @Test("appending adds a child and parent removes it")
@@ -72,10 +109,24 @@ struct ArchivePathTests {
         #expect(lesson != Fixture.imagesExam)
     }
 
-    @Test("A path survives a Codable round trip")
+    @Test("A path survives a Codable round trip, keeping its display names")
     func codableRoundTrip() throws {
-        let data = try JSONEncoder().encode(Fixture.imagesExam)
+        let path = ArchivePath(components: ["bogazici-universitesi"], displayNames: ["Boğaziçi Üniversitesi"])
 
-        #expect(try JSONDecoder().decode(ArchivePath.self, from: data) == Fixture.imagesExam)
+        let decoded = try JSONDecoder().decode(ArchivePath.self, from: JSONEncoder().encode(path))
+
+        #expect(decoded == path)
+        #expect(decoded.displayNames == ["Boğaziçi Üniversitesi"])
+    }
+
+    @Test("A path stored before display names existed decodes with the ids as names")
+    func decodesLegacyPathWithoutDisplayNames() throws {
+        // A recents entry written by an older build: only `components`, no `displayNames`.
+        let legacy = Data(#"{"components":["BOZOK ÜNİVERSİTESİ","2019 FİNAL"]}"#.utf8)
+
+        let decoded = try JSONDecoder().decode(ArchivePath.self, from: legacy)
+
+        #expect(decoded.components == ["BOZOK ÜNİVERSİTESİ", "2019 FİNAL"])
+        #expect(decoded.displayNames == ["BOZOK ÜNİVERSİTESİ", "2019 FİNAL"])
     }
 }

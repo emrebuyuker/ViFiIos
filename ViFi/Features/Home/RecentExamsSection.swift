@@ -135,8 +135,8 @@ private struct RecentExamCard: View {
 
     /// The card read as a sentence, without the "›" separator of the visual subtitle.
     private var accessibilityDescription: String {
-        let components = exam.path.components
-        let location = [components.first, components.dropLast().last].compactMap(\.self)
+        let names = exam.path.displayNames
+        let location = [names.first, names.dropLast().last].compactMap(\.self)
         return ([exam.title, exam.kind.badge] + location + [openedText]).joined(separator: ", ")
     }
 }

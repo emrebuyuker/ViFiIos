@@ -49,7 +49,7 @@ private struct BrowseScreen: View {
         .scrollDismissesKeyboard(.immediately)
         .overlay { stateOverlay }
         .animation(.smooth, value: viewModel.state)
-        .navigationTitle(viewModel.path.name ?? "")
+        .navigationTitle(viewModel.path.displayName ?? "")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $viewModel.searchText, prompt: listedLevel.searchPrompt)
         .refreshable { await viewModel.refresh() }

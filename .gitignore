@@ -37,5 +37,6 @@ fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output/
 
-# Internal roadmap / backlog — kept local, not published to the public repo.
+# Internal roadmap / planning docs — kept local, not published to the public repo.
 ROADMAP.md
+FIRESTORE-MIGRATION.md

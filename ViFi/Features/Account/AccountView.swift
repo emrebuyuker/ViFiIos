@@ -7,7 +7,13 @@ struct AccountView: View {
     var body: some View {
         // Signing out or deleting replaces the whole archive (and this sheet) with the login screen.
         if let user = environment.session.user {
-            AccountScreen(user: user, auth: environment.auth, profileName: environment.profile.profile?.fullName)
+            AccountScreen(
+                user: user,
+                auth: environment.auth,
+                profileName: environment.profile.profile?.fullName,
+                // Deleting the account wipes the user's cached exam files from the device.
+                onDeleted: { [fileLoader = environment.fileLoader] in await fileLoader.purge() }
+            )
         }
     }
 }
@@ -24,8 +30,13 @@ private struct AccountScreen: View {
     /// The current profile's display name, shown on the edit-profile row.
     private let profileName: String?
 
-    init(user: AuthUser, auth: any AuthServicing, profileName: String?) {
-        _viewModel = State(initialValue: AccountViewModel(user: user, auth: auth))
+    init(
+        user: AuthUser,
+        auth: any AuthServicing,
+        profileName: String?,
+        onDeleted: @escaping @MainActor () async -> Void
+    ) {
+        _viewModel = State(initialValue: AccountViewModel(user: user, auth: auth, onDeleted: onDeleted))
         self.user = user
         self.profileName = profileName
     }

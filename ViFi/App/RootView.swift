@@ -6,6 +6,7 @@ struct RootView: View {
     @Environment(AppEnvironment.self) private var environment
     @Environment(Router.self) private var router
     @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     @State private var updateStatus: AppUpdateStatus = .upToDate
     /// The optional version dismissed with "Daha Sonra" this launch; shown again next launch.
     @State private var dismissedOptionalVersion: String?
@@ -25,11 +26,19 @@ struct RootView: View {
         .task { await environment.session.observeUserChanges() }
         .task { await observeUpdateStatus() }
         .onChange(of: environment.session.state) { _, state in
-            // The next user starts on the home screen, not deep in the previous user's stack, and with a
-            // clean profile read.
+            // The next user starts on the home screen, not deep in the previous user's stack, with a clean
+            // profile read and without the previous user's recently-viewed list. Downloaded files are kept
+            // (re-login needs no re-download); account deletion wipes them separately, in `AccountViewModel`.
             if state == .signedOut {
                 router.popToRoot()
                 environment.profile.reset()
+                environment.recents.clear()
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // Trim the on-disk file cache back within budget while the app is idle.
+            if phase == .background {
+                Task { await environment.fileLoader.pruneDiskCache() }
             }
         }
         .onOpenURL { url in
@@ -70,6 +79,8 @@ struct RootView: View {
             HomeView()
                 .navigationDestination(for: Route.self, destination: destination)
         }
+        // Warm the offline cache once the signed-in user reaches the archive; cancelled on sign-out.
+        .task { await environment.prefetcher.prefetchIfNeeded() }
     }
 
     @ViewBuilder

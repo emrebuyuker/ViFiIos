@@ -104,6 +104,11 @@ private struct ExamImagesScreen: View {
                         onOpen: { openedPage = OpenedPage(index: index) }
                     )
                     .accessibilityIdentifier("exam.page.\(index)")
+                    // Drop the preview when the row scrolls off, so the dictionary stays bounded to the
+                    // visible window instead of holding every page's image for the screen's lifetime.
+                    // The full-screen viewer takes its own `@State` snapshot at presentation, so clearing
+                    // entries here never empties an open viewer.
+                    .onDisappear { pagePreviews[index] = nil }
                 }
             }
             .frame(maxWidth: Layout.readableWidth)

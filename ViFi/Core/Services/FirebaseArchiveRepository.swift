@@ -25,6 +25,10 @@ final class FirebaseArchiveRepository: ArchiveRepository {
     /// Whether keep-synced is armed for the current sign-in.
     private var isKeepSyncedArmed = false
     private var sessionTask: Task<Void, Never>?
+    /// The live `archiveChanges()` consumers; one shared root observer fans each change out to all of them.
+    private var changeContinuations: [UUID: AsyncStream<Void>.Continuation] = [:]
+    /// The single `.value` observer on the root, installed with the first consumer and removed with the last.
+    private var rootObserverHandle: DatabaseHandle?
 
     /// - Parameters:
     ///   - auth: The sign-in state; the archive is only kept in sync while a user is signed in.
@@ -42,6 +46,8 @@ final class FirebaseArchiveRepository: ArchiveRepository {
 
     deinit {
         sessionTask?.cancel()
+        // The shared root observer is removed when its last consumer's stream ends (`endChangeStream`) or the
+        // server cancels it (`finishAllStreams`); this app-lifetime repository is never actually deinitialised.
     }
 
     func items(at path: ArchivePath) async throws -> [ArchiveItem] {
@@ -67,20 +73,70 @@ final class FirebaseArchiveRepository: ArchiveRepository {
     /// With persistence on, the first read after launch is answered from the previous session's disk
     /// cache before the server sync lands. A live listener on the root fires again once fresh data
     /// arrives (and on every later edit), so visible lists can re-read.
+    ///
+    /// Every consumer shares one root `.value` observer: with N screens open on the navigation stack, a single
+    /// change is materialised and dispatched once, not N times.
     func archiveChanges() -> AsyncStream<Void> {
         armKeepSyncedIfNeeded()
+        let id = UUID()
+        let (stream, continuation) = AsyncStream.makeStream(of: Void.self, bufferingPolicy: .bufferingNewest(1))
+        changeContinuations[id] = continuation
+        continuation.onTermination = { @Sendable [weak self] _ in
+            Task { @MainActor in self?.endChangeStream(id) }
+        }
+        installRootObserverIfNeeded()
+        return stream
+    }
+}
+
+// MARK: - Change broadcasting
+
+private extension FirebaseArchiveRepository {
+    /// Attaches the one root observer, the first time a consumer subscribes.
+    func installRootObserverIfNeeded() {
+        guard rootObserverHandle == nil else { return }
         // `DatabaseReference` is thread-safe but not annotated `Sendable`.
         nonisolated(unsafe) let root = root
-        return AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
-            let handle = root.observe(
-                .value,
-                with: { @Sendable _ in continuation.yield() },
-                withCancel: { @Sendable _ in continuation.finish() }
-            )
-            continuation.onTermination = { @Sendable _ in
-                root.removeObserver(withHandle: handle)
+        rootObserverHandle = root.observe(
+            .value,
+            with: { @Sendable [weak self] _ in
+                Task { @MainActor in self?.broadcastChange() }
+            },
+            withCancel: { @Sendable [weak self] _ in
+                Task { @MainActor in self?.finishAllStreams() }
             }
+        )
+    }
+
+    /// Notifies every live consumer of a change.
+    func broadcastChange() {
+        for continuation in changeContinuations.values {
+            continuation.yield()
         }
+    }
+
+    /// Drops one consumer; removes the shared observer once the last one goes away.
+    func endChangeStream(_ id: UUID) {
+        changeContinuations[id] = nil
+        if changeContinuations.isEmpty {
+            removeRootObserver()
+        }
+    }
+
+    /// Ends every consumer's stream when the server cancels the listener (signed out, revoked token).
+    func finishAllStreams() {
+        let continuations = Array(changeContinuations.values)
+        changeContinuations.removeAll()
+        removeRootObserver()
+        for continuation in continuations {
+            continuation.finish()
+        }
+    }
+
+    func removeRootObserver() {
+        guard let rootObserverHandle else { return }
+        root.removeObserver(withHandle: rootObserverHandle)
+        self.rootObserverHandle = nil
     }
 }
 

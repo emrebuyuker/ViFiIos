@@ -30,11 +30,11 @@ final class ExamDocumentViewModel {
     }
 
     /// The exam name, available before the document loads (navigation title).
-    var title: String { path.name ?? "" }
+    var title: String { path.displayName ?? "" }
 
     /// "University › Lesson": where the exam comes from.
     var subtitle: String {
-        [path.components.first, path.components.dropLast().last]
+        [path.displayNames.first, path.displayNames.dropLast().last]
             .compactMap { $0 }
             .joined(separator: " › ")
     }
@@ -80,6 +80,13 @@ final class ExamDocumentViewModel {
     private func handleLoadFailure(_ error: any Error) {
         // Leaving the screen cancels the load: keep `.loading` so the next appearance retries.
         guard !Task.isCancelled, !(error is CancellationError) else { return }
+
+        // A recorded exam that no longer exists (deleted or renamed) is dropped from recents, so its dead card
+        // leaves the home screen. Only a definitive "not found" removes it — never a transient offline,
+        // permission or server error, which must leave the entry in place for a later retry.
+        if (error as? ArchiveError) == .notFound {
+            recents.remove(path: path)
+        }
 
         let location = path.components.joined(separator: "/")
         Logger.archive.error("Loading exam \(location, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")

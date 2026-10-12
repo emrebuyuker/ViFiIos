@@ -18,7 +18,10 @@ extension AppEnvironment {
             auth: MockAuthService(isSignedIn: !arguments.contains(LaunchArgument.signedOut)),
             profileService: MockProfileService(profile: mockProfile(arguments: arguments)),
             catalog: .bundled(),
-            recents: RecentExamsStore(defaults: .mockSuite)
+            recents: RecentExamsStore(defaults: .mockSuite),
+            // Keep the prefetch throttle out of the real defaults, so a mock/UI-test run never suppresses a
+            // later live warm (the mock repository's prefetch is a no-op anyway).
+            prefetcherDefaults: .mockSuite
         )
     }
 

@@ -9,6 +9,11 @@ protocol ArchiveRepository: AnyObject {
     /// The files of the exam at `path` (a depth-5 path).
     func document(at path: ArchivePath) async throws -> ExamDocument
 
+    /// Warms the source's offline cache with the whole archive, so later reads work without a connection.
+    /// Best-effort, called off the critical path: callers ignore failures and retry. A requirement (not only
+    /// an extension member) so a call through `any ArchiveRepository` dispatches to the concrete source.
+    func prefetchArchive() async throws
+
     /// Emits whenever the archive changes, including when fresh server data replaces the copy cached
     /// by a previous session. Lists re-read their entries on each element; the stream ends when the
     /// consuming task is cancelled.
@@ -16,6 +21,10 @@ protocol ArchiveRepository: AnyObject {
 }
 
 extension ArchiveRepository {
+    /// Sources that keep themselves available offline (the Realtime Database via `keepSynced`) or have nothing
+    /// remote to warm (sample data, test doubles) do nothing.
+    func prefetchArchive() async throws {}
+
     /// Sources without live updates (sample data, test doubles) never change.
     func archiveChanges() -> AsyncStream<Void> {
         AsyncStream { $0.finish() }
@@ -25,10 +34,32 @@ extension ArchiveRepository {
 /// Downloads exam files with an on-disk cache.
 protocol RemoteFileLoading: AnyObject {
     /// A decoded image, downsampled so its longest side is at most `maxPixelSize` pixels.
-    func image(from url: URL, maxPixelSize: CGFloat) async throws -> UIImage
+    ///
+    /// - Parameter speculative: When `true`, this is a prefetch of a page the user is not looking at; it is
+    ///   restricted to unmetered networks and fails fast on cellular / Low Data Mode (callers ignore that
+    ///   failure). The page the user is actually viewing is always loaded with `speculative: false`.
+    func image(from url: URL, maxPixelSize: CGFloat, speculative: Bool) async throws -> UIImage
+
+    /// Drops the in-memory decoded image for `url` at `maxPixelSize`, so a closed viewer stops holding a
+    /// large full-screen bitmap. The on-disk copy stays, so re-opening it needs no new download.
+    func releaseImage(from url: URL, maxPixelSize: CGFloat)
 
     /// A local copy of the file (cached), named `fileName`; used for PDFs and sharing.
     func localFile(from url: URL, fileName: String) async throws -> URL
+
+    /// Trims the on-disk file cache back within its budget, oldest first. Safe to call at launch and when the
+    /// app goes to the background.
+    func pruneDiskCache() async
+
+    /// Removes every downloaded file, cached response and decoded image. Used when the account is deleted.
+    func purge() async
+}
+
+extension RemoteFileLoading {
+    /// Loads the page the user is looking at (non-speculative), on any network.
+    func image(from url: URL, maxPixelSize: CGFloat) async throws -> UIImage {
+        try await image(from: url, maxPixelSize: maxPixelSize, speculative: false)
+    }
 }
 
 /// Adds the signed-in user's credentials to downloads of protected exam files.

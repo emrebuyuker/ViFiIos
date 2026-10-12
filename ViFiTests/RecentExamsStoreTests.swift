@@ -93,6 +93,18 @@ final class RecentExamsStoreTests {
         #expect(store.exams.map(\.path) == [exam(1)])
     }
 
+    @Test("Removing by path takes a stale exam off the list and persists")
+    func removeByPath() {
+        let store = makeStore()
+        store.record(path: exam(1), kind: .images, at: date(1))
+        store.record(path: exam(2), kind: .pdf, at: date(2))
+
+        store.remove(path: exam(1))
+
+        #expect(store.exams.map(\.path) == [exam(2)])
+        #expect(makeStore().exams.map(\.path) == [exam(2)])
+    }
+
     @Test("Clearing empties the list and persists")
     func clear() {
         let store = makeStore()

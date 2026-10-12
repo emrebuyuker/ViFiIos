@@ -23,7 +23,7 @@ nonisolated struct ArchiveItem: Identifiable, Hashable, Sendable {
     let exam: ExamSummary?
 
     var id: ArchivePath { path }
-    var name: String { path.name ?? "" }
+    var name: String { path.displayName ?? "" }
 }
 
 /// The files of a single exam, ready to be displayed.
@@ -33,5 +33,5 @@ nonisolated struct ExamDocument: Hashable, Sendable {
     /// Image pages in reading order, or the PDF file(s).
     let fileURLs: [URL]
 
-    var title: String { path.name ?? "" }
+    var title: String { path.displayName ?? "" }
 }

@@ -15,6 +15,8 @@ final class AppEnvironment {
     @ObservationIgnored let profileService: any ProfileServicing
     /// The bundled lists backing the profile pickers (free text is always allowed on top).
     @ObservationIgnored let catalog: UniversityCatalog
+    /// Warms the archive's offline cache after sign-in (see `ArchivePrefetcher`).
+    @ObservationIgnored let prefetcher: ArchivePrefetcher
     let recents: RecentExamsStore
     let session: SessionStore
     let profile: ProfileStore
@@ -27,7 +29,8 @@ final class AppEnvironment {
         auth: any AuthServicing,
         profileService: any ProfileServicing,
         catalog: UniversityCatalog,
-        recents: RecentExamsStore
+        recents: RecentExamsStore,
+        prefetcherDefaults: UserDefaults = .standard
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -37,6 +40,7 @@ final class AppEnvironment {
         self.profileService = profileService
         self.catalog = catalog
         self.recents = recents
+        prefetcher = ArchivePrefetcher(repository: repository, defaults: prefetcherDefaults)
         session = SessionStore(auth: auth)
         profile = ProfileStore(service: profileService)
     }
@@ -53,13 +57,16 @@ final class AppEnvironment {
         }
         let firebaseAuth = Auth.auth()
         let auth = FirebaseAuthService(auth: firebaseAuth)
+        let bucket = FirebaseApp.app()?.options.storageBucket
         let authorizer = FirebaseRequestAuthorizer(
             auth: firebaseAuth,
             appCheck: AppCheck.appCheck(),
-            storageBucket: FirebaseApp.app()?.options.storageBucket
+            storageBucket: bucket
         )
         return AppEnvironment(
-            repository: FirebaseArchiveRepository(auth: auth),
+            // Cutover: the archive is read from Cloud Firestore (named `vifi` database). The Realtime Database
+            // `FirebaseArchiveRepository(auth:)` is kept available for rollback.
+            repository: FirestoreArchiveRepository(bucket: bucket ?? ""),
             fileLoader: RemoteFileLoader(authorizer: authorizer),
             updateChecker: RemoteAppUpdateChecker(config: FirebaseRemoteConfigReader()),
             analytics: FirebaseAnalyticsTracker(),
