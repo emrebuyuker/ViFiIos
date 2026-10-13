@@ -254,6 +254,12 @@
     "Arşive ulaşmak için birkaç bilgini tamamla. Bu bilgiler profilinde saklanır." : {
 
     },
+    "Atla" : {
+
+    },
+    "Başla" : {
+
+    },
     "Bekleyen gönderim yok" : {
 
     },
@@ -921,6 +927,9 @@
         }
       }
     },
+    "İleri" : {
+
+    },
     "İnternet bağlantısı yok. Bağlantını kontrol edip tekrar dene." : {
       "comment" : "Error: offline or the request timed out.",
       "localizations" : {
@@ -1489,6 +1498,9 @@
           }
         }
       }
+    },
+    "Tanıtım turunu tekrar izle" : {
+
     },
     "Tarih" : {
 

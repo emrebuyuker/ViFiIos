@@ -6,6 +6,7 @@ struct AboutView: View {
 
     @Environment(\.dismiss) private var dismiss
     @ScaledMetric(relativeTo: .largeTitle) private var logoSize: CGFloat = 84
+    @State private var isShowingTour = false
 
     var body: some View {
         NavigationStack {
@@ -26,6 +27,15 @@ struct AboutView: View {
                     Label("Son görüntülenen sınavlara hızlı erişim", systemImage: "clock.arrow.circlepath")
                 }
 
+                Section {
+                    Button {
+                        isShowingTour = true
+                    } label: {
+                        Label("Tanıtım turunu tekrar izle", systemImage: "play.circle")
+                    }
+                    .accessibilityIdentifier("about.replayOnboarding")
+                }
+
                 Section("Veri Kaynağı") {
                     Label {
                         Text("""
@@ -39,6 +49,10 @@ struct AboutView: View {
                 }
             }
             .accessibilityIdentifier("about.sheet")
+            // Replaying the tour just presents it again; it never touches the per-device "seen" flag.
+            .fullScreenCover(isPresented: $isShowingTour) {
+                OnboardingView(onFinish: { isShowingTour = false })
+            }
             .navigationTitle("Hakkında")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

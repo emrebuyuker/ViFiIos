@@ -10,7 +10,11 @@ extension AppEnvironment {
     /// Recents are stored in a separate defaults suite that starts empty on every launch. The user is signed in
     /// unless `arguments` contain `-ViFiSignedOut`.
     static func mock(arguments: [String] = []) -> AppEnvironment {
-        AppEnvironment(
+        // The onboarding tour starts hidden so the existing UI tests land straight on the home list;
+        // `-ViFiShowOnboarding` forces it visible to exercise the tour itself.
+        let onboardingDefaults = UserDefaults.mockSuite
+        OnboardingStore.seed(seen: !arguments.contains(LaunchArgument.showOnboarding), into: onboardingDefaults)
+        return AppEnvironment(
             repository: MockArchiveRepository(),
             fileLoader: RemoteFileLoader(),
             updateChecker: StubUpdateChecker(status: mockUpdateStatus(arguments: arguments)),
@@ -32,7 +36,8 @@ extension AppEnvironment {
             recents: RecentExamsStore(defaults: .mockSuite),
             // Keep the prefetch throttle out of the real defaults, so a mock/UI-test run never suppresses a
             // later live warm (the mock repository's prefetch is a no-op anyway).
-            prefetcherDefaults: .mockSuite
+            prefetcherDefaults: .mockSuite,
+            onboardingDefaults: onboardingDefaults
         )
     }
 

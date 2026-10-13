@@ -36,6 +36,8 @@ final class AppEnvironment {
     let wallet: CoinWalletStore
     /// The signed-in user's unlocked exams, for the archive's lock state.
     let unlocks: ExamUnlocksStore
+    /// Whether the first-launch onboarding tour should be shown (a per-device flag).
+    let onboarding: OnboardingStore
 
     init(
         repository: any ArchiveRepository,
@@ -53,7 +55,8 @@ final class AppEnvironment {
         catalog: UniversityCatalog,
         storageBucket: String = "",
         recents: RecentExamsStore,
-        prefetcherDefaults: UserDefaults = .standard
+        prefetcherDefaults: UserDefaults = .standard,
+        onboardingDefaults: UserDefaults = .standard
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -74,6 +77,7 @@ final class AppEnvironment {
         profile = ProfileStore(service: profileService)
         wallet = CoinWalletStore(reader: walletReader)
         unlocks = ExamUnlocksStore(reader: unlocksReader)
+        onboarding = OnboardingStore(defaults: onboardingDefaults)
     }
 
     /// Production services backed by Firebase and the App Store.
@@ -154,5 +158,7 @@ enum LaunchArgument {
     static let admin = "-ViFiAdmin"
     /// With `-ViFiMockData`: starts the user with no coins, to exercise the locked-exam / earn-coins prompt.
     static let noCoins = "-ViFiNoCoins"
+    /// With `-ViFiMockData`: forces the first-launch onboarding tour to show (mock otherwise starts past it).
+    static let showOnboarding = "-ViFiShowOnboarding"
     #endif
 }

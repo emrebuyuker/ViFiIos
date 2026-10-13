@@ -77,12 +77,18 @@ struct RootView: View {
 
     private var archive: some View {
         @Bindable var router = router
+        @Bindable var onboarding = environment.onboarding
         return NavigationStack(path: $router.path) {
             HomeView()
                 .navigationDestination(for: Route.self, destination: destination)
         }
         // Warm the offline cache once the signed-in user reaches the archive; cancelled on sign-out.
         .task { await environment.prefetcher.prefetchIfNeeded() }
+        // First-launch tour, over the archive so the home screen and its prefetch load underneath. Skipping
+        // or finishing marks it seen (per device), so it shows only once; it is replayable from About.
+        .fullScreenCover(isPresented: $onboarding.isPresenting) {
+            OnboardingView(onFinish: { environment.onboarding.markSeen() })
+        }
     }
 
     @ViewBuilder
