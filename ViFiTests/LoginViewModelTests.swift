@@ -6,6 +6,7 @@ import Testing
 struct LoginViewModelTests {
     private let auth = StubAuthService()
     private let clock = TestClock()
+    private let analytics = AnalyticsSpy()
 
     // MARK: - Number input
 
@@ -357,10 +358,20 @@ struct LoginViewModelTests {
         #expect(auth.calls.isEmpty)
     }
 
+    @Test("Requesting a code reports the login_code_requested event")
+    func tracksCodeRequested() async {
+        let viewModel = makeViewModel()
+        viewModel.updatePhoneText("5321234567")
+
+        await viewModel.sendCode()?.value
+
+        #expect(analytics.events.contains(.loginCodeRequested(isResend: false)))
+    }
+
     // MARK: - Helpers
 
     private func makeViewModel() -> LoginViewModel {
-        LoginViewModel(auth: auth, now: clock.now)
+        LoginViewModel(auth: auth, analytics: analytics, now: clock.now)
     }
 
     /// A view model that has sent a code to `+90 532 123 45 67` (verification id `verification-1`).
@@ -377,6 +388,7 @@ struct LoginViewModelTests {
 struct LoginViewModelCodeStepTests {
     private let auth = StubAuthService()
     private let clock = TestClock()
+    private let analytics = AnalyticsSpy()
 
     // MARK: - Resending
 
@@ -539,13 +551,13 @@ struct LoginViewModelCodeStepTests {
 
     /// A view model that has sent a code to `+90 532 123 45 67` (verification id `verification-1`).
     private func makeCodeStep() async -> LoginViewModel {
-        let viewModel = LoginViewModel(auth: auth, now: clock.now)
+        let viewModel = LoginViewModel(auth: auth, analytics: analytics, now: clock.now)
         viewModel.updatePhoneText("5321234567")
         await viewModel.sendCode()?.value
         return viewModel
     }
 
     private func makeViewModel() -> LoginViewModel {
-        LoginViewModel(auth: auth, now: clock.now)
+        LoginViewModel(auth: auth, analytics: analytics, now: clock.now)
     }
 }

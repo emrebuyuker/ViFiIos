@@ -15,6 +15,7 @@ struct EditProfileView: View {
             catalog: environment.catalog,
             onSaved: { profile in
                 environment.profile.update(profile)
+                environment.analytics.track(.profileUpdated)
                 dismiss()
             }
         )

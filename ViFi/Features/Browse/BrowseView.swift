@@ -47,7 +47,7 @@ private struct BrowseScreen: View {
                         ArchiveNavigationRow(
                             item: item,
                             isLocked: isLocked(item),
-                            onLockedTap: { examToUnlock = item }
+                            onLockedTap: { presentUnlockSheet(for: item) }
                         )
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 if canDeleteExams {
@@ -92,6 +92,7 @@ private struct BrowseScreen: View {
         }
         .task { await viewModel.refreshOnArchiveChanges() }
         .task { isAdmin = await environment.auth.isCurrentUserAdmin() }
+        .task(id: viewModel.searchQuery) { await trackSearch() }
         .alert("Sınav silinsin mi?", isPresented: deleteConfirmationBinding, presenting: examToDelete) { item in
             Button("Sil", role: .destructive) { performDelete(item) }
             Button("Vazgeç", role: .cancel) {}
@@ -110,6 +111,7 @@ private struct BrowseScreen: View {
                 unlock: { await unlock(exam) },
                 onUnlocked: { open(exam) },
                 onEarnCoins: {
+                    environment.analytics.track(.earnCoinsTapped)
                     examToUnlock = nil
                     isShowingAddExam = true
                 }
@@ -138,14 +140,28 @@ private struct BrowseScreen: View {
         return !ExamLock.isAccessible(item, freeIds: freeExamIds, unlockedIds: environment.unlocks.unlockedIds)
     }
 
+    /// Shows the unlock sheet for a locked exam, recording whether the user can currently afford it.
+    private func presentUnlockSheet(for item: ArchiveItem) {
+        examToUnlock = item
+        let canAfford = environment.wallet.balance >= ExamLock.unlockCost
+        environment.analytics.track(.examUnlockSheetShown(canAfford: canAfford))
+    }
+
     /// Spends coins to unlock `exam` (server-side); returns an error message on failure, `nil` on success.
     private func unlock(_ exam: ArchiveItem) async -> String? {
         guard let examId = exam.path.components.last else { return nil }
         do {
-            _ = try await environment.unlockService.unlock(examId: examId)
+            let result = try await environment.unlockService.unlock(examId: examId)
             environment.unlocks.markUnlocked(examId)
+            if let kind = exam.exam?.kind {
+                environment.analytics.track(
+                    .examUnlocked(kind: kind, coinsSpent: ExamLock.unlockCost, alreadyUnlocked: result.alreadyUnlocked)
+                )
+            }
             return nil
         } catch {
+            let reason = (error as? ExamUnlockError)?.analyticsReason ?? "unknown"
+            environment.analytics.track(.examUnlockFailed(reason: reason))
             return error.userMessage
         }
     }
@@ -211,6 +227,15 @@ private struct BrowseScreen: View {
 
     private func reload() {
         Task { await viewModel.load() }
+    }
+
+    /// Reports a search once the user pauses typing, with whether it returned any results. Debounced by the
+    /// task's own cancellation: a new keystroke restarts the task and cancels this pending report.
+    private func trackSearch() async {
+        guard !viewModel.searchQuery.isEmpty else { return }
+        try? await Task.sleep(for: .milliseconds(700))
+        guard !Task.isCancelled else { return }
+        environment.analytics.track(.searchUsed(level: listedLevel, zeroResults: viewModel.visibleItems.isEmpty))
     }
 
     /// The screen view is logged on every appearance; the level browse event once per screen.

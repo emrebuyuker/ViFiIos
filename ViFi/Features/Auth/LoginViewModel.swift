@@ -28,14 +28,16 @@ final class LoginViewModel {
     private(set) var resendAvailableAt: Date?
 
     @ObservationIgnored private let auth: any AuthServicing
+    @ObservationIgnored private let analytics: any AnalyticsTracking
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private var verificationID: String?
     /// The last code sent, kept across `changeNumber()` so re-entering the same number cannot skip the cooldown.
     @ObservationIgnored private var lastSentCode: SentCode?
 
     /// - Parameter now: The clock the resend cooldown is measured with (injected by tests).
-    init(auth: any AuthServicing, now: @escaping () -> Date = Date.init) {
+    init(auth: any AuthServicing, analytics: any AnalyticsTracking, now: @escaping () -> Date = Date.init) {
         self.auth = auth
+        self.analytics = analytics
         self.now = now
     }
 
@@ -96,14 +98,14 @@ final class LoginViewModel {
             showCodeStep(for: lastSentCode)
             return nil
         }
-        return requestCode(for: phoneNumber)
+        return requestCode(for: phoneNumber, isResend: false)
     }
 
     /// Sends a new code to the same number once the cooldown is over.
     @discardableResult
     func resendCode() -> Task<Void, Never>? {
         guard case let .code(phoneNumber) = step, canResendCode(at: now()) else { return nil }
-        return requestCode(for: phoneNumber)
+        return requestCode(for: phoneNumber, isResend: true)
     }
 
     /// Signs in with the entered code. On success the session gate replaces the login screen, so the model
@@ -115,9 +117,11 @@ final class LoginViewModel {
         errorMessage = nil
         let auth = auth
         let code = codeText
+        let analytics = analytics
         return Task { [weak self] in
             do {
                 try await auth.signIn(verificationID: verificationID, code: code)
+                analytics.track(.loginSucceeded)
             } catch {
                 self?.fail(with: error)
             }
@@ -136,9 +140,10 @@ final class LoginViewModel {
 
     // MARK: - Private
 
-    private func requestCode(for phoneNumber: PhoneNumber) -> Task<Void, Never> {
+    private func requestCode(for phoneNumber: PhoneNumber, isResend: Bool) -> Task<Void, Never> {
         isWorking = true
         errorMessage = nil
+        analytics.track(.loginCodeRequested(isResend: isResend))
         let auth = auth
         return Task { [weak self] in
             do {
@@ -173,6 +178,7 @@ final class LoginViewModel {
         isWorking = false
         guard !(error is CancellationError) else { return }
         errorMessage = error.userMessage
+        analytics.track(.loginFailed(reason: (error as? AuthError)?.analyticsReason ?? "unknown"))
 
         switch error as? AuthError {
         case .invalidCode:

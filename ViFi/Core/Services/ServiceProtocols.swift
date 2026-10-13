@@ -103,10 +103,81 @@ nonisolated enum AnalyticsEvent: Equatable, Sendable {
     case browse(level: ArchiveLevel)
     case examOpened(kind: ExamKind)
     case recentExamOpened
+
+    // Coin economy
+    case examUnlockSheetShown(canAfford: Bool)
+    case earnCoinsTapped
+    case examUnlocked(kind: ExamKind, coinsSpent: Int, alreadyUnlocked: Bool)
+    case examUnlockFailed(reason: String)
+
+    // Exam submission (supply side)
+    case examSubmitted(kind: ExamKind, fileCount: Int, tier: SubmissionTier?)
+    case examSubmitFailed(reason: String)
+
+    // Login funnel
+    case loginCodeRequested(isResend: Bool)
+    case loginSucceeded
+    case loginFailed(reason: String)
+
+    // Activation
+    case onboardingCompleted(method: String, source: String)
+    case profileCompleted
+    case profileUpdated
+    case searchUsed(level: ArchiveLevel, zeroResults: Bool)
+
+    // Lifecycle & operations
+    case signedOut
+    case accountDeleted
+    case updatePromptShown(isRequired: Bool)
+    case updateAction(action: String)
+    case submissionApproved(tier: SubmissionTier)
+    case submissionRejected
+}
+
+/// The signed-in user's analytics identity: a stable id plus low-cardinality, canonical segment
+/// properties (never free text or anything identifying). `nil` clears the identity on sign-out.
+nonisolated struct AnalyticsUser: Equatable, Sendable {
+    let id: String
+    let universityId: String?
+    let facultyId: String?
+    let departmentId: String?
+    /// "female" | "male".
+    let gender: String?
+    let isAdmin: Bool
+
+    /// Builds the identity from the user's id, their profile (when present) and admin status.
+    init(id: String, profile: UserProfile?, isAdmin: Bool) {
+        self.id = id
+        universityId = profile?.universityId
+        facultyId = profile?.facultyId
+        departmentId = profile?.departmentId
+        gender = profile?.gender.rawValue
+        self.isAdmin = isAdmin
+    }
+
+    /// Every analytics user-property name, so each can be set or cleared on identity changes.
+    static let propertyNames = ["university_id", "faculty_id", "department_id", "gender", "is_admin"]
+
+    /// The user-property values that are known, keyed by name, clamped to Analytics' 36-character limit.
+    /// A name absent from the map has no known value (e.g. no profile yet) and is cleared when applied.
+    var properties: [String: String] {
+        var result = ["is_admin": isAdmin ? "true" : "false"]
+        result["university_id"] = Self.clamped(universityId)
+        result["faculty_id"] = Self.clamped(facultyId)
+        result["department_id"] = Self.clamped(departmentId)
+        result["gender"] = Self.clamped(gender)
+        return result
+    }
+
+    private static func clamped(_ value: String?) -> String? {
+        value.map { String($0.prefix(36)) }
+    }
 }
 
 protocol AnalyticsTracking: AnyObject {
     func track(_ event: AnalyticsEvent)
+    /// Identifies the signed-in user (id + segment properties), or clears the identity with `nil`.
+    func setUser(_ user: AnalyticsUser?)
 }
 
 /// Errors surfaced to the user by the data layer.

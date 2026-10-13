@@ -51,7 +51,7 @@ struct AboutView: View {
             .accessibilityIdentifier("about.sheet")
             // Replaying the tour just presents it again; it never touches the per-device "seen" flag.
             .fullScreenCover(isPresented: $isShowingTour) {
-                OnboardingView(onFinish: { isShowingTour = false })
+                OnboardingView(onFinish: { isShowingTour = false }, source: "replay")
             }
             .navigationTitle("Hakkında")
             .navigationBarTitleDisplayMode(.inline)

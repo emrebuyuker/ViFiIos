@@ -16,7 +16,10 @@ struct AccountView: View {
                     try await profileService.deleteProfile(uid: user.id)
                 },
                 // Deleting the account wipes the user's cached exam files from the device.
-                onDeleted: { [fileLoader = environment.fileLoader] in await fileLoader.purge() }
+                onDeleted: { [fileLoader = environment.fileLoader, analytics = environment.analytics] in
+                    analytics.track(.accountDeleted)
+                    await fileLoader.purge()
+                }
             )
         }
     }
@@ -95,6 +98,9 @@ private struct AccountScreen: View {
             .confirmationDialog("Çıkış yapılsın mı?", isPresented: $isConfirmingSignOut, titleVisibility: .visible) {
                 Button("Çıkış Yap", role: .destructive) {
                     viewModel.signOut()
+                    if viewModel.errorMessage == nil {
+                        environment.analytics.track(.signedOut)
+                    }
                 }
                 .accessibilityIdentifier("account.signOut.confirm")
                 Button("Vazgeç", role: .cancel) {}

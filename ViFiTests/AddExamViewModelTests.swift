@@ -8,6 +8,7 @@ struct AddExamViewModelTests {
         ownerId: String = Fixture.user.id,
         profile: UserProfile? = nil,
         service: StubExamSubmissionService = StubExamSubmissionService(),
+        analytics: AnalyticsSpy = AnalyticsSpy(),
         onSubmitted: @escaping () -> Void = {}
     ) -> AddExamViewModel {
         AddExamViewModel(
@@ -15,6 +16,7 @@ struct AddExamViewModelTests {
             profile: profile,
             catalog: Fixture.catalog,
             submissionService: service,
+            analytics: analytics,
             currentYear: 2024,
             onSubmitted: onSubmitted
         )
@@ -119,7 +121,7 @@ struct AddExamViewModelTests {
         let viewModel = makeViewModel(service: service)
         fillValid(viewModel)
 
-        await viewModel.submit()?.value
+        await viewModel.submit(estimatedTier: nil)?.value
 
         #expect(service.calls == [StubExamSubmissionService.Call(ownerId: Fixture.user.id)])
         let submitted = service.submitted.first
@@ -141,7 +143,7 @@ struct AddExamViewModelTests {
         let viewModel = makeViewModel(service: service)
         fillValid(viewModel)
 
-        await viewModel.submit()?.value
+        await viewModel.submit(estimatedTier: nil)?.value
 
         #expect(viewModel.errorMessage == ExamSubmissionError.offline.userMessage)
         #expect(!viewModel.isWorking)
@@ -154,8 +156,32 @@ struct AddExamViewModelTests {
         let viewModel = makeViewModel(onSubmitted: { completed += 1 })
         fillValid(viewModel)
 
-        await viewModel.submit()?.value
+        await viewModel.submit(estimatedTier: nil)?.value
 
         #expect(completed == 1)
+    }
+
+    @Test("A successful submit reports the exam_submit event with the estimated tier")
+    func submitTracksEvent() async {
+        let analytics = AnalyticsSpy()
+        let viewModel = makeViewModel(analytics: analytics)
+        fillValid(viewModel)
+
+        await viewModel.submit(estimatedTier: .newExam)?.value
+
+        #expect(analytics.events.contains(.examSubmitted(kind: .pdf, fileCount: 1, tier: .newExam)))
+    }
+
+    @Test("A failed submit reports the exam_submit_failed event with a stable reason")
+    func submitFailureTracksEvent() async {
+        let analytics = AnalyticsSpy()
+        let service = StubExamSubmissionService()
+        service.submitReplies = [.failure(ExamSubmissionError.offline)]
+        let viewModel = makeViewModel(service: service, analytics: analytics)
+        fillValid(viewModel)
+
+        await viewModel.submit(estimatedTier: nil)?.value
+
+        #expect(analytics.events.contains(.examSubmitFailed(reason: "offline")))
     }
 }

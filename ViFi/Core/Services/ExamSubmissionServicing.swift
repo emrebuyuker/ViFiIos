@@ -38,4 +38,15 @@ nonisolated enum ExamSubmissionError: LocalizedError, Equatable {
             message
         }
     }
+
+    /// A stable, low-cardinality reason for analytics (never the localized message).
+    var analyticsReason: String {
+        switch self {
+        case .notSignedIn: "not_signed_in"
+        case .invalidSubmission: "invalid_submission"
+        case .permissionDenied: "permission_denied"
+        case .offline: "offline"
+        case .unknown: "unknown"
+        }
+    }
 }

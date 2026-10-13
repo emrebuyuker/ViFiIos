@@ -38,4 +38,15 @@ nonisolated enum ExamUnlockError: LocalizedError, Equatable {
             message
         }
     }
+
+    /// A stable, low-cardinality reason for analytics (never the localized message).
+    var analyticsReason: String {
+        switch self {
+        case .insufficientCoins: "insufficient_coins"
+        case .notFound: "not_found"
+        case .notSignedIn: "not_signed_in"
+        case .offline: "offline"
+        case .unknown: "unknown"
+        }
+    }
 }

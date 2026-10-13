@@ -8,11 +8,18 @@ import SwiftUI
 /// the caller decides what that means (mark the tour seen, or just dismiss a replay).
 struct OnboardingView: View {
     let onFinish: () -> Void
+    /// Where the tour was opened from, recorded with the completion event ("first_launch" | "replay").
+    var source: String = "first_launch"
 
     @Environment(AppEnvironment.self) private var environment
 
     var body: some View {
-        OnboardingScreen(pages: OnboardingPage.tour, analytics: environment.analytics, onFinish: onFinish)
+        OnboardingScreen(
+            pages: OnboardingPage.tour,
+            analytics: environment.analytics,
+            source: source,
+            onFinish: onFinish
+        )
     }
 }
 
@@ -60,6 +67,7 @@ private struct OnboardingPage: Identifiable {
 private struct OnboardingScreen: View {
     let pages: [OnboardingPage]
     let analytics: any AnalyticsTracking
+    let source: String
     let onFinish: () -> Void
 
     @State private var selection = 0
@@ -91,7 +99,7 @@ private struct OnboardingScreen: View {
         HStack {
             Spacer()
             if !isLastPage {
-                Button("Atla", action: onFinish)
+                Button("Atla") { finish(method: "skipped") }
                     .font(.body.weight(.semibold))
                     .accessibilityIdentifier("onboarding.skip")
             }
@@ -118,10 +126,15 @@ private struct OnboardingScreen: View {
 
     private func advance() {
         if isLastPage {
-            onFinish()
+            finish(method: "finished")
         } else {
             withAnimation { selection += 1 }
         }
+    }
+
+    private func finish(method: String) {
+        analytics.track(.onboardingCompleted(method: method, source: source))
+        onFinish()
     }
 }
 

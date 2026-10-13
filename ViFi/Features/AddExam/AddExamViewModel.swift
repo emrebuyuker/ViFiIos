@@ -36,6 +36,7 @@ final class AddExamViewModel {
 
     @ObservationIgnored private let ownerId: String
     @ObservationIgnored private let submissionService: any ExamSubmissionServicing
+    @ObservationIgnored private let analytics: any AnalyticsTracking
     @ObservationIgnored private let onSubmitted: () -> Void
 
     init(
@@ -43,12 +44,14 @@ final class AddExamViewModel {
         profile: UserProfile?,
         catalog: UniversityCatalog,
         submissionService: any ExamSubmissionServicing,
+        analytics: any AnalyticsTracking,
         currentYear: Int,
         onSubmitted: @escaping () -> Void
     ) {
         self.ownerId = ownerId
         self.catalog = catalog
         self.submissionService = submissionService
+        self.analytics = analytics
         year = currentYear
         self.onSubmitted = onSubmitted
 
@@ -156,17 +159,23 @@ final class AddExamViewModel {
 
     // MARK: - Submit
 
+    /// - Parameter estimatedTier: The novelty tier the form was showing, recorded with the submission event;
+    ///   authoritative only at approval, so it is best-effort (`nil` when the placement was not yet classified).
     @discardableResult
-    func submit() -> Task<Void, Never>? {
+    func submit(estimatedTier: SubmissionTier?) -> Task<Void, Never>? {
         guard !isWorking, let submission = builtSubmission else { return nil }
         isWorking = true
         errorMessage = nil
         let submissionService = submissionService
         let ownerId = ownerId
         let onSubmitted = onSubmitted
+        let analytics = analytics
         return Task { [weak self] in
             do {
                 try await submissionService.submit(submission, ownerId: ownerId)
+                analytics.track(
+                    .examSubmitted(kind: submission.kind, fileCount: submission.files.count, tier: estimatedTier)
+                )
                 onSubmitted()
             } catch {
                 self?.fail(with: error)
@@ -180,6 +189,7 @@ final class AddExamViewModel {
         isWorking = false
         guard !(error is CancellationError) else { return }
         errorMessage = error.userMessage
+        analytics.track(.examSubmitFailed(reason: (error as? ExamSubmissionError)?.analyticsReason ?? "unknown"))
     }
 
     /// Reassigns 1-based orders by the current array order, so the file positions stay contiguous.

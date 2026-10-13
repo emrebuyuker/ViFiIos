@@ -5,7 +5,7 @@ struct LoginView: View {
     @Environment(AppEnvironment.self) private var environment
 
     var body: some View {
-        LoginScreen(auth: environment.auth)
+        LoginScreen(auth: environment.auth, analytics: environment.analytics)
             .onAppear { environment.analytics.track(.screenView(name: "Login")) }
     }
 }
@@ -17,8 +17,8 @@ private struct LoginScreen: View {
     @State private var isPhoneFocused = false
     @FocusState private var isCodeFocused: Bool
 
-    init(auth: any AuthServicing) {
-        _viewModel = State(initialValue: LoginViewModel(auth: auth))
+    init(auth: any AuthServicing, analytics: any AnalyticsTracking) {
+        _viewModel = State(initialValue: LoginViewModel(auth: auth, analytics: analytics))
     }
 
     var body: some View {

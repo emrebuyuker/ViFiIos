@@ -99,4 +99,21 @@ nonisolated enum AuthError: LocalizedError, Equatable {
             message
         }
     }
+
+    /// A stable, low-cardinality reason for analytics (never the localized message).
+    var analyticsReason: String {
+        switch self {
+        case .invalidPhoneNumber: "invalid_phone_number"
+        case .invalidCode: "invalid_code"
+        case .codeExpired: "code_expired"
+        case .tooManyRequests: "too_many_requests"
+        case .offline: "offline"
+        case .verificationCancelled: "verification_cancelled"
+        case .appVerificationFailed: "app_verification_failed"
+        case .requiresRecentLogin: "requires_recent_login"
+        case .notSignedIn: "not_signed_in"
+        case .accountDisabled: "account_disabled"
+        case .unknown: "unknown"
+        }
+    }
 }

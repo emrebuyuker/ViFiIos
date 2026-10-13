@@ -12,6 +12,8 @@ struct RootView: View {
     @State private var dismissedOptionalVersion: String?
     /// The optional version the user chose to skip for good (persisted across launches).
     @State private var skippedOptionalVersion: String? = UpdatePromptDefaults.skippedVersion
+    /// The required version a prompt-shown event was already logged for, so it is counted once.
+    @State private var promptedRequiredVersion: String?
 
     var body: some View {
         // The required-update gate replaces the whole UI rather than presenting a modal: it cannot be
@@ -43,6 +45,8 @@ struct RootView: View {
                 environment.wallet.reset()
                 environment.unlocks.reset()
                 environment.recents.clear()
+                // Clear the analytics identity so the next user is not attributed to the previous one.
+                environment.analytics.setUser(nil)
             }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -62,11 +66,25 @@ struct RootView: View {
             isPresented: optionalPromptBinding,
             presenting: pendingOptionalUpdate
         ) { update in
-            Button("Güncelle") { openURL(update.storeURL) }
-            Button("Bu sürümü atla") { skipOptional(update) }
-            Button("Daha Sonra", role: .cancel) {}
+            Button("Güncelle") {
+                environment.analytics.track(.updateAction(action: "update"))
+                openURL(update.storeURL)
+            }
+            Button("Bu sürümü atla") {
+                environment.analytics.track(.updateAction(action: "skip"))
+                skipOptional(update)
+            }
+            Button("Daha Sonra", role: .cancel) {
+                environment.analytics.track(.updateAction(action: "later"))
+            }
         } message: { update in
             Text(update.message ?? "ViFi \(update.version) App Store'da. En iyi deneyim için uygulamayı güncelle.")
+        }
+        // The optional prompt is counted when it actually appears (a new, non-skipped optional version).
+        .onChange(of: pendingOptionalUpdate?.version) { _, version in
+            if version != nil {
+                environment.analytics.track(.updatePromptShown(isRequired: false))
+            }
         }
     }
 
@@ -118,6 +136,12 @@ struct RootView: View {
     private func observeUpdateStatus() async {
         for await status in environment.updateChecker.statusChanges() {
             updateStatus = status
+            // The required gate always shows; count it once per version. (The optional prompt is counted when
+            // it is actually presented — see the `pendingOptionalUpdate` change handler.)
+            if case let .required(update) = status, update.version != promptedRequiredVersion {
+                promptedRequiredVersion = update.version
+                environment.analytics.track(.updatePromptShown(isRequired: true))
+            }
         }
     }
 
@@ -163,6 +187,7 @@ private struct ProfileGate<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     @Environment(AppEnvironment.self) private var environment
+    @State private var isAdmin = false
 
     init(user: AuthUser, @ViewBuilder content: @escaping () -> Content) {
         self.user = user
@@ -176,6 +201,19 @@ private struct ProfileGate<Content: View>: View {
             .task(id: user.id) { await environment.wallet.observe(uid: user.id) }
             // Load the user's unlocked exams, for the archive's lock state.
             .task(id: user.id) { await environment.unlocks.load(uid: user.id) }
+            // Identify the user for analytics: id + admin now, enriched with profile segments once loaded.
+            .task(id: user.id) {
+                isAdmin = await environment.auth.isCurrentUserAdmin()
+                identifyUser()
+            }
+            .onChange(of: environment.profile.state) { _, _ in identifyUser() }
+    }
+
+    /// Sets the analytics identity from the current profile (when present), admin status and user id.
+    private func identifyUser() {
+        environment.analytics.setUser(
+            AnalyticsUser(id: user.id, profile: environment.profile.profile, isAdmin: isAdmin)
+        )
     }
 
     @ViewBuilder

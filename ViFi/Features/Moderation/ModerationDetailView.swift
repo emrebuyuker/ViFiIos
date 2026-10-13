@@ -7,6 +7,7 @@ struct ModerationDetailView: View {
     let viewModel: ModerationViewModel
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppEnvironment.self) private var environment
     @State private var isWorking = false
     @State private var errorMessage: String?
     @State private var isConfirmingReject = false
@@ -125,6 +126,7 @@ struct ModerationDetailView: View {
             switch outcome {
             case let .approved(result):
                 approval = result
+                environment.analytics.track(.submissionApproved(tier: result.tier))
             case let .failed(message):
                 errorMessage = message
             }
@@ -141,6 +143,7 @@ struct ModerationDetailView: View {
             if let message {
                 errorMessage = message
             } else {
+                environment.analytics.track(.submissionRejected)
                 dismiss()
             }
         }

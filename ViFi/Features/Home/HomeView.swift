@@ -196,7 +196,8 @@ private struct HomeScreen: View {
     }
 
     private func showAddExam() {
-        environment.analytics.track(.screenView(name: "AddExam"))
+        // The AddExam screen view is logged by AddExamView.onAppear (reached from here and from Browse),
+        // so it is not tracked again here.
         isShowingAddExam = true
     }
 

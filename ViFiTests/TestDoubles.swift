@@ -112,12 +112,17 @@ final class AsyncGate {
 
 // MARK: - Analytics
 
-/// Records tracked analytics events in order.
+/// Records tracked analytics events and user-identity changes in order.
 final class AnalyticsSpy: AnalyticsTracking {
     private(set) var events: [AnalyticsEvent] = []
+    private(set) var users: [AnalyticsUser?] = []
 
     func track(_ event: AnalyticsEvent) {
         events.append(event)
+    }
+
+    func setUser(_ user: AnalyticsUser?) {
+        users.append(user)
     }
 }
 

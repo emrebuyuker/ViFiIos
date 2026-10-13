@@ -522,6 +522,10 @@ final class NoOpAnalyticsTracker: AnalyticsTracking {
     func track(_ event: AnalyticsEvent) {
         Logger.app.debug("Analytics event (not sent): \(String(describing: event), privacy: .public)")
     }
+
+    func setUser(_ user: AnalyticsUser?) {
+        Logger.app.debug("Analytics user (not sent): \(String(describing: user), privacy: .public)")
+    }
 }
 
 /// Reports a fixed reward config, once (sample per-tier coin amounts for previews and UI tests).

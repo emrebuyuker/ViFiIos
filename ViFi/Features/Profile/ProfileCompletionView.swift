@@ -12,7 +12,10 @@ struct ProfileCompletionView: View {
             profileService: environment.profileService,
             catalog: environment.catalog,
             auth: environment.auth,
-            onSaved: { environment.profile.update($0) }
+            onSaved: {
+                environment.profile.update($0)
+                environment.analytics.track(.profileCompleted)
+            }
         )
         .onAppear { environment.analytics.track(.screenView(name: "ProfileCompletion")) }
     }

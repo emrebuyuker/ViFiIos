@@ -18,6 +18,7 @@ struct AddExamView: View {
             submissionService: environment.submissionService,
             rewardsConfig: environment.rewardsConfig,
             repository: environment.repository,
+            analytics: environment.analytics,
             onSubmitted: { dismiss() }
         )
         .onAppear { environment.analytics.track(.screenView(name: "AddExam")) }
@@ -45,6 +46,7 @@ private struct AddExamScreen: View {
         submissionService: any ExamSubmissionServicing,
         rewardsConfig: any RewardsConfigReading,
         repository: any ArchiveRepository,
+        analytics: any AnalyticsTracking,
         onSubmitted: @escaping () -> Void
     ) {
         let year = Calendar.current.component(.year, from: .now)
@@ -56,6 +58,7 @@ private struct AddExamScreen: View {
             profile: profile,
             catalog: catalog,
             submissionService: submissionService,
+            analytics: analytics,
             currentYear: year,
             onSubmitted: onSubmitted
         ))
@@ -98,7 +101,7 @@ private struct AddExamScreen: View {
                     if viewModel.isWorking {
                         ProgressView()
                     } else {
-                        Button("Gönder") { viewModel.submit() }
+                        Button("Gönder") { viewModel.submit(estimatedTier: estimatedTier) }
                             .disabled(!viewModel.canSubmit)
                             .accessibilityIdentifier("addExam.submit")
                     }
