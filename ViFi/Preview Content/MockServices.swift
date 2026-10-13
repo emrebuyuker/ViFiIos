@@ -37,7 +37,12 @@ extension AppEnvironment {
             // Keep the prefetch throttle out of the real defaults, so a mock/UI-test run never suppresses a
             // later live warm (the mock repository's prefetch is a no-op anyway).
             prefetcherDefaults: .mockSuite,
-            onboardingDefaults: onboardingDefaults
+            onboardingDefaults: onboardingDefaults,
+            // Permission is "authorized" by default so the priming screen stays out of the way; the
+            // `-ViFiNotificationsPrompt` argument reports it not-determined to exercise priming.
+            notifications: MockNotificationService(granted: !arguments.contains(LaunchArgument.notificationsPrompt)),
+            announcementsReader: StubAnnouncementsReader(),
+            announcementsDefaults: .mockSuite
         )
     }
 
@@ -601,6 +606,57 @@ final class MockExamUnlockService: ExamUnlockServicing {
         unlockedExamIds.append(examId)
         return ExamUnlockResult(balance: 20, alreadyUnlocked: false)
     }
+}
+
+/// Notification permission in memory, for previews and UI tests: never shows a real system prompt.
+final class MockNotificationService: NotificationServicing {
+    private var granted: Bool
+
+    init(granted: Bool = true) {
+        self.granted = granted
+    }
+
+    func permission() async -> NotificationPermission {
+        granted ? .authorized : .notDetermined
+    }
+
+    @discardableResult
+    func requestAuthorization() async -> Bool {
+        granted = true
+        return true
+    }
+}
+
+/// Serves a fixed set of announcements, once (sample inbox content for previews and UI tests).
+final class StubAnnouncementsReader: AnnouncementsReading {
+    private let announcements: [Announcement]
+
+    init(announcements: [Announcement] = StubAnnouncementsReader.samples) {
+        self.announcements = announcements
+    }
+
+    func announcementsChanges() -> AsyncStream<[Announcement]> {
+        let announcements = announcements
+        return AsyncStream { continuation in
+            continuation.yield(announcements)
+            continuation.finish()
+        }
+    }
+
+    static let samples: [Announcement] = [
+        Announcement(
+            id: "a1",
+            title: "Yeni sınavlar eklendi",
+            body: "Bilgisayar Mühendisliği'ne 2024 vize ve finalleri eklendi.",
+            createdAt: Date(timeIntervalSince1970: 1_760_000_000)
+        ),
+        Announcement(
+            id: "a2",
+            title: "ViFi'ye hoş geldin",
+            body: "Geçmiş sınavlara tek yerden ulaş, sınav ekleyerek coin kazan.",
+            createdAt: Date(timeIntervalSince1970: 1_759_000_000)
+        ),
+    ]
 }
 
 /// Reports a fixed update status, once.

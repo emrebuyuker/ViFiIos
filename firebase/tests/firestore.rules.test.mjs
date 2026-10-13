@@ -88,6 +88,40 @@ describe('Firestore rules — archive read (catalogNodes, exams)', () => {
   });
 });
 
+describe('Firestore rules — announcements (public inbox, #11)', () => {
+  beforeEach(async () => {
+    await env.clearFirestore();
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().collection('announcements').doc('a1').set({
+        title: 'Yeni sınavlar eklendi', body: 'İncele', createdAt: new Date(),
+      });
+    });
+  });
+
+  test('a +90 phone user can get and list announcements', async () => {
+    const fs = db(users.alice);
+    await assertSucceeds(fs.collection('announcements').doc('a1').get());
+    await assertSucceeds(fs.collection('announcements').orderBy('createdAt', 'desc').limit(50).get());
+  });
+
+  test('an admin can read announcements', async () => {
+    await assertSucceeds(db(users.admin).collection('announcements').doc('a1').get());
+  });
+
+  test('non-+90, email-only, short-+90 and anonymous users cannot read announcements', async () => {
+    for (const user of [users.usPhone, users.emailOnly, users.shortTrPhone, null]) {
+      await assertFails(db(user).collection('announcements').doc('a1').get());
+    }
+  });
+
+  test('no client can write or delete an announcement, not even an admin', async () => {
+    await assertFails(db(users.alice).collection('announcements').doc('new').set({ title: 'X', body: '' }));
+    await assertFails(db(users.admin).collection('announcements').doc('new').set({ title: 'X', body: '' }));
+    await assertFails(db(users.alice).collection('announcements').doc('a1').delete());
+    await assertFails(db(users.admin).collection('announcements').doc('a1').delete());
+  });
+});
+
 describe('Firestore rules — submissions (create, read, moderate)', () => {
   const validSubmission = (uid, overrides = {}) => ({
     ownerId: uid,

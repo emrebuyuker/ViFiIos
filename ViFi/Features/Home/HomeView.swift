@@ -18,6 +18,8 @@ private struct HomeScreen: View {
     @State private var isShowingAbout = false
     @State private var isShowingAccount = false
     @State private var isShowingAddExam = false
+    @State private var isShowingInbox = false
+    @State private var isShowingPriming = false
 
     init(repository: any ArchiveRepository) {
         _viewModel = State(initialValue: BrowseViewModel(path: .root, repository: repository))
@@ -60,6 +62,14 @@ private struct HomeScreen: View {
                 CoinBalanceBadge()
             }
             ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    isShowingInbox = true
+                } label: {
+                    Label("Bildirimler", systemImage: environment.announcements.unreadCount > 0 ? "bell.badge.fill" : "bell")
+                }
+                .accessibilityIdentifier("toolbar.inbox")
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Button("Hakkında", systemImage: "info.circle") {
                     showAbout()
                 }
@@ -84,9 +94,29 @@ private struct HomeScreen: View {
             AddExamView()
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $isShowingInbox, onDismiss: trackScreen) {
+            InboxView()
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $isShowingPriming, onDismiss: trackScreen) {
+            NotificationPrimingView(
+                onEnable: {
+                    isShowingPriming = false
+                    Task { await environment.notifications.requestAuthorization() }
+                },
+                onDismiss: { isShowingPriming = false }
+            )
+        }
         .task {
             trackScreen()
             await loadIfNeeded()
+        }
+        // Offer notifications once the user has a profile (this screen) and the onboarding tour is gone.
+        .task { await offerNotificationsIfNeeded() }
+        .onChange(of: environment.onboarding.isPresenting) { _, isPresenting in
+            if !isPresenting {
+                Task { await offerNotificationsIfNeeded() }
+            }
         }
         .task { await viewModel.refreshOnArchiveChanges() }
     }
@@ -199,6 +229,17 @@ private struct HomeScreen: View {
         // The AddExam screen view is logged by AddExamView.onAppear (reached from here and from Browse),
         // so it is not tracked again here.
         isShowingAddExam = true
+    }
+
+    /// Shows the notification pre-permission screen once per device: after the profile is in place (this
+    /// screen), after the onboarding tour, and only while the OS permission has not been decided yet.
+    private func offerNotificationsIfNeeded() async {
+        guard !environment.onboarding.isPresenting,
+              !isShowingPriming,
+              !NotificationPrimingDefaults.hasOffered(),
+              await environment.notifications.permission() == .notDetermined else { return }
+        NotificationPrimingDefaults.markOffered()
+        isShowingPriming = true
     }
 
     /// Logged on every appearance (and after the About and Account sheets close) so time is credited to Home.

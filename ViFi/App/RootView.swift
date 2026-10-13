@@ -45,6 +45,7 @@ struct RootView: View {
                 environment.wallet.reset()
                 environment.unlocks.reset()
                 environment.recents.clear()
+                environment.announcements.reset()
                 // Clear the analytics identity so the next user is not attributed to the previous one.
                 environment.analytics.setUser(nil)
             }
@@ -201,6 +202,8 @@ private struct ProfileGate<Content: View>: View {
             .task(id: user.id) { await environment.wallet.observe(uid: user.id) }
             // Load the user's unlocked exams, for the archive's lock state.
             .task(id: user.id) { await environment.unlocks.load(uid: user.id) }
+            // Keep the notification inbox (public announcements) in step while signed in.
+            .task(id: user.id) { await environment.announcements.observe() }
             // Identify the user for analytics: id + admin now, enriched with profile segments once loaded.
             .task(id: user.id) {
                 isAdmin = await environment.auth.isCurrentUserAdmin()

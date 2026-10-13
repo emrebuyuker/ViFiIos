@@ -277,6 +277,18 @@
         }
       }
     },
+    "Bildirim yok" : {
+
+    },
+    "Bildirimler" : {
+
+    },
+    "Bildirimlere izin ver" : {
+
+    },
+    "Bildirimleri Aç" : {
+
+    },
     "Bir görsel işlenemedi. Lütfen başka bir görsel dene." : {
 
     },
@@ -709,6 +721,9 @@
     "Eklemek istediğin dersin adını yaz." : {
 
     },
+    "Ekran kaydı sırasında sınav içeriği gizlenir" : {
+
+    },
     "En fazla %lld sayfa ekleyebilirsin." : {
 
     },
@@ -958,6 +973,9 @@
     "Kaydet" : {
 
     },
+    "Kaydı durdurduğunda içerik yeniden görünür." : {
+
+    },
     "Kilitli, %lld coin" : {
 
     },
@@ -1112,6 +1130,9 @@
       }
     },
     "Okul" : {
+
+    },
+    "Okunmadı" : {
 
     },
     "Onayla ve Yayınla" : {
@@ -1323,6 +1344,9 @@
     "Silinemedi" : {
 
     },
+    "Şimdi Değil" : {
+
+    },
     "Sınav" : {
       "comment" : "Fallback file name of a shared exam whose name is empty.",
       "localizations" : {
@@ -1374,6 +1398,9 @@
 
     },
     "Sınav Ekle" : {
+
+    },
+    "Sınav içeriği korumalıdır" : {
 
     },
     "Sınav silinsin mi?" : {
@@ -1693,6 +1720,9 @@
     "Yeni ders" : {
 
     },
+    "Yeni duyurular burada görünecek." : {
+
+    },
     "Yeni fakülte" : {
 
     },
@@ -1711,6 +1741,9 @@
       }
     },
     "Yeni sınav" : {
+
+    },
+    "Yeni sınavlar eklendiğinde ve önemli duyurularda haberdar ol." : {
 
     },
     "Yeni sürüm mevcut" : {

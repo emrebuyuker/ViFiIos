@@ -111,6 +111,8 @@ targets:
         product: FirebaseStorage
       - package: Firebase
         product: FirebaseFunctions
+      - package: Firebase
+        product: FirebaseMessaging
     postCompileScripts:
       - name: SwiftLint
         basedOnDependencyAnalysis: false

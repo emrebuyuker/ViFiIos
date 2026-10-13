@@ -38,6 +38,10 @@ final class AppEnvironment {
     let unlocks: ExamUnlocksStore
     /// Whether the first-launch onboarding tour should be shown (a per-device flag).
     let onboarding: OnboardingStore
+    /// Requests and reports the OS notification permission.
+    @ObservationIgnored let notifications: any NotificationServicing
+    /// The in-app notification inbox (public announcements + per-device read state).
+    let announcements: AnnouncementsStore
 
     init(
         repository: any ArchiveRepository,
@@ -56,7 +60,10 @@ final class AppEnvironment {
         storageBucket: String = "",
         recents: RecentExamsStore,
         prefetcherDefaults: UserDefaults = .standard,
-        onboardingDefaults: UserDefaults = .standard
+        onboardingDefaults: UserDefaults = .standard,
+        notifications: any NotificationServicing,
+        announcementsReader: any AnnouncementsReading,
+        announcementsDefaults: UserDefaults = .standard
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -78,6 +85,8 @@ final class AppEnvironment {
         wallet = CoinWalletStore(reader: walletReader)
         unlocks = ExamUnlocksStore(reader: unlocksReader)
         onboarding = OnboardingStore(defaults: onboardingDefaults)
+        self.notifications = notifications
+        announcements = AnnouncementsStore(reader: announcementsReader, defaults: announcementsDefaults)
     }
 
     /// Production services backed by Firebase and the App Store.
@@ -117,7 +126,9 @@ final class AppEnvironment {
             unlocksReader: FirebaseUnlocksReader(),
             catalog: .bundled(),
             storageBucket: bucket ?? "",
-            recents: RecentExamsStore()
+            recents: RecentExamsStore(),
+            notifications: SystemNotificationService(),
+            announcementsReader: FirebaseAnnouncementsReader()
         )
     }
 
@@ -160,5 +171,7 @@ enum LaunchArgument {
     static let noCoins = "-ViFiNoCoins"
     /// With `-ViFiMockData`: forces the first-launch onboarding tour to show (mock otherwise starts past it).
     static let showOnboarding = "-ViFiShowOnboarding"
+    /// With `-ViFiMockData`: reports notification permission as not-yet-asked, so the priming screen shows.
+    static let notificationsPrompt = "-ViFiNotificationsPrompt"
     #endif
 }

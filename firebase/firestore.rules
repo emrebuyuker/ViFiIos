@@ -48,6 +48,14 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Public announcements shown in the in-app notification inbox (#11 v1): readable by every signed-in (+90)
+    // user, written only server-side / from the Firebase Console (the Admin SDK bypasses rules). The client
+    // never writes them; read state is tracked locally on the device.
+    match /announcements/{announcementId} {
+      allow read: if canReadArchive();
+      allow write: if false;
+    }
+
     // User exam submissions awaiting moderation — the Firestore counterpart of RTDB `pendingExams`. The owner
     // (+90) creates a pending submission and reads/deletes their own while it is pending; admins read all and
     // moderate. The moderation/approval flow runs via the Admin SDK (which bypasses these rules), so the client

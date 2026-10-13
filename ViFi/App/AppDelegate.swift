@@ -1,13 +1,25 @@
 import FirebaseAuth
+import FirebaseCore
+import FirebaseMessaging
 import os
 import UIKit
+import UserNotifications
 
-/// Forwards what phone sign-in needs from the system to Firebase Auth: the APNs token and the silent
-/// pushes it verifies the app with. (The reCAPTCHA fallback's URL is forwarded by `RootView.onOpenURL`.)
+/// The single FCM topic every signed-in device subscribes to, so a Firebase Console broadcast reaches
+/// everyone (the simple v1 of #11). Per-user and segmented delivery come with the V2 notification work.
+enum PushTopic {
+    static let broadcast = "all"
+}
+
+/// Forwards what phone sign-in needs from the system to Firebase Auth (the APNs token and the silent pushes it
+/// verifies the app with), and hosts Cloud Messaging: it bridges the APNs token to FCM, subscribes to the
+/// broadcast topic, and presents / handles taps on the notifications the app receives. (The reCAPTCHA
+/// fallback's URL is forwarded by `RootView.onOpenURL`.)
 ///
 /// Firebase's app delegate swizzling is off (`FirebaseAppDelegateProxyEnabled = NO`) so this stays
-/// deterministic under the SwiftUI lifecycle. Nothing here touches Firebase unless it has been configured,
-/// which never happens on sample data (`-ViFiMockData`).
+/// deterministic under the SwiftUI lifecycle — the APNs token must be handed to both Auth and Messaging by
+/// hand. Nothing here touches Firebase unless it has been configured, which never happens on sample data
+/// (`-ViFiMockData`).
 final class AppDelegate: NSObject, UIApplicationDelegate {
     /// The app's services, built at launch (or on first use, which is never earlier).
     ///
@@ -22,9 +34,14 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     ) -> Bool {
         // Configures Firebase before the APNs callbacks below can arrive.
         let environment = environment
-        // Silent pushes need no permission prompt.
+        // Silent pushes (phone sign-in verification) need no permission prompt; user-facing notifications are
+        // only shown once the user grants permission (requested from the UI, not here).
         if !AppEnvironment.usesMockData() {
             application.registerForRemoteNotifications()
+            if FirebaseApp.app() != nil {
+                Messaging.messaging().delegate = self
+                UNUserNotificationCenter.current().delegate = self
+            }
             // Trim the on-disk file cache back within budget once per launch, while the app is idle.
             Task { await environment.fileLoader.pruneDiskCache() }
         }
@@ -35,6 +52,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         guard let auth = FirebaseAuthService.configuredAuth else { return }
         // `.unknown` lets Firebase detect the sandbox or production APNs environment from the provisioning profile.
         auth.setAPNSToken(deviceToken, type: .unknown)
+        // Swizzling is off, so FCM needs the APNs token handed to it too, or it never produces a token.
+        Messaging.messaging().apnsToken = deviceToken
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: any Error) {
@@ -50,9 +69,50 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         didReceiveRemoteNotification userInfo: [AnyHashable: Any],
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) {
-        // Firebase Auth consumes its verification pushes. ViFi sends no notifications of its own, so anything
-        // else is ignored as well.
-        _ = FirebaseAuthService.configuredAuth?.canHandleNotification(userInfo)
+        // Firebase Auth consumes its verification pushes; hand anything else to Messaging (swizzling is off).
+        if FirebaseAuthService.configuredAuth?.canHandleNotification(userInfo) != true, FirebaseApp.app() != nil {
+            Messaging.messaging().appDidReceiveMessage(userInfo)
+        }
         completionHandler(.noData)
+    }
+}
+
+// MARK: - Cloud Messaging
+
+extension AppDelegate: MessagingDelegate {
+    /// Fires once the FCM token is available (at launch and on refresh). Subscribing to the broadcast topic is
+    /// idempotent, so re-subscribing on every launch is safe.
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        messaging.subscribe(toTopic: PushTopic.broadcast) { error in
+            if let error {
+                Logger.app.notice("Broadcast topic subscribe failed: \(String(describing: error), privacy: .public)")
+            }
+        }
+    }
+}
+
+// MARK: - Notification presentation
+
+extension AppDelegate: UNUserNotificationCenterDelegate {
+    /// Shows notifications that arrive while the app is in the foreground.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        if FirebaseApp.app() != nil {
+            Messaging.messaging().appDidReceiveMessage(notification.request.content.userInfo)
+        }
+        return [.banner, .list, .sound]
+    }
+
+    /// Handles a tap on a notification. The announcements the user can read live in the app's inbox, so a tap
+    /// just opens the app there; it is reported to Messaging for delivery metrics.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        if FirebaseApp.app() != nil {
+            Messaging.messaging().appDidReceiveMessage(response.notification.request.content.userInfo)
+        }
     }
 }
