@@ -107,6 +107,7 @@ private struct PDFExamScreen: View {
                     .ignoresSafeArea(edges: .bottom)
                 pageIndicator(pageCount: pdf.document.pageCount)
             }
+            .screenCaptureProtection()
             .task(id: currentPage) {
                 await showPageIndicatorBriefly()
             }

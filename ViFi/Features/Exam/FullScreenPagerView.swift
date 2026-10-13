@@ -30,6 +30,8 @@ struct FullScreenPagerView: View {
 
     var body: some View {
         pager
+            // Cover the pages while recording and flash a notice on screenshot; the chrome stays above it.
+            .screenCaptureProtection()
             .background(Color.black.ignoresSafeArea())
             .overlay(alignment: .top) {
                 if showsChrome {

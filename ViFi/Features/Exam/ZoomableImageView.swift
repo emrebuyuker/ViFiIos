@@ -13,11 +13,20 @@ struct ZoomableImageView: UIViewRepresentable {
     /// A single tap that is not part of a double tap, e.g. to toggle surrounding controls.
     var onSingleTap: (() -> Void)?
 
-    func makeUIView(context: Context) -> ZoomableImageScrollView {
-        ZoomableImageScrollView()
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
     }
 
-    func updateUIView(_ scrollView: ZoomableImageScrollView, context: Context) {
+    // Wrapped in a secure host so the exam page is excluded from screenshots and screen recordings; the
+    // scroll view (and its zoom/tap gestures) keeps working inside it.
+    func makeUIView(context: Context) -> SecureHostingView {
+        let scrollView = ZoomableImageScrollView()
+        context.coordinator.scrollView = scrollView
+        return SecureHostingView(protecting: scrollView)
+    }
+
+    func updateUIView(_ uiView: SecureHostingView, context: Context) {
+        guard let scrollView = context.coordinator.scrollView else { return }
         scrollView.maximumZoomScale = max(maximumZoomScale, scrollView.minimumZoomScale)
         scrollView.onSingleTap = onSingleTap
         scrollView.imageDescription = imageDescription
@@ -25,6 +34,11 @@ struct ZoomableImageView: UIViewRepresentable {
         if !isActive {
             scrollView.resetZoom(animated: false)
         }
+    }
+
+    @MainActor final class Coordinator {
+        /// The protected scroll view, reconfigured on every update.
+        var scrollView: ZoomableImageScrollView?
     }
 }
 

@@ -12,7 +12,9 @@ struct PDFKitView: UIViewRepresentable {
         Coordinator(onPageChange: onPageChange)
     }
 
-    func makeUIView(context: Context) -> PDFView {
+    // Wrapped in a secure host so the PDF is excluded from screenshots and screen recordings; scrolling and
+    // zooming keep working inside it.
+    func makeUIView(context: Context) -> SecureHostingView {
         let pdfView = PDFView()
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
@@ -22,20 +24,23 @@ struct PDFKitView: UIViewRepresentable {
         pdfView.backgroundColor = .systemGroupedBackground
         pdfView.document = document
         pdfView.autoScales = true
-        pdfView.accessibilityIdentifier = "exam.pdf"
         context.coordinator.observePageChanges(of: pdfView)
-        return pdfView
+        let host = SecureHostingView(protecting: pdfView)
+        // The identifier goes on the host (outside the secure canvas, which hides its subtree from the
+        // accessibility tree), so the viewer stays locatable by VoiceOver and UI tests.
+        host.accessibilityIdentifier = "exam.pdf"
+        return host
     }
 
-    func updateUIView(_ pdfView: PDFView, context: Context) {
+    func updateUIView(_ uiView: SecureHostingView, context: Context) {
         context.coordinator.onPageChange = onPageChange
-        guard pdfView.document !== document else { return }
+        guard let pdfView = uiView.hostedView as? PDFView, pdfView.document !== document else { return }
         pdfView.document = document
         // Fit the new document's pages to the width again.
         pdfView.autoScales = true
     }
 
-    static func dismantleUIView(_ pdfView: PDFView, coordinator: Coordinator) {
+    static func dismantleUIView(_ uiView: SecureHostingView, coordinator: Coordinator) {
         coordinator.stopObserving()
     }
 

@@ -118,6 +118,7 @@ private struct ExamImagesScreen: View {
         }
         .background(Color(.systemGroupedBackground))
         .accessibilityIdentifier("exam.images")
+        .screenCaptureProtection()
     }
 }
 

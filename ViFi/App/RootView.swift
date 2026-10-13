@@ -23,6 +23,14 @@ struct RootView: View {
                 content
             }
         }
+        // A privacy cover over the whole app while it is not active, so exam content never shows in the app
+        // switcher's snapshot. No animation: the snapshot is taken the instant the app becomes inactive, so the
+        // cover must be in place immediately.
+        .overlay {
+            if scenePhase != .active {
+                AppSwitcherCover()
+            }
+        }
         .task { await environment.session.observeUserChanges() }
         .task { await observeUpdateStatus() }
         .onChange(of: environment.session.state) { _, state in
@@ -184,6 +192,25 @@ private struct ProfileGate<Content: View>: View {
                 Task { await environment.profile.load(uid: user.id) }
             }
         }
+    }
+}
+
+/// An opaque branded cover shown over the whole app while it is inactive or backgrounded, so no screen
+/// (exam content included) appears in the multitasking snapshot.
+private struct AppSwitcherCover: View {
+    @ScaledMetric(relativeTo: .largeTitle) private var logoSize: CGFloat = 96
+
+    var body: some View {
+        ZStack {
+            Color(.systemBackground)
+            Image("Logo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: min(logoSize, 128), height: min(logoSize, 128))
+                .clipShape(.rect(cornerRadius: min(logoSize, 128) * 0.225, style: .continuous))
+        }
+        .ignoresSafeArea()
+        .accessibilityHidden(true)
     }
 }
 

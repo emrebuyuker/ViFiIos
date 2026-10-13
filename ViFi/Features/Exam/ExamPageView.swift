@@ -46,9 +46,11 @@ struct ExamPageView: View {
         ZStack {
             switch phase {
             case let .loaded(image, _):
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
+                // A secure host keeps the page out of screenshots and recordings; aspect-ratio drives its
+                // height exactly like `Image(uiImage:).scaledToFit()` would.
+                SecureImageView(image: image)
+                    .aspectRatio(image.size, contentMode: .fit)
+                    .frame(maxWidth: .infinity)
                     .transition(.opacity)
             case .loading:
                 placeholder {
