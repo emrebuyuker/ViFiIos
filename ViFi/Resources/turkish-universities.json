@@ -808,15 +808,15 @@
     "name": "Yıldız Teknik Üniversitesi"
   },
   {
-    "id": "yozgat-bozok-universitesi",
-    "name": "Yozgat Bozok Üniversitesi"
+    "id": "bozok-universitesi",
+    "name": "Bozok Üniversitesi"
   },
   {
     "id": "yuksek-ihtisas-universitesi",
     "name": "Yüksek İhtisas Üniversitesi"
   },
   {
-    "id": "zonguldak-bulent-ecevit-universitesi",
-    "name": "Zonguldak Bülent Ecevit Üniversitesi"
+    "id": "bulent-ecevit-universitesi",
+    "name": "Bülent Ecevit Üniversitesi"
   }
 ]

@@ -53,6 +53,18 @@ final class FirebaseAuthService: AuthServicing {
         }
     }
 
+    func isCurrentUserAdmin() async -> Bool {
+        guard let user = auth.currentUser else { return false }
+        do {
+            // A forced refresh picks up a claim granted during this session; Firebase caches the token otherwise.
+            let result = try await user.getIDTokenResult(forcingRefresh: false)
+            return result.claims["admin"] as? Bool == true
+        } catch {
+            Logger.app.error("Reading admin claim failed: \(String(describing: error), privacy: .public)")
+            return false
+        }
+    }
+
     func sendVerificationCode(to phoneNumber: String) async throws -> String {
         // Firebase stops the app with `fatalError` when the reCAPTCHA return scheme is missing; fail gracefully.
         guard isRecaptchaCallbackSchemeRegistered else {

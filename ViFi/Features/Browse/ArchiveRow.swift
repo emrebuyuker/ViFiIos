@@ -6,6 +6,8 @@ import SwiftUI
 /// Use `ArchiveNavigationRow` to get the row wired for navigation.
 struct ArchiveRow: View {
     let item: ArchiveItem
+    /// A locked exam shows a lock badge with the unlock cost instead of its format badge.
+    var isLocked = false
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .headline) private var iconSize: CGFloat = 40
@@ -31,18 +33,28 @@ struct ArchiveRow: View {
                     .foregroundStyle(.secondary)
 
                 if stacksBadge, let exam = item.exam {
-                    ExamKindBadge(kind: exam.kind)
+                    badge(for: exam)
                         .padding(.top, 2)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if !stacksBadge, let exam = item.exam {
-                ExamKindBadge(kind: exam.kind)
+                badge(for: exam)
             }
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+    }
+
+    /// The trailing badge: a lock with the unlock cost when the exam is locked, otherwise its format.
+    @ViewBuilder
+    private func badge(for exam: ExamSummary) -> some View {
+        if isLocked {
+            LockBadge(cost: ExamLock.unlockCost)
+        } else {
+            ExamKindBadge(kind: exam.kind)
+        }
     }
 
     /// An exam node that exists but has no files to open.
@@ -75,10 +87,18 @@ struct ArchiveRow: View {
 /// Carries the `row.<name>` accessibility identifier used by UI tests.
 struct ArchiveNavigationRow: View {
     let item: ArchiveItem
+    /// A locked exam does not navigate; tapping it runs `onLockedTap` (to offer unlocking).
+    var isLocked = false
+    var onLockedTap: () -> Void = {}
 
     var body: some View {
         Group {
-            if let route = item.route {
+            if isLocked {
+                Button(action: onLockedTap) {
+                    ArchiveRow(item: item, isLocked: true)
+                }
+                .accessibilityHint("Kilitli; açmak için dokun")
+            } else if let route = item.route {
                 NavigationLink(value: route) {
                     ArchiveRow(item: item)
                 }
@@ -94,6 +114,26 @@ struct ArchiveNavigationRow: View {
             }
         }
         .accessibilityIdentifier("row.\(item.name)")
+    }
+}
+
+/// A capsule showing an exam is locked and its unlock cost in coins.
+struct LockBadge: View {
+    let cost: Int
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "lock.fill")
+            Text(cost, format: .number)
+                .monospacedDigit()
+        }
+        .font(.caption2.weight(.semibold))
+        .foregroundStyle(.orange)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(Color.orange.opacity(0.14), in: .capsule)
+        .fixedSize()
+        .accessibilityLabel("Kilitli, \(cost) coin")
     }
 }
 

@@ -21,22 +21,28 @@ final class AccountViewModel {
 
     @ObservationIgnored private let auth: any AuthServicing
     @ObservationIgnored private let now: () -> Date
+    /// Removes the user's stored data (their profile) while they are still signed in, before the account is
+    /// deleted — so a deleted account leaves nothing behind. Throws to abort the deletion.
+    @ObservationIgnored private let deleteUserData: @MainActor () async throws -> Void
     /// Run once the account has been deleted, to wipe the user's locally cached exam data.
     @ObservationIgnored private let onDeleted: @MainActor () async -> Void
     @ObservationIgnored private var verificationID: String?
 
     /// - Parameters:
     ///   - now: The clock the resend cooldown is measured with (injected by tests).
+    ///   - deleteUserData: Removes the user's server-side data (profile) before the account is deleted.
     ///   - onDeleted: Called after a successful deletion, to purge locally cached exam files.
     init(
         user: AuthUser,
         auth: any AuthServicing,
         now: @escaping () -> Date = Date.init,
+        deleteUserData: @escaping @MainActor () async throws -> Void = {},
         onDeleted: @escaping @MainActor () async -> Void = {}
     ) {
         self.user = user
         self.auth = auth
         self.now = now
+        self.deleteUserData = deleteUserData
         self.onDeleted = onDeleted
     }
 
@@ -78,9 +84,12 @@ final class AccountViewModel {
         errorMessage = nil
         let auth = auth
         let phoneNumber = user.phoneNumber
+        let deleteUserData = deleteUserData
         let onDeleted = onDeleted
         return Task { [weak self] in
             do {
+                // Remove the profile while still signed in, so a deleted account leaves nothing behind.
+                try await deleteUserData()
                 try await auth.deleteAccount()
                 // Runs even if the sheet is already torn down by the session gate; captured, not via `self`.
                 await onDeleted()
@@ -122,6 +131,7 @@ final class AccountViewModel {
         return Task { [weak self] in
             do {
                 try await auth.reauthenticate(verificationID: verificationID, code: code)
+                // The profile was already removed by `deleteAccount()` before the recent-login prompt.
                 try await auth.deleteAccount()
                 await onDeleted()
             } catch {

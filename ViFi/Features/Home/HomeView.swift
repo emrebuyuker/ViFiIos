@@ -17,6 +17,7 @@ private struct HomeScreen: View {
     @State private var viewModel: BrowseViewModel
     @State private var isShowingAbout = false
     @State private var isShowingAccount = false
+    @State private var isShowingAddExam = false
 
     init(repository: any ArchiveRepository) {
         _viewModel = State(initialValue: BrowseViewModel(path: .root, repository: repository))
@@ -29,6 +30,8 @@ private struct HomeScreen: View {
             // While searching, only the matching universities are relevant.
             if !viewModel.isFiltering {
                 HomeHeroHeader()
+
+                addExamSection
 
                 if !recentExams.isEmpty {
                     RecentExamsSection(
@@ -53,6 +56,9 @@ private struct HomeScreen: View {
         .searchable(text: $viewModel.searchText, prompt: ArchiveLevel.university.searchPrompt)
         .refreshable { await viewModel.refresh() }
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                CoinBalanceBadge()
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Hakkında", systemImage: "info.circle") {
                     showAbout()
@@ -74,11 +80,49 @@ private struct HomeScreen: View {
             AccountView()
                 .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $isShowingAddExam, onDismiss: trackScreen) {
+            AddExamView()
+                .presentationDragIndicator(.visible)
+        }
         .task {
             trackScreen()
             await loadIfNeeded()
         }
         .task { await viewModel.refreshOnArchiveChanges() }
+    }
+
+    // MARK: - Add exam
+
+    /// A call to action inviting the signed-in user to contribute an exam.
+    private var addExamSection: some View {
+        Section {
+            Button {
+                showAddExam()
+            } label: {
+                HStack(spacing: 14) {
+                    IconBadge(systemName: "plus.rectangle.on.rectangle", tint: .accentColor, size: 40)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Sınav Ekle")
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                        Text("Arşive sınav ekle, onaylanınca coin kazan.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
+                }
+                .padding(.vertical, 4)
+            }
+            .accessibilityIdentifier("home.addExam")
+        }
     }
 
     // MARK: - Universities
@@ -149,6 +193,11 @@ private struct HomeScreen: View {
     private func showAccount() {
         environment.analytics.track(.screenView(name: "Account"))
         isShowingAccount = true
+    }
+
+    private func showAddExam() {
+        environment.analytics.track(.screenView(name: "AddExam"))
+        isShowingAddExam = true
     }
 
     /// Logged on every appearance (and after the About and Account sheets close) so time is credited to Home.

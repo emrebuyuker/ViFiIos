@@ -18,6 +18,14 @@ private struct BrowseScreen: View {
     @Environment(Router.self) private var router
     @State private var viewModel: BrowseViewModel
     @State private var hasTrackedLevel = false
+    /// Whether the signed-in user is an admin (reveals the delete action on exams); resolved on appear.
+    @State private var isAdmin = false
+    /// The exam pending an admin deletion confirmation.
+    @State private var examToDelete: ArchiveItem?
+    @State private var deleteErrorMessage: String?
+    /// The locked exam the user tapped, shown in the unlock sheet.
+    @State private var examToUnlock: ArchiveItem?
+    @State private var isShowingAddExam = false
 
     init(path: ArchivePath, repository: any ArchiveRepository) {
         _viewModel = State(initialValue: BrowseViewModel(path: path, repository: repository))
@@ -36,7 +44,21 @@ private struct BrowseScreen: View {
             if !items.isEmpty {
                 Section {
                     ForEach(items) { item in
-                        ArchiveNavigationRow(item: item)
+                        ArchiveNavigationRow(
+                            item: item,
+                            isLocked: isLocked(item),
+                            onLockedTap: { examToUnlock = item }
+                        )
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                if canDeleteExams {
+                                    Button(role: .destructive) {
+                                        examToDelete = item
+                                    } label: {
+                                        Label("Sil", systemImage: "trash")
+                                    }
+                                    .accessibilityIdentifier("browse.delete.\(item.name)")
+                                }
+                            }
                     }
                 } header: {
                     ArchiveSectionHeader(title: listedLevel.listTitle, count: items.count)
@@ -54,6 +76,9 @@ private struct BrowseScreen: View {
         .searchable(text: $viewModel.searchText, prompt: listedLevel.searchPrompt)
         .refreshable { await viewModel.refresh() }
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                CoinBalanceBadge()
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Ana Sayfa", systemImage: "house") {
                     router.popToRoot()
@@ -66,11 +91,94 @@ private struct BrowseScreen: View {
             await loadIfNeeded()
         }
         .task { await viewModel.refreshOnArchiveChanges() }
+        .task { isAdmin = await environment.auth.isCurrentUserAdmin() }
+        .alert("Sınav silinsin mi?", isPresented: deleteConfirmationBinding, presenting: examToDelete) { item in
+            Button("Sil", role: .destructive) { performDelete(item) }
+            Button("Vazgeç", role: .cancel) {}
+        } message: { item in
+            Text("\"\(item.name)\" arşivden kalıcı olarak silinir; bu işlem geri alınamaz.")
+        }
+        .alert("Silinemedi", isPresented: deleteErrorBinding) {
+            Button("Tamam", role: .cancel) {}
+        } message: {
+            Text(deleteErrorMessage ?? "")
+        }
+        .sheet(item: $examToUnlock) { exam in
+            ExamUnlockSheet(
+                examName: exam.name,
+                balance: environment.wallet.balance,
+                unlock: { await unlock(exam) },
+                onUnlocked: { open(exam) },
+                onEarnCoins: {
+                    examToUnlock = nil
+                    isShowingAddExam = true
+                }
+            )
+        }
+        .sheet(isPresented: $isShowingAddExam) {
+            AddExamView()
+                .presentationDragIndicator(.visible)
+        }
     }
 
     /// The level of the entries on this screen.
     private var listedLevel: ArchiveLevel {
         viewModel.path.childLevel ?? .exam
+    }
+
+    /// The ids of this course's free (oldest) exams, computed from the full loaded list.
+    private var freeExamIds: Set<String> {
+        guard listedLevel == .exam, let exams = viewModel.state.value else { return [] }
+        return ExamLock.freeExamIds(orderedExams: exams)
+    }
+
+    /// Whether `item` is a locked exam (has files, and is neither free nor unlocked by the user).
+    private func isLocked(_ item: ArchiveItem) -> Bool {
+        guard item.level == .exam, item.exam != nil else { return false }
+        return !ExamLock.isAccessible(item, freeIds: freeExamIds, unlockedIds: environment.unlocks.unlockedIds)
+    }
+
+    /// Spends coins to unlock `exam` (server-side); returns an error message on failure, `nil` on success.
+    private func unlock(_ exam: ArchiveItem) async -> String? {
+        guard let examId = exam.path.components.last else { return nil }
+        do {
+            _ = try await environment.unlockService.unlock(examId: examId)
+            environment.unlocks.markUnlocked(examId)
+            return nil
+        } catch {
+            return error.userMessage
+        }
+    }
+
+    /// Opens an exam's viewer (used after a successful unlock).
+    private func open(_ exam: ArchiveItem) {
+        guard let kind = exam.exam?.kind else { return }
+        router.openExam(at: exam.path, kind: kind)
+    }
+
+    /// Admins may delete the exams listed under a course.
+    private var canDeleteExams: Bool {
+        isAdmin && listedLevel == .exam
+    }
+
+    private var deleteConfirmationBinding: Binding<Bool> {
+        Binding(get: { examToDelete != nil }, set: { if !$0 { examToDelete = nil } })
+    }
+
+    private var deleteErrorBinding: Binding<Bool> {
+        Binding(get: { deleteErrorMessage != nil }, set: { if !$0 { deleteErrorMessage = nil } })
+    }
+
+    /// Deletes the exam from the archive (admin), removing it from the list on success.
+    private func performDelete(_ item: ArchiveItem) {
+        Task {
+            do {
+                try await environment.moderationService.deleteExam(at: item.path)
+                viewModel.remove(item)
+            } catch {
+                deleteErrorMessage = error.userMessage
+            }
+        }
     }
 
     @ViewBuilder

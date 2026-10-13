@@ -9,7 +9,7 @@
   },
   {
     "id": "muhendislik-mimarlik-fakultesi",
-    "name": "Mühendislik-Mimarlık Fakültesi"
+    "name": "Mühendislik Mimarlık Fakültesi"
   },
   {
     "id": "muhendislik-ve-mimarlik-fakultesi",
@@ -85,7 +85,11 @@
   },
   {
     "id": "fen-edebiyat-fakultesi",
-    "name": "Fen-Edebiyat Fakültesi"
+    "name": "Fen Edebiyat Fakültesi"
+  },
+  {
+    "id": "bilgisayar-ve-bilisim-bilimleri-fakultesi",
+    "name": "Bilgisayar ve Bilişim Bilimleri Fakültesi"
   },
   {
     "id": "fen-bilimleri-fakultesi",

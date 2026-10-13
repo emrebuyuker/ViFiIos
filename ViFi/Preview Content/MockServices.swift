@@ -15,8 +15,19 @@ extension AppEnvironment {
             fileLoader: RemoteFileLoader(),
             updateChecker: StubUpdateChecker(status: mockUpdateStatus(arguments: arguments)),
             analytics: NoOpAnalyticsTracker(),
-            auth: MockAuthService(isSignedIn: !arguments.contains(LaunchArgument.signedOut)),
+            auth: MockAuthService(
+                isSignedIn: !arguments.contains(LaunchArgument.signedOut),
+                isAdmin: arguments.contains(LaunchArgument.admin)
+            ),
             profileService: MockProfileService(profile: mockProfile(arguments: arguments)),
+            submissionService: MockExamSubmissionService(),
+            rewardsConfig: StubRewardsConfigReader(),
+            walletReader: StubWalletReader(
+                wallet: CoinWallet(balance: arguments.contains(LaunchArgument.noCoins) ? 0 : 120, updatedAt: nil)
+            ),
+            moderationService: MockModerationService(),
+            unlockService: MockExamUnlockService(),
+            unlocksReader: StubUnlocksReader(),
             catalog: .bundled(),
             recents: RecentExamsStore(defaults: .mockSuite),
             // Keep the prefetch throttle out of the real defaults, so a mock/UI-test run never suppresses a
@@ -142,6 +153,9 @@ private enum MockArchive {
                 node(.faculty, "MÜHENDİSLİK MİMARLIK FAKÜLTESİ", [
                     node(.department, "BİLGİSAYAR MÜHENDİSLİĞİ", [
                         node(.lesson, "MÜHENDİSLİK MATEMATİĞİ", [
+                            // More than two exams, so the newest two are locked (the oldest two stay free).
+                            exam("2023 VİZE", .images, files: pages),
+                            exam("2022 FİNAL", .pdf, files: pdf),
                             exam("2019 FİNAL", .images, files: pages),
                             exam("2018 VİZE", .pdf, files: pdf),
                         ]),
@@ -250,6 +264,7 @@ final class MockAuthService: AuthServicing {
 
     private let latency: Duration
     private let requiresRecentLoginForDeletion: Bool
+    private let admin: Bool
     private var isRecentlyAuthenticated = false
     /// Numbers that codes were sent to, by verification id.
     private var pendingNumbers: [String: String] = [:]
@@ -259,10 +274,21 @@ final class MockAuthService: AuthServicing {
     ///   - isSignedIn: Starts with `defaultUser` signed in.
     ///   - latency: Simulated network delay of every call.
     ///   - requiresRecentLoginForDeletion: Deleting needs a fresh code first, like an old Firebase session.
-    init(isSignedIn: Bool = true, latency: Duration = .milliseconds(300), requiresRecentLoginForDeletion: Bool = false) {
+    ///   - isAdmin: Reports the user as an admin, to exercise the in-app moderation tools.
+    init(
+        isSignedIn: Bool = true,
+        latency: Duration = .milliseconds(300),
+        requiresRecentLoginForDeletion: Bool = false,
+        isAdmin: Bool = false
+    ) {
         currentUser = isSignedIn ? Self.defaultUser : nil
         self.latency = latency
         self.requiresRecentLoginForDeletion = requiresRecentLoginForDeletion
+        admin = isAdmin
+    }
+
+    func isCurrentUserAdmin() async -> Bool {
+        currentUser != nil && admin
     }
 
     func userChanges() -> AsyncStream<AuthUser?> {
@@ -388,10 +414,97 @@ final class MockProfileService: ProfileServicing {
         self.profile = profile
     }
 
+    func deleteProfile(uid: String) async throws {
+        try await simulateLatency()
+        profile = nil
+    }
+
     private func simulateLatency() async throws {
         if latency > .zero {
             try await Task.sleep(for: latency)
         }
+    }
+}
+
+// MARK: - Submissions
+
+/// In-memory exam submissions, for previews and UI tests. Records every submitted exam; never touches Firebase.
+final class MockExamSubmissionService: ExamSubmissionServicing {
+    private(set) var submitted: [ExamSubmission] = []
+    private let latency: Duration
+    private let failing: Bool
+
+    /// - Parameters:
+    ///   - latency: Simulated network delay of every call.
+    ///   - failing: Makes every call throw `ExamSubmissionError.offline`.
+    init(latency: Duration = .milliseconds(300), failing: Bool = false) {
+        self.latency = latency
+        self.failing = failing
+    }
+
+    func submit(_ submission: ExamSubmission, ownerId: String) async throws {
+        if latency > .zero {
+            try await Task.sleep(for: latency)
+        }
+        if failing {
+            throw ExamSubmissionError.offline
+        }
+        submitted.append(submission)
+    }
+}
+
+// MARK: - Moderation
+
+/// In-memory moderation for previews and UI tests: a small pending queue; approving or rejecting removes an
+/// item. The sample files reference pending paths that do not resolve off Firebase, so the preview shows its
+/// error state in sample mode (the queue, approve and reject flows are what the UI tests exercise).
+final class MockModerationService: ModerationServicing {
+    private var pending: [ExamSubmissionRecord]
+    private let latency: Duration
+
+    init(pending: [ExamSubmissionRecord] = MockModerationService.samples, latency: Duration = .milliseconds(300)) {
+        self.pending = pending
+        self.latency = latency
+    }
+
+    static let samples: [ExamSubmissionRecord] = [
+        ExamSubmissionRecord(
+            id: "sub-1", ownerId: "mock-user",
+            university: "Boğaziçi Üniversitesi", faculty: "Mühendislik Fakültesi",
+            department: "Bilgisayar Mühendisliği", lesson: "Ayrık Matematik", exam: "2023 VİZE",
+            kind: .images, status: "pending", createdAt: Date(timeIntervalSince1970: 1_760_000_000),
+            files: [
+                SubmissionFileRef(storagePath: "pending/mock-user/sub-1/1.jpg", order: 1),
+                SubmissionFileRef(storagePath: "pending/mock-user/sub-1/2.jpg", order: 2),
+            ]
+        ),
+        ExamSubmissionRecord(
+            id: "sub-2", ownerId: "mock-user",
+            university: "Sakarya Üniversitesi", faculty: "İşletme Fakültesi",
+            department: "İşletme", lesson: "Muhasebe", exam: "2022 FİNAL",
+            kind: .pdf, status: "pending", createdAt: Date(timeIntervalSince1970: 1_759_000_000),
+            files: [SubmissionFileRef(storagePath: "pending/mock-user/sub-2/1.pdf", order: 1)]
+        ),
+    ]
+
+    func pendingSubmissions() async throws -> [ExamSubmissionRecord] {
+        try? await Task.sleep(for: latency)
+        return pending
+    }
+
+    func approve(_ record: ExamSubmissionRecord) async throws -> ApprovalResult {
+        try? await Task.sleep(for: latency)
+        pending.removeAll { $0.id == record.id }
+        return ApprovalResult(tier: .newUniversity, coins: 500, publishedExamId: "pub-\(record.id)")
+    }
+
+    func reject(_ record: ExamSubmissionRecord, reason: String?) async throws {
+        try? await Task.sleep(for: latency)
+        pending.removeAll { $0.id == record.id }
+    }
+
+    func deleteExam(at path: ArchivePath) async throws {
+        try? await Task.sleep(for: latency)
     }
 }
 
@@ -403,6 +516,81 @@ final class NoOpAnalyticsTracker: AnalyticsTracking {
 
     func track(_ event: AnalyticsEvent) {
         Logger.app.debug("Analytics event (not sent): \(String(describing: event), privacy: .public)")
+    }
+}
+
+/// Reports a fixed reward config, once (sample per-tier coin amounts for previews and UI tests).
+final class StubRewardsConfigReader: RewardsConfigReading {
+    private let config: RewardsConfig?
+
+    init(config: RewardsConfig? = RewardsConfig(examUploadCoins: 10, tiers: [
+        .newUniversity: 500,
+        .newFaculty: 300,
+        .newDepartment: 200,
+        .newCourse: 120,
+        .newExam: 60,
+        .duplicate: 10,
+    ])) {
+        self.config = config
+    }
+
+    func rewardsChanges() -> AsyncStream<RewardsConfig?> {
+        let config = config
+        return AsyncStream { continuation in
+            continuation.yield(config)
+            continuation.finish()
+        }
+    }
+}
+
+/// Reports a fixed coin balance, once (a sample balance for previews and UI tests).
+final class StubWalletReader: WalletReading {
+    private let wallet: CoinWallet
+
+    init(wallet: CoinWallet = CoinWallet(balance: 120, updatedAt: nil)) {
+        self.wallet = wallet
+    }
+
+    func walletChanges(uid: String) -> AsyncStream<CoinWallet> {
+        let wallet = wallet
+        return AsyncStream { continuation in
+            continuation.yield(wallet)
+            continuation.finish()
+        }
+    }
+}
+
+/// Serves a fixed set of unlocked exams, for previews and UI tests.
+final class StubUnlocksReader: UnlocksReading {
+    private let ids: Set<String>
+
+    init(ids: Set<String> = []) {
+        self.ids = ids
+    }
+
+    func unlockedExamIds(uid: String) async throws -> Set<String> {
+        ids
+    }
+}
+
+/// In-memory exam unlocking for previews and UI tests: succeeds unless `failure` is set.
+final class MockExamUnlockService: ExamUnlockServicing {
+    private let latency: Duration
+    private let failure: ExamUnlockError?
+    private(set) var unlockedExamIds: [String] = []
+
+    init(latency: Duration = .milliseconds(300), failure: ExamUnlockError? = nil) {
+        self.latency = latency
+        self.failure = failure
+    }
+
+    func unlock(examId: String) async throws -> ExamUnlockResult {
+        try? await Task.sleep(for: latency)
+        if let failure {
+            throw failure
+        }
+        unlockedExamIds.append(examId)
+        return ExamUnlockResult(balance: 20, alreadyUnlocked: false)
     }
 }
 

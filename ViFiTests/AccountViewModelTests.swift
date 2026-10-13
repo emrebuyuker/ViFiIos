@@ -423,3 +423,53 @@ private final class CallSpy {
         calls += 1
     }
 }
+
+// MARK: - Server-side data removal on deletion
+
+@Suite("AccountViewModel deletion data removal", .timeLimit(.minutes(1)))
+struct AccountDeletionDataTests {
+    private let auth = StubAuthService(currentUser: Fixture.user)
+
+    @Test("A successful deletion removes the user's data, then deletes the account")
+    func removesDataThenAccount() async {
+        let spy = CallSpy()
+        let viewModel = AccountViewModel(user: Fixture.user, auth: auth, deleteUserData: spy.call)
+
+        await viewModel.deleteAccount()?.value
+
+        #expect(spy.calls == 1)
+        #expect(auth.count(of: .deleteAccount) == 1)
+        #expect(auth.currentUser == nil)
+    }
+
+    @Test("If removing the data fails, the account is kept and the error is shown")
+    func dataFailureKeepsAccount() async {
+        let viewModel = AccountViewModel(
+            user: Fixture.user,
+            auth: auth,
+            deleteUserData: { throw ProfileError.offline }
+        )
+
+        await viewModel.deleteAccount()?.value
+
+        #expect(auth.count(of: .deleteAccount) == 0)
+        #expect(auth.currentUser == Fixture.user)
+        #expect(viewModel.errorMessage == ProfileError.offline.errorDescription)
+    }
+
+    @Test("After re-verification, the data is removed before the account")
+    func removesDataAfterReverification() async throws {
+        auth.deleteReplies = [.failure(AuthError.requiresRecentLogin), .success(())]
+        let spy = CallSpy()
+        let viewModel = AccountViewModel(user: Fixture.user, auth: auth, deleteUserData: spy.call)
+
+        await viewModel.deleteAccount()?.value
+        #expect(viewModel.isReverifying)
+
+        let task = try #require(viewModel.updateCode("123456"))
+        await task.value
+
+        #expect(spy.calls == 1)
+        #expect(auth.currentUser == nil)
+    }
+}

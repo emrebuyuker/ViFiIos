@@ -113,6 +113,18 @@ describe('pending/{uid}/{submissionId}/', () => {
     await assertSucceeds(upload(users.alice, 'pending/alice/sub9/exam.pdf', bytes(), PDF));
   });
 
+  test('client-set custom metadata, Content-Disposition and Content-Encoding are not constrained', async () => {
+    // The real Apple/Android Storage SDKs attach their own metadata on upload (e.g.
+    // `firebaseStorageDownloadTokens`) that the JS/Admin SDK and emulator do not, so the pending-upload rule
+    // deliberately does not constrain client metadata. It is safe: the approval Cloud Function re-uploads the
+    // reviewed bytes with fresh, server-set metadata, so pending metadata never reaches the published archive.
+    await assertSucceeds(upload(users.alice, 'pending/alice/sub9/mobile.jpg', bytes(), {
+      ...JPEG,
+      customMetadata: { firebaseStorageDownloadTokens: 'sdk-uuid', note: 'ignored by approval' },
+      contentDisposition: 'inline',
+    }));
+  });
+
   test('owner can upload exactly 15 MiB', async () => {
     await assertSucceeds(upload(users.alice, 'pending/alice/sub9/big.pdf', bytes(15 * MiB), PDF));
   });

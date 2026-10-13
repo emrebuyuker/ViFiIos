@@ -138,6 +138,8 @@ final class StubAuthService: AuthServicing {
     }
 
     var currentUser: AuthUser?
+    /// Whether `isCurrentUserAdmin()` reports the user as an admin.
+    var isAdmin = false
     var sendReplies: [Result<String, any Error>] = [.success("verification-1")]
     var signInReplies: [Result<AuthUser, any Error>] = [.success(Fixture.user)]
     var reauthenticateReplies: [Result<Void, any Error>] = [.success(())]
@@ -166,6 +168,10 @@ final class StubAuthService: AuthServicing {
     /// Number of `userChanges()` streams that were requested and not finished by `finishUserChanges()`.
     var observerCount: Int {
         continuations.count
+    }
+
+    func isCurrentUserAdmin() async -> Bool {
+        currentUser != nil && isAdmin
     }
 
     func userChanges() -> AsyncStream<AuthUser?> {
@@ -285,10 +291,12 @@ final class StubProfileService: ProfileServicing {
     enum Call: Equatable {
         case load(uid: String)
         case save(uid: String)
+        case delete(uid: String)
     }
 
     var loadReplies: [Result<UserProfile?, any Error>]
     var saveReplies: [Result<Void, any Error>] = [.success(())]
+    var deleteReplies: [Result<Void, any Error>] = [.success(())]
     /// When set, every call waits at the gate before it is answered.
     var gate: AsyncGate?
 
@@ -315,6 +323,13 @@ final class StubProfileService: ProfileServicing {
         savedProfiles.append(profile)
     }
 
+    func deleteProfile(uid: String) async throws {
+        let call = calls.count(where: { if case .delete = $0 { true } else { false } })
+        calls.append(.delete(uid: uid))
+        await gate?.pass()
+        try Self.reply(to: call, from: deleteReplies).get()
+    }
+
     private static func reply<Value>(
         to call: Int,
         from replies: [Result<Value, any Error>]
@@ -323,6 +338,99 @@ final class StubProfileService: ProfileServicing {
             return .failure(ProfileError.unknown(message: "No stubbed reply for call \(call)."))
         }
         return replies[min(call, replies.count - 1)]
+    }
+}
+
+// MARK: - Submissions
+
+/// An `ExamSubmissionServicing` that answers with scripted replies and records every submission.
+///
+/// Each reply list answers successive calls in order; once it runs out, its last reply is repeated.
+final class StubExamSubmissionService: ExamSubmissionServicing {
+    struct Call: Equatable {
+        let ownerId: String
+    }
+
+    var submitReplies: [Result<Void, any Error>] = [.success(())]
+    /// When set, every call waits at the gate before it is answered.
+    var gate: AsyncGate?
+
+    private(set) var calls: [Call] = []
+    /// The submissions passed to successful `submit(_:ownerId:)` calls, in order.
+    private(set) var submitted: [ExamSubmission] = []
+
+    func submit(_ submission: ExamSubmission, ownerId: String) async throws {
+        let call = calls.count
+        calls.append(Call(ownerId: ownerId))
+        await gate?.pass()
+        try Self.reply(to: call, from: submitReplies).get()
+        submitted.append(submission)
+    }
+
+    private static func reply<Value>(
+        to call: Int,
+        from replies: [Result<Value, any Error>]
+    ) -> Result<Value, any Error> {
+        guard !replies.isEmpty else {
+            return .failure(ExamSubmissionError.unknown(message: "No stubbed reply for call \(call)."))
+        }
+        return replies[min(call, replies.count - 1)]
+    }
+}
+
+// MARK: - Moderation
+
+/// A `ModerationServicing` that serves a scripted queue and records every approve/reject.
+final class StubModerationService: ModerationServicing {
+    var pending: [ExamSubmissionRecord]
+    var approveReplies: [Result<ApprovalResult, any Error>] = [
+        .success(ApprovalResult(tier: .newExam, coins: 60, publishedExamId: "exam-1")),
+    ]
+    var rejectError: (any Error)?
+    var deleteExamError: (any Error)?
+    /// When set, every call waits at the gate before it is answered.
+    var gate: AsyncGate?
+
+    private(set) var approvedIDs: [String] = []
+    private(set) var rejectedReasons: [(id: String, reason: String?)] = []
+    private(set) var deletedExamPaths: [ArchivePath] = []
+
+    init(pending: [ExamSubmissionRecord] = []) {
+        self.pending = pending
+    }
+
+    func pendingSubmissions() async throws -> [ExamSubmissionRecord] {
+        await gate?.pass()
+        return pending
+    }
+
+    func approve(_ record: ExamSubmissionRecord) async throws -> ApprovalResult {
+        let call = approvedIDs.count
+        approvedIDs.append(record.id)
+        await gate?.pass()
+        let reply = approveReplies.isEmpty
+            ? Result<ApprovalResult, any Error>.failure(ModerationError.unknown(message: "No reply"))
+            : approveReplies[min(call, approveReplies.count - 1)]
+        let result = try reply.get()
+        pending.removeAll { $0.id == record.id }
+        return result
+    }
+
+    func reject(_ record: ExamSubmissionRecord, reason: String?) async throws {
+        rejectedReasons.append((record.id, reason))
+        await gate?.pass()
+        if let rejectError {
+            throw rejectError
+        }
+        pending.removeAll { $0.id == record.id }
+    }
+
+    func deleteExam(at path: ArchivePath) async throws {
+        deletedExamPaths.append(path)
+        await gate?.pass()
+        if let deleteExamError {
+            throw deleteExamError
+        }
     }
 }
 
@@ -570,5 +678,44 @@ enum Fixture {
             URL(filePath: "/exams/\(path.displayName ?? "exam")/file-\(index + 1).\(fileExtension)")
         }
         return ExamDocument(path: path, kind: kind, fileURLs: urls)
+    }
+
+    /// A stored submission record awaiting moderation.
+    static func submissionRecord(
+        id: String = "sub-1",
+        university: String = "Boğaziçi Üniversitesi",
+        faculty: String = "Mühendislik Fakültesi",
+        department: String = "Bilgisayar Mühendisliği",
+        lesson: String = "Ayrık Matematik",
+        exam: String = "2023 VİZE",
+        kind: ExamKind = .images,
+        status: String = "pending",
+        fileCount: Int = 2
+    ) -> ExamSubmissionRecord {
+        ExamSubmissionRecord(
+            id: id, ownerId: user.id, university: university, faculty: faculty, department: department,
+            lesson: lesson, exam: exam, kind: kind, status: status,
+            createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+            files: (1...max(1, fileCount)).map {
+                SubmissionFileRef(storagePath: "pending/\(user.id)/\(id)/\($0).\(kind.fileExtension)", order: $0)
+            }
+        )
+    }
+
+    /// A valid exam submission owned by `user`.
+    static func submission(
+        kind: ExamKind = .images,
+        files: [SubmissionFile]? = nil
+    ) -> ExamSubmission {
+        ExamSubmission(
+            university: "Boğaziçi Üniversitesi",
+            faculty: "Mühendislik Fakültesi",
+            department: "Bilgisayar Mühendisliği",
+            lesson: "Ayrık Matematik",
+            examName: "Vize",
+            year: 2023,
+            kind: kind,
+            files: files ?? [SubmissionFile(data: Data([1, 2, 3]), order: 1)]
+        )
     }
 }

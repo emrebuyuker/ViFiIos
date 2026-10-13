@@ -54,19 +54,19 @@ service firebase.storage {
       }
 
       allow get: if isOwner() || isAdmin();
-      // Owners never replace a file they uploaded. `update` is not granted at all, and
-      // `resource == null` also rejects an overwrite that is evaluated as `create`
-      // (the Storage emulator, for one, evaluates every upload as `create`).
-      // The uploader controls no other metadata: no served filename (Content-Disposition), no
-      // Content-Encoding (the size limit would apply to compressed bytes) and no custom metadata.
+      // The owner may upload a new image/PDF of a capped size into their own submission folder. `update` is
+      // never granted and `resource == null` also rejects an overwrite evaluated as `create`, so a file is
+      // never replaced in place. The client-set Content-Disposition, Content-Encoding and custom metadata are
+      // intentionally NOT constrained: the real Apple/Android Storage SDK attaches its own metadata (e.g.
+      // `firebaseStorageDownloadTokens`) that the JS/Admin SDK and the emulator do not, so constraining them
+      // rejected every real mobile upload (403). It is safe to drop here because the approval Cloud Function
+      // re-uploads the reviewed bytes with fresh, server-set metadata — a pending file's metadata never
+      // reaches the published archive.
       allow create: if isOwner()
         && resource == null
         && request.resource.size > 0
         && request.resource.size <= 15 * 1024 * 1024
-        && request.resource.contentType in ['image/jpeg', 'application/pdf']
-        && request.resource.contentDisposition == null
-        && request.resource.contentEncoding == null
-        && (request.resource.metadata == null || request.resource.metadata.size() == 0);
+        && request.resource.contentType in ['image/jpeg', 'application/pdf'];
       allow delete: if isOwner() || isAdmin();
     }
   }

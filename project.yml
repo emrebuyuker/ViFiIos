@@ -107,6 +107,10 @@ targets:
         product: FirebaseAuth
       - package: Firebase
         product: FirebaseAppCheck
+      - package: Firebase
+        product: FirebaseStorage
+      - package: Firebase
+        product: FirebaseFunctions
     postCompileScripts:
       - name: SwiftLint
         basedOnDependencyAnalysis: false

@@ -27,6 +27,10 @@ protocol AuthServicing: AnyObject {
     /// consuming task is cancelled.
     func userChanges() -> AsyncStream<AuthUser?>
 
+    /// Whether the signed-in user carries the `admin: true` custom claim (set out-of-band by the project owner).
+    /// Reads the ID token; returns `false` when signed out or on any error. Gates the in-app moderation tools.
+    func isCurrentUserAdmin() async -> Bool
+
     /// Sends a verification code by SMS to `phoneNumber` (E.164) and returns the verification id that the code
     /// must be combined with.
     func sendVerificationCode(to phoneNumber: String) async throws -> String

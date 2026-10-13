@@ -10,6 +10,10 @@ protocol ProfileServicing: AnyObject {
 
     /// Creates or replaces the profile for `uid`.
     func saveProfile(_ profile: UserProfile, uid: String) async throws
+
+    /// Deletes the stored profile for `uid`. Called while the user is still signed in, as part of deleting the
+    /// account, so a deleted account leaves no profile behind.
+    func deleteProfile(uid: String) async throws
 }
 
 /// Profile errors, with messages shown to the user.

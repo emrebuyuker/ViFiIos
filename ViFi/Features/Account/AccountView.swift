@@ -11,6 +11,10 @@ struct AccountView: View {
                 user: user,
                 auth: environment.auth,
                 profileName: environment.profile.profile?.fullName,
+                // Removes the server-side profile before the account is deleted, so nothing is left orphaned.
+                deleteUserData: { [profileService = environment.profileService] in
+                    try await profileService.deleteProfile(uid: user.id)
+                },
                 // Deleting the account wipes the user's cached exam files from the device.
                 onDeleted: { [fileLoader = environment.fileLoader] in await fileLoader.purge() }
             )
@@ -21,9 +25,12 @@ struct AccountView: View {
 /// The screen itself, owning its view model for the lifetime of the sheet.
 private struct AccountScreen: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppEnvironment.self) private var environment
     @State private var viewModel: AccountViewModel
     @State private var isConfirmingSignOut = false
     @State private var isConfirmingDeletion = false
+    /// Whether the signed-in user is an admin (reveals the moderation tools); resolved on appear.
+    @State private var isAdmin = false
     @FocusState private var isCodeFocused: Bool
     /// The signed-in user, for the edit-profile link (the view model already holds it too).
     private let user: AuthUser
@@ -34,9 +41,12 @@ private struct AccountScreen: View {
         user: AuthUser,
         auth: any AuthServicing,
         profileName: String?,
+        deleteUserData: @escaping @MainActor () async throws -> Void,
         onDeleted: @escaping @MainActor () async -> Void
     ) {
-        _viewModel = State(initialValue: AccountViewModel(user: user, auth: auth, onDeleted: onDeleted))
+        _viewModel = State(initialValue: AccountViewModel(
+            user: user, auth: auth, deleteUserData: deleteUserData, onDeleted: onDeleted
+        ))
         self.user = user
         self.profileName = profileName
     }
@@ -45,6 +55,10 @@ private struct AccountScreen: View {
         NavigationStack {
             List {
                 profileSection
+                coinSection
+                if isAdmin {
+                    moderationSection
+                }
                 phoneSection
                 signOutSection
                 deleteSection
@@ -64,6 +78,8 @@ private struct AccountScreen: View {
             .accessibilityIdentifier("account.sheet")
             .animation(.smooth, value: viewModel.isReverifying)
             .animation(.smooth, value: viewModel.errorMessage)
+            .animation(.smooth, value: isAdmin)
+            .task { isAdmin = await environment.auth.isCurrentUserAdmin() }
             .navigationTitle("Hesap")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -125,6 +141,52 @@ private struct AccountScreen: View {
             }
             .disabled(viewModel.isWorking)
             .accessibilityIdentifier("account.editProfile")
+        }
+    }
+
+    private var coinSection: some View {
+        Section {
+            HStack(spacing: 14) {
+                IconBadge(systemName: "bitcoinsign.circle.fill")
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Coin bakiyen")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text(environment.wallet.balance, format: .number)
+                        .font(.headline.monospacedDigit())
+                        .contentTransition(.numericText())
+                }
+                Spacer()
+            }
+            .padding(.vertical, 4)
+            .animation(.smooth, value: environment.wallet.balance)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Coin bakiyen")
+            .accessibilityValue(Text(environment.wallet.balance, format: .number))
+            .accessibilityIdentifier("account.coinBalance")
+        } footer: {
+            Text("Onaylanan sınav yüklemelerinden coin kazanırsın.")
+        }
+    }
+
+    private var moderationSection: some View {
+        Section {
+            NavigationLink {
+                ModerationView()
+            } label: {
+                HStack(spacing: 14) {
+                    IconBadge(systemName: "checklist")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Moderasyon")
+                            .font(.headline)
+                        Text("Bekleyen gönderimleri incele ve onayla")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            .accessibilityIdentifier("account.moderation")
         }
     }
 

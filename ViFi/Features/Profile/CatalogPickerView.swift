@@ -40,6 +40,9 @@ struct CatalogPickerView: View {
     /// Accessibility identifier prefix, e.g. `profile.university` → `.option` / `.custom` rows.
     let accessibilityPrefix: String
     @Binding var selection: CatalogSelection
+    /// Whether the typed text may be used as a custom (free-text) value. `false` restricts the picker to the
+    /// listed options only (the add-exam flow lists the same bundled values but does not allow free text).
+    var allowsCustom = true
 
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
@@ -54,11 +57,22 @@ struct CatalogPickerView: View {
 
     /// Whether to offer the typed text itself (it is not already an exact option by name).
     private var showsCustomOption: Bool {
-        !trimmedQuery.isEmpty && !options.contains { $0.name.caseInsensitiveCompare(trimmedQuery) == .orderedSame }
+        allowsCustom
+            && !trimmedQuery.isEmpty
+            && !options.contains { $0.name.caseInsensitiveCompare(trimmedQuery) == .orderedSame }
     }
 
     var body: some View {
         List {
+            Section {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    TextField("Ara", text: $query)
+                        .accessibilityIdentifier("\(accessibilityPrefix).search")
+                }
+            }
+
             if showsCustomOption {
                 Section {
                     Button {
@@ -99,7 +113,6 @@ struct CatalogPickerView: View {
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
-        .searchable(text: $query, prompt: "Ara")
         .autocorrectionDisabled()
     }
 

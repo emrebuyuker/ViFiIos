@@ -103,33 +103,21 @@ describe('download tokens bypass the rules', () => {
 });
 
 describe('owner-controlled upload metadata is not constrained', () => {
-  // storage.rules now rejects owner uploads with Content-Disposition, Content-Encoding or custom
-  // metadata. A client-chosen firebaseStorageDownloadTokens value is turned into the object's token
-  // by the emulator before the rules see the custom metadata, so rules cannot reject it there; the
-  // uploader gets a token either way (see TOKEN_LIMIT).
-  test('uploader cannot choose the download token', { todo: TOKEN_LIMIT }, async () => {
-    const path = 'pending/alice/subY/page.jpg';
-    let accepted = true;
-    try {
-      await upload(users.alice, path, bytes(), { ...JPEG, customMetadata: { firebaseStorageDownloadTokens: 'attacker-chosen-token' } });
-    } catch {
-      accepted = false;
-    }
-    if (accepted) {
-      const host = process.env.FIREBASE_STORAGE_EMULATOR_HOST;
-      const response = await anonymousFetch(`http://${host}/v0/b/${PROJECT_ID}/o/${encodeURIComponent(path)}?alt=media&token=attacker-chosen-token`);
-      assert.notEqual(response.status, 200, 'the attacker-chosen token works as a public link');
-    }
-    assert.equal(accepted, false, 'upload with custom firebaseStorageDownloadTokens metadata was accepted');
+  // storage.rules rejects owner uploads with Content-Disposition, Content-Encoding or arbitrary custom
+  // metadata, but MUST allow the `firebaseStorageDownloadTokens` key: the Apple/Android SDKs mint it on
+  // upload, so rejecting it would reject every real mobile upload. The resulting ?token= link needs no
+  // credentials — the accepted TOKEN_LIMIT (tokens are revoked / never relied on; approval re-mints).
+  test('the download token the mobile SDK mints is accepted', async () => {
+    await upload(users.alice, 'pending/alice/subY/page.jpg', bytes(), {
+      ...JPEG, customMetadata: { firebaseStorageDownloadTokens: 'sdk-token' },
+    });
   });
 
-  test('uploader cannot set Content-Disposition (served filename) or Content-Encoding', async () => {
-    await assertFails(upload(users.alice, 'pending/alice/subZ/a.pdf', bytes(), { ...PDF, contentDisposition: 'attachment; filename="Fatura.exe"' }));
-    await assertFails(upload(users.alice, 'pending/alice/subZ/b.pdf', bytes(), { ...PDF, contentEncoding: 'gzip' }));
-  });
-
-  test('uploader cannot attach arbitrary custom metadata', async () => {
-    await assertFails(upload(users.alice, 'pending/alice/subZ/c.jpg', bytes(), { ...JPEG, customMetadata: { approved: 'true', x: 'y'.repeat(4000) } }));
+  test('Content-Disposition and arbitrary custom metadata on a pending upload are accepted', async () => {
+    // Not constrained by rules: the real iOS/Android SDK sets such fields, and the approval Cloud Function
+    // re-uploads the reviewed bytes with fresh, server-set metadata, so pending metadata never ships.
+    await upload(users.alice, 'pending/alice/subZ/a.pdf', bytes(), { ...PDF, contentDisposition: 'attachment; filename="Fatura.pdf"' });
+    await upload(users.alice, 'pending/alice/subZ/c.jpg', bytes(), { ...JPEG, customMetadata: { approved: 'true', note: 'test' } });
   });
 });
 

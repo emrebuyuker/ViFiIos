@@ -86,6 +86,14 @@ final class BrowseViewModel {
         }
     }
 
+    /// Removes `item` from the loaded entries after an admin has deleted it from the archive, so the list
+    /// updates at once (a refetch could still serve the deleted item from the offline cache).
+    func remove(_ item: ArchiveItem) {
+        guard var items = state.value else { return }
+        items.removeAll { $0.path == item.path }
+        state = .loaded(items)
+    }
+
     // MARK: - Helpers
 
     /// Folds Turkish text for matching: case- and diacritic-insensitive, dotted and dotless i alike,

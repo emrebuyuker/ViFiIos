@@ -155,7 +155,7 @@ describe('Firestore rules — submissions (create, read, moderate)', () => {
   });
 });
 
-describe('Firestore rules — coin / entitlement / notification (server-only)', () => {
+describe('Firestore rules — coins (admin-written), entitlements (server-only), notifications', () => {
   const wallet = (fs, uid) => fs.collection('wallets').doc(uid);
   const ledger = (fs, uid, id) => fs.collection('wallets').doc(uid).collection('ledger').doc(id);
   const sub = (fs, uid) => fs.collection('subscriptions').doc(uid);
@@ -167,8 +167,8 @@ describe('Firestore rules — coin / entitlement / notification (server-only)', 
     await env.clearFirestore();
     await env.withSecurityRulesDisabled(async (context) => {
       const seed = context.firestore();
-      await wallet(seed, 'alice').set({ coinBalance: 10 });
-      await ledger(seed, 'alice', 'e1').set({ type: 'earn', amount: 10, balanceAfter: 10 });
+      await wallet(seed, 'alice').set({ balance: 10, updatedAt: new Date() });
+      await ledger(seed, 'alice', 'e1').set({ type: 'earn', amount: 10, balanceAfter: 10, createdAt: new Date() });
       await sub(seed, 'alice').set({ active: true });
       await unlock(seed, 'alice', 'exam1').set({ coinsSpent: 5 });
       await inbox(seed, 'alice', 'm1').set({ title: 'Merhaba', body: 'x', read: false });
@@ -176,15 +176,18 @@ describe('Firestore rules — coin / entitlement / notification (server-only)', 
     });
   });
 
-  test('an owner reads their money/entitlement state but can never write it', async () => {
+  const validWallet = (overrides = {}) => ({ balance: 20, updatedAt: new Date(), ...overrides });
+  const validEntry = (overrides = {}) => ({ type: 'earn', amount: 10, balanceAfter: 20, createdAt: new Date(), ...overrides });
+
+  test('an owner reads their money/entitlement state but can never write it, even with a valid shape', async () => {
     const fs = db(users.alice);
     await assertSucceeds(wallet(fs, 'alice').get());
     await assertSucceeds(ledger(fs, 'alice', 'e1').get());
     await assertSucceeds(sub(fs, 'alice').get());
     await assertSucceeds(unlock(fs, 'alice', 'exam1').get());
-    await assertFails(wallet(fs, 'alice').set({ coinBalance: 9999 }));
-    await assertFails(wallet(fs, 'alice').update({ coinBalance: 9999 }));
-    await assertFails(ledger(fs, 'alice', 'e2').set({ type: 'earn', amount: 9999 }));
+    await assertFails(wallet(fs, 'alice').set(validWallet()));
+    await assertFails(wallet(fs, 'alice').update({ balance: 9999 }));
+    await assertFails(ledger(fs, 'alice', 'e2').set(validEntry()));
     await assertFails(sub(fs, 'alice').set({ active: true }));
     await assertFails(unlock(fs, 'alice', 'exam2').set({ coinsSpent: 0 }));
   });
@@ -197,11 +200,50 @@ describe('Firestore rules — coin / entitlement / notification (server-only)', 
     await assertFails(unlock(fs, 'alice', 'exam1').get());
   });
 
-  test('even an admin cannot write money/entitlement state from a client', async () => {
+  test('an admin credits a wallet and appends a ledger entry with a valid shape', async () => {
     const fs = db(users.admin);
-    await assertSucceeds(wallet(fs, 'alice').get());
-    await assertFails(wallet(fs, 'alice').set({ coinBalance: 9999 }));
-    await assertFails(ledger(fs, 'alice', 'e2').set({ amount: 1 }));
+    await assertSucceeds(wallet(fs, 'alice').set(validWallet({ balance: 30 })));
+    await assertSucceeds(wallet(fs, 'alice').update({ balance: 40, updatedAt: new Date() }));
+    await assertSucceeds(ledger(fs, 'alice', 's-approved').set(validEntry({ submissionId: 's-approved', tier: 'newUniversity' })));
+  });
+
+  test('an admin may append a ledger entry without a balanceAfter (the serverless credit shape)', async () => {
+    const fs = db(users.admin);
+    await assertSucceeds(ledger(fs, 'alice', 's-earn').set({
+      type: 'earn', amount: 500, submissionId: 's-earn', tier: 'newUniversity', createdAt: new Date(),
+    }));
+  });
+
+  test('an admin cannot write a malformed wallet or ledger entry', async () => {
+    const fs = db(users.admin);
+    await assertFails(wallet(fs, 'alice').set(validWallet({ balance: -1 })));
+    await assertFails(wallet(fs, 'alice').set(validWallet({ balance: 1.5 })));
+    await assertFails(wallet(fs, 'alice').set(validWallet({ hacked: true })));
+    await assertFails(wallet(fs, 'alice').set({ balance: 10 })); // missing updatedAt
+    await assertFails(ledger(fs, 'alice', 'bad1').set(validEntry({ type: 'mint' })));
+    await assertFails(ledger(fs, 'alice', 'bad2').set(validEntry({ amount: 0 })));
+    await assertFails(ledger(fs, 'alice', 'bad3').set(validEntry({ balanceAfter: -5 })));
+    await assertFails(ledger(fs, 'alice', 'bad4').set(validEntry({ junk: 1 })));
+    await assertFails(ledger(fs, 'alice', 'bad5').set({ type: 'earn', amount: 10, balanceAfter: 10 })); // missing createdAt
+  });
+
+  test('a ledger entry is immutable: even an admin cannot edit or delete one', async () => {
+    const fs = db(users.admin);
+    await assertFails(ledger(fs, 'alice', 'e1').update({ amount: 9999 }));
+    await assertFails(ledger(fs, 'alice', 'e1').delete());
+    await assertFails(wallet(fs, 'alice').delete());
+  });
+
+  test('a non-admin +90 user still cannot write money state', async () => {
+    const fs = db(users.alice);
+    await assertFails(wallet(fs, 'alice').set(validWallet()));
+    await assertFails(ledger(fs, 'alice', 'e9').set(validEntry()));
+    await assertFails(sub(fs, 'alice').set({ active: true }));
+    await assertFails(unlock(fs, 'alice', 'exam2').set({ coinsSpent: 0 }));
+  });
+
+  test('even an admin cannot write subscriptions or unlocks from a client', async () => {
+    const fs = db(users.admin);
     await assertFails(sub(fs, 'alice').set({ active: true }));
     await assertFails(unlock(fs, 'alice', 'exam2').set({ coinsSpent: 0 }));
   });

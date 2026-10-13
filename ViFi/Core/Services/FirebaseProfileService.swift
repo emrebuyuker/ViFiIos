@@ -93,6 +93,40 @@ final class FirebaseProfileService: ProfileServicing {
             throw error
         }
     }
+
+    func deleteProfile(uid: String) async throws {
+        // The uid must be the signed-in user; the profile is removed while they are still authenticated, so the
+        // rules (owner-only) still permit the write. After the account is deleted the node could never be reached.
+        guard auth.currentUser?.id == uid else { throw ProfileError.notSignedIn }
+
+        let reference = root.child(uid).child(Self.profileKey)
+        let outcome = FirstOutcome<Void>()
+        let timeoutTask = Task { [timeout] in
+            try await Task.sleep(for: timeout)
+            outcome.resolve(.failure(ProfileError.offline))
+        }
+        defer { timeoutTask.cancel() }
+
+        do {
+            try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+                    outcome.attach(continuation)
+                    reference.removeValue { @Sendable error, _ in
+                        if let error {
+                            outcome.resolve(.failure(Self.profileError(from: error)))
+                        } else {
+                            outcome.resolve(.success(()))
+                        }
+                    }
+                }
+            } onCancel: {
+                outcome.resolve(.failure(CancellationError()))
+            }
+        } catch {
+            Self.log(error, during: "Deleting the profile")
+            throw error
+        }
+    }
 }
 
 // MARK: - Error mapping

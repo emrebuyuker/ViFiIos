@@ -32,6 +32,28 @@ struct BrowseViewModelTests {
         #expect(repository.requestedItemPaths == [.root, .root])
     }
 
+    // MARK: - Admin removal
+
+    @Test("Removing an item drops it from the loaded list")
+    func removeDropsItem() async {
+        let repository = StubArchiveRepository(items: [.success(universities)])
+        let viewModel = BrowseViewModel(path: .root, repository: repository)
+        await viewModel.load()
+
+        let target = universities[1]
+        viewModel.remove(target)
+
+        #expect(viewModel.state.value?.count == universities.count - 1)
+        #expect(viewModel.state.value?.contains { $0.path == target.path } == false)
+    }
+
+    @Test("Removing before the list has loaded does nothing")
+    func removeBeforeLoadIsNoOp() {
+        let viewModel = BrowseViewModel(path: .root, repository: StubArchiveRepository())
+        viewModel.remove(universities[0])
+        #expect(viewModel.state.value == nil)
+    }
+
     @Test("A change during the initial load is ignored; the load already reads the newest data")
     func archiveChangeWhileLoadingIsIgnored() async {
         let repository = StubArchiveRepository(items: [.success(universities)])

@@ -102,15 +102,41 @@ service cloud.firestore {
     // can never forge a balance, a ledger entry, an unlock or a subscription. The logic arrives later via Cloud
     // Functions / IAP validation, which use the Admin SDK and bypass these rules.
 
-    // A user's coin balance. Readable by the owner and admins; never written by a client.
+    // A user's coin balance. Readable by the owner and admins. This serverless build has no Cloud Function, so
+    // an admin's device writes the wallet when it approves a submission — a Firestore transaction bumps the
+    // balance and appends the matching ledger entry. Non-admins can never write it; it is never deleted. The
+    // balance's arithmetic is trusted to the (human-reviewed) admin app; the rules enforce only the shape.
     match /wallets/{uid} {
-      allow read: if isOwner(uid) || isAdmin();
-      allow write: if false;
+      function isValidWallet(data) {
+        return data.keys().hasOnly(['balance', 'updatedAt'])
+          && data.balance is int
+          && data.balance >= 0
+          && data.updatedAt is timestamp;
+      }
 
-      // The immutable coin ledger (earn / spend / purchase / refund). Read-only; no client writes, ever.
+      allow read: if isOwner(uid) || isAdmin();
+      allow create, update: if isAdmin() && isValidWallet(request.resource.data);
+      allow delete: if false;
+
+      // The append-only coin ledger (earn / spend / purchase / refund / adjust). Admins append immutable
+      // entries when they credit an approval; nobody edits or deletes one. Read-only to the owner. The entry id
+      // for an approval is the submission id, so re-approving the same submission cannot double-credit.
       match /ledger/{entryId} {
+        function isValidEntry(data) {
+          return data.keys().hasOnly(['type', 'amount', 'balanceAfter', 'submissionId', 'tier', 'note', 'createdAt'])
+            && data.type is string
+            && data.type in ['earn', 'spend', 'purchase', 'refund', 'adjust']
+            && data.amount is int
+            && data.amount != 0
+            // balanceAfter is optional (the serverless credit bumps the balance with FieldValue.increment and
+            // does not read it back); when present it must be a non-negative int.
+            && (!('balanceAfter' in data) || (data.balanceAfter is int && data.balanceAfter >= 0))
+            && data.createdAt is timestamp;
+        }
+
         allow read: if isOwner(uid) || isAdmin();
-        allow write: if false;
+        allow create: if isAdmin() && isValidEntry(request.resource.data);
+        allow update, delete: if false;
       }
     }
 

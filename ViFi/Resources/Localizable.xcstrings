@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "tr",
   "strings" : {
+    "\"%@\" arşivden kalıcı olarak silinir; bu işlem geri alınamaz." : {
+
+    },
     "\"%@\" kullan" : {
 
     },
@@ -21,6 +24,16 @@
         }
       }
     },
+    "%@ · %@" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
+          }
+        }
+      }
+    },
     "%@ numarasına gönderilen 6 haneli kodu gir." : {
       "comment" : "Login code step; the argument is the formatted number, e.g. “+90 532 123 45 67”.",
       "localizations" : {
@@ -28,6 +41,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Enter the 6-digit code sent to %@."
+          }
+        }
+      }
+    },
+    "%@: gönderene %lld coin verildi." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: gönderene %2$lld coin verildi."
           }
         }
       }
@@ -43,6 +66,16 @@
         }
       },
       "shouldTranslate" : false
+    },
+    "%lld %@" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@"
+          }
+        }
+      }
     },
     "%lld bölüm" : {
       "comment" : "Row subtitle of a faculty: its number of departments.",
@@ -63,6 +96,16 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "%lld coin · Bakiyen: %lld" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld coin · Bakiyen: %2$lld"
           }
         }
       }
@@ -113,6 +156,9 @@
         }
       }
     },
+    "%lld gönderim onay bekliyor." : {
+
+    },
     "%lld sayfa" : {
       "comment" : "Subtitle of an image exam: its number of pages.",
       "localizations" : {
@@ -135,6 +181,9 @@
           }
         }
       }
+    },
+    "%lld sayfa seçildi" : {
+
     },
     "%lld sınav" : {
       "comment" : "Row subtitle of a course: its number of exams.",
@@ -159,6 +208,12 @@
         }
       }
     },
+    "Aç (%lld coin)" : {
+
+    },
+    "Açtığın sınav hesabında kalıcı olur, bir daha kilitlenmez." : {
+
+    },
     "Ad" : {
 
     },
@@ -179,6 +234,12 @@
     "Aradığın listede yoksa, yazdığın metni olduğu gibi kullanabilirsin." : {
 
     },
+    "Aramanla eşleşen ders yok." : {
+
+    },
+    "Arşive sınav ekle, onaylanınca coin kazan." : {
+
+    },
     "Arşive tekrar ulaşmak için numaranı yeniden doğrulaman gerekir." : {
       "comment" : "Sign-out confirmation message.",
       "localizations" : {
@@ -193,6 +254,12 @@
     "Arşive ulaşmak için birkaç bilgini tamamla. Bu bilgiler profilinde saklanır." : {
 
     },
+    "Bekleyen gönderim yok" : {
+
+    },
+    "Bekleyen gönderimleri incele ve onayla" : {
+
+    },
     "Belge indiriliyor…" : {
       "comment" : "Loading indicator while a PDF exam is downloaded.",
       "localizations" : {
@@ -203,6 +270,9 @@
           }
         }
       }
+    },
+    "Bir görsel işlenemedi. Lütfen başka bir görsel dene." : {
+
     },
     "Bir sorun oluştu" : {
       "comment" : "Error state title.",
@@ -262,6 +332,9 @@
         }
       }
     },
+    "Bu bölüm için arşivde kayıtlı ders yok. Aşağıdan ekleyebilirsin." : {
+
+    },
     "Bu bölümde henüz ders yok" : {
       "comment" : "Empty state title: a department without courses.",
       "localizations" : {
@@ -295,6 +368,15 @@
         }
       }
     },
+    "Bu gönderim arşive eklenmez ve coin verilmez." : {
+
+    },
+    "Bu gönderim artık beklemede değil; listeyi yenile." : {
+
+    },
+    "Bu gönderim için ödül zaten verilmiş." : {
+
+    },
     "Bu hesap devre dışı bırakıldı." : {
       "comment" : "Sign-in error: an admin disabled the account.",
       "localizations" : {
@@ -317,6 +399,9 @@
         }
       }
     },
+    "Bu işlem için yetkin yok." : {
+
+    },
     "Bu seviyeye döner" : {
       "comment" : "Accessibility hint of a breadcrumb chip.",
       "localizations" : {
@@ -327,6 +412,9 @@
           }
         }
       }
+    },
+    "Bu sınav kilitli." : {
+
     },
     "Bu sınavda dosya yok" : {
       "comment" : "Empty state title: a PDF exam without files.",
@@ -349,6 +437,9 @@
           }
         }
       }
+    },
+    "Bu sınavı açmak için yeterli coin yok." : {
+
     },
     "Bu sürümü atla" : {
 
@@ -400,6 +491,12 @@
         }
       }
     },
+    "Coin bakiyen" : {
+
+    },
+    "Coin kazanmak için uygulamada olmayan sınavları ekleyebilirsin." : {
+
+    },
     "Çok fazla deneme yapıldı. Lütfen bir süre sonra tekrar dene." : {
       "comment" : "Sign-in error: rate limited or SMS quota exceeded.",
       "localizations" : {
@@ -422,6 +519,21 @@
         }
       }
     },
+    "Ders" : {
+
+    },
+    "Ders adı" : {
+
+    },
+    "Ders ara" : {
+
+    },
+    "Ders Ekle" : {
+
+    },
+    "Dersin listede yoksa, adını yazarak ekleyebilirsin." : {
+
+    },
     "Dersler" : {
       "comment" : "List title: the courses of a department.",
       "localizations" : {
@@ -432,6 +544,9 @@
           }
         }
       }
+    },
+    "Dersler yükleniyor…" : {
+
     },
     "Derslerde ara" : {
       "comment" : "Search field prompt on a course list.",
@@ -510,6 +625,9 @@
         }
       }
     },
+    "Dosya boş görünüyor. Lütfen başka bir dosya seç." : {
+
+    },
     "Dosya bulunamadı" : {
       "comment" : "Row subtitle of an exam that has no files and can’t be opened.",
       "localizations" : {
@@ -532,6 +650,9 @@
         }
       }
     },
+    "Dosya okunamadı. Lütfen tekrar dene." : {
+
+    },
     "Dosya şu anda sunucudan alınamıyor. Lütfen daha sonra tekrar dene." : {
       "comment" : "Error: the file host refused the download.",
       "localizations" : {
@@ -542,6 +663,9 @@
           }
         }
       }
+    },
+    "Dosya yok" : {
+
     },
     "Dosyalar" : {
       "comment" : "Toolbar menu listing the PDF files of an exam.",
@@ -554,7 +678,32 @@
         }
       }
     },
+    "Dosyalar hazırlanıyor…" : {
+
+    },
+    "Dosyaları incele (%lld %@)" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Dosyaları incele (%1$lld %2$@)"
+          }
+        }
+      }
+    },
     "Eğitim" : {
+
+    },
+    "Ekle" : {
+
+    },
+    "Eklediğin sınav incelenip onaylandığında coin kazanırsın; coinlerin hesabına yüklenir." : {
+
+    },
+    "Eklemek istediğin dersin adını yaz." : {
+
+    },
+    "En fazla %lld sayfa ekleyebilirsin." : {
 
     },
     "Erkek" : {
@@ -585,6 +734,9 @@
         }
       }
     },
+    "Farklı ders ekle" : {
+
+    },
     "Giriş Yap" : {
       "comment" : "Title of the login screen.",
       "localizations" : {
@@ -595,6 +747,27 @@
           }
         }
       }
+    },
+    "Gönder" : {
+
+    },
+    "Gönderim" : {
+
+    },
+    "Gönderim onaylandı." : {
+
+    },
+    "Gönderimin eksik veya geçersiz. Lütfen bilgileri kontrol et." : {
+
+    },
+    "Gönderimin kaydedilemedi. Lütfen tekrar dene." : {
+
+    },
+    "Gönderimin şu anda kaydedilemiyor. Lütfen daha sonra tekrar dene." : {
+
+    },
+    "Gönderimler yükleniyor…" : {
+
     },
     "Görsel" : {
       "comment" : "Format badge of an exam made of scanned image pages (the other format is “PDF”).",
@@ -607,6 +780,9 @@
         }
       }
     },
+    "Görsel sayfa ekle" : {
+
+    },
     "Görsel ve PDF sınavlar tek yerde" : {
       "comment" : "About screen feature.",
       "localizations" : {
@@ -617,6 +793,9 @@
           }
         }
       }
+    },
+    "Görsel yüklenemedi" : {
+
     },
     "Güncelle" : {
       "comment" : "Update alert button that opens the App Store.",
@@ -770,6 +949,12 @@
     "Kaydet" : {
 
     },
+    "Kilitli, %lld coin" : {
+
+    },
+    "Kilitli; açmak için dokun" : {
+
+    },
     "Kişisel Bilgiler" : {
 
     },
@@ -872,6 +1057,15 @@
         }
       }
     },
+    "Mevcut Dersler" : {
+
+    },
+    "Mevcut sınav" : {
+
+    },
+    "Moderasyon" : {
+
+    },
     "Numaran giriş sırasında doğrulandı ve değiştirilemez." : {
 
     },
@@ -908,6 +1102,34 @@
         }
       }
     },
+    "Okul" : {
+
+    },
+    "Onayla ve Yayınla" : {
+
+    },
+    "Onaylanan sınav yüklemelerinden coin kazanırsın." : {
+
+    },
+    "Onaylandı" : {
+
+    },
+    "Onaylanırsa %lld coin kazanırsın; coinlerin hesabına yüklenir." : {
+
+    },
+    "Onaylanırsa yaklaşık %lld coin kazanırsın (%@); coinlerin hesabına yüklenir." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Onaylanırsa yaklaşık %1$lld coin kazanırsın (%2$@); coinlerin hesabına yüklenir."
+          }
+        }
+      }
+    },
+    "Onaylarsan sınav arşive eklenir ve gönderene yenilik kademesine göre coin verilir." : {
+
+    },
     "Öne Çıkanlar" : {
       "comment" : "About screen section header: the app’s main features.",
       "localizations" : {
@@ -929,6 +1151,12 @@
           }
         }
       }
+    },
+    "PDF" : {
+
+    },
+    "PDF 15 MB'tan büyük olamaz." : {
+
     },
     "PDF belge" : {
       "comment" : "Row subtitle of a PDF exam.",
@@ -952,6 +1180,18 @@
         }
       }
     },
+    "PDF seç" : {
+
+    },
+    "PDF seçildi" : {
+
+    },
+    "PDF yüklenemedi" : {
+
+    },
+    "PDF'i değiştir" : {
+
+    },
     "Profil" : {
 
     },
@@ -962,6 +1202,12 @@
 
     },
     "Profilini Tamamla" : {
+
+    },
+    "Reddedilsin mi?" : {
+
+    },
+    "Reddet" : {
 
     },
     "Sayfa %lld" : {
@@ -1053,7 +1299,19 @@
         }
       }
     },
+    "Sebep (isteğe bağlı)" : {
+
+    },
     "Seç" : {
+
+    },
+    "Sil" : {
+
+    },
+    "Silinecek sınav bulunamadı." : {
+
+    },
+    "Silinemedi" : {
 
     },
     "Sınav" : {
@@ -1066,6 +1324,9 @@
           }
         }
       }
+    },
+    "Sınav adı" : {
+
     },
     "Sınav Arşivi" : {
       "comment" : "Tagline under the app name: ViFi is an archive of past university exams.",
@@ -1100,6 +1361,18 @@
         }
       }
     },
+    "Sınav bulunamadı." : {
+
+    },
+    "Sınav Ekle" : {
+
+    },
+    "Sınav silinsin mi?" : {
+
+    },
+    "Sınavı Aç" : {
+
+    },
     "Sınavı açar" : {
       "comment" : "Accessibility hint of a recently viewed exam card.",
       "localizations" : {
@@ -1110,6 +1383,12 @@
           }
         }
       }
+    },
+    "Sınavı tek bir PDF olarak ekle." : {
+
+    },
+    "Sınavın sayfalarını sırayla ekle. En fazla %lld görsel." : {
+
     },
     "Sınavlar" : {
       "comment" : "List title: the exams of a course.",
@@ -1202,7 +1481,6 @@
     },
     "Tamam" : {
       "comment" : "Button that dismisses an alert.",
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1211,6 +1489,12 @@
           }
         }
       }
+    },
+    "Tarih" : {
+
+    },
+    "Tekrar dene" : {
+
     },
     "Tekrar Dene" : {
       "comment" : "Button that retries a failed load.",
@@ -1291,6 +1575,9 @@
           }
         }
       }
+    },
+    "Tür" : {
+
     },
     "Üniversite" : {
 
@@ -1388,6 +1675,18 @@
         }
       }
     },
+    "Yeni bölüm" : {
+
+    },
+    "Yeni ders" : {
+
+    },
+    "Yeni fakülte" : {
+
+    },
+    "Yeni gönderimler onay için burada görünür." : {
+
+    },
     "Yeni içerik eklendiğinde burada görünecek." : {
       "comment" : "Empty state message below the titles above.",
       "localizations" : {
@@ -1399,6 +1698,9 @@
         }
       }
     },
+    "Yeni sınav" : {
+
+    },
     "Yeni sürüm mevcut" : {
       "comment" : "Alert title: a newer version is on the App Store.",
       "localizations" : {
@@ -1409,6 +1711,12 @@
           }
         }
       }
+    },
+    "Yeni üniversite" : {
+
+    },
+    "Yıl" : {
+
     },
     "Yükleniyor…" : {
       "comment" : "Loading indicator.",

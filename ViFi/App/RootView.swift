@@ -32,6 +32,8 @@ struct RootView: View {
             if state == .signedOut {
                 router.popToRoot()
                 environment.profile.reset()
+                environment.wallet.reset()
+                environment.unlocks.reset()
                 environment.recents.clear()
             }
         }
@@ -156,6 +158,10 @@ private struct ProfileGate<Content: View>: View {
     var body: some View {
         gatedContent
             .task(id: user.id) { await environment.profile.load(uid: user.id) }
+            // Follow the user's coin balance for as long as they are signed in, so every screen shows it.
+            .task(id: user.id) { await environment.wallet.observe(uid: user.id) }
+            // Load the user's unlocked exams, for the archive's lock state.
+            .task(id: user.id) { await environment.unlocks.load(uid: user.id) }
     }
 
     @ViewBuilder

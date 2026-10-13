@@ -13,13 +13,29 @@ final class AppEnvironment {
     @ObservationIgnored let analytics: any AnalyticsTracking
     @ObservationIgnored let auth: any AuthServicing
     @ObservationIgnored let profileService: any ProfileServicing
+    /// Uploads user-contributed exams for moderation (Cloud Firestore + Cloud Storage).
+    @ObservationIgnored let submissionService: any ExamSubmissionServicing
+    /// Remote reward values (the coin amount shown in the add-exam flow).
+    @ObservationIgnored let rewardsConfig: any RewardsConfigReading
+    /// Reads the signed-in user's coin balance (shown across the app).
+    @ObservationIgnored let walletReader: any WalletReading
+    /// Admin-only moderation of user submissions (approve → publish + credit, or reject).
+    @ObservationIgnored let moderationService: any ModerationServicing
+    /// Unlocks a locked exam by spending coins (via the server-side Cloud Function).
+    @ObservationIgnored let unlockService: any ExamUnlockServicing
     /// The bundled lists backing the profile pickers (free text is always allowed on top).
     @ObservationIgnored let catalog: UniversityCatalog
+    /// The Storage bucket, for building canonical file URLs (e.g. previewing a submission's pending files).
+    @ObservationIgnored let storageBucket: String
     /// Warms the archive's offline cache after sign-in (see `ArchivePrefetcher`).
     @ObservationIgnored let prefetcher: ArchivePrefetcher
     let recents: RecentExamsStore
     let session: SessionStore
     let profile: ProfileStore
+    /// The signed-in user's coin balance, kept live and shown across the app.
+    let wallet: CoinWalletStore
+    /// The signed-in user's unlocked exams, for the archive's lock state.
+    let unlocks: ExamUnlocksStore
 
     init(
         repository: any ArchiveRepository,
@@ -28,7 +44,14 @@ final class AppEnvironment {
         analytics: any AnalyticsTracking,
         auth: any AuthServicing,
         profileService: any ProfileServicing,
+        submissionService: any ExamSubmissionServicing,
+        rewardsConfig: any RewardsConfigReading,
+        walletReader: any WalletReading,
+        moderationService: any ModerationServicing,
+        unlockService: any ExamUnlockServicing,
+        unlocksReader: any UnlocksReading,
         catalog: UniversityCatalog,
+        storageBucket: String = "",
         recents: RecentExamsStore,
         prefetcherDefaults: UserDefaults = .standard
     ) {
@@ -38,11 +61,19 @@ final class AppEnvironment {
         self.analytics = analytics
         self.auth = auth
         self.profileService = profileService
+        self.submissionService = submissionService
+        self.rewardsConfig = rewardsConfig
+        self.walletReader = walletReader
+        self.moderationService = moderationService
+        self.unlockService = unlockService
         self.catalog = catalog
+        self.storageBucket = storageBucket
         self.recents = recents
         prefetcher = ArchivePrefetcher(repository: repository, defaults: prefetcherDefaults)
         session = SessionStore(auth: auth)
         profile = ProfileStore(service: profileService)
+        wallet = CoinWalletStore(reader: walletReader)
+        unlocks = ExamUnlocksStore(reader: unlocksReader)
     }
 
     /// Production services backed by Firebase and the App Store.
@@ -63,16 +94,25 @@ final class AppEnvironment {
             appCheck: AppCheck.appCheck(),
             storageBucket: bucket
         )
+        // Cutover: the archive is read from Cloud Firestore (named `vifi` database). The Realtime Database
+        // `FirebaseArchiveRepository(auth:)` is kept available for rollback.
+        let repository = FirestoreArchiveRepository(bucket: bucket ?? "")
+        let rewardsConfig = FirebaseRewardsConfigReader()
         return AppEnvironment(
-            // Cutover: the archive is read from Cloud Firestore (named `vifi` database). The Realtime Database
-            // `FirebaseArchiveRepository(auth:)` is kept available for rollback.
-            repository: FirestoreArchiveRepository(bucket: bucket ?? ""),
+            repository: repository,
             fileLoader: RemoteFileLoader(authorizer: authorizer),
             updateChecker: RemoteAppUpdateChecker(config: FirebaseRemoteConfigReader()),
             analytics: FirebaseAnalyticsTracker(),
             auth: auth,
             profileService: FirebaseProfileService(auth: auth),
+            submissionService: FirebaseExamSubmissionService(auth: auth),
+            rewardsConfig: rewardsConfig,
+            walletReader: FirebaseWalletReader(),
+            moderationService: FirebaseModerationService(repository: repository, rewards: rewardsConfig),
+            unlockService: FirebaseExamUnlockService(),
+            unlocksReader: FirebaseUnlocksReader(),
             catalog: .bundled(),
+            storageBucket: bucket ?? "",
             recents: RecentExamsStore()
         )
     }
@@ -110,5 +150,9 @@ enum LaunchArgument {
     static let forceUpdate = "-ViFiForceUpdate"
     /// With `-ViFiMockData`: starts with no stored profile, on the blocking profile-completion screen.
     static let profileIncomplete = "-ViFiProfileIncomplete"
+    /// With `-ViFiMockData`: reports the signed-in user as an admin, to exercise the moderation tools.
+    static let admin = "-ViFiAdmin"
+    /// With `-ViFiMockData`: starts the user with no coins, to exercise the locked-exam / earn-coins prompt.
+    static let noCoins = "-ViFiNoCoins"
     #endif
 }
