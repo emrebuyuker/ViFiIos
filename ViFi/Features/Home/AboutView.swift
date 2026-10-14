@@ -7,6 +7,7 @@ struct AboutView: View {
     @Environment(\.dismiss) private var dismiss
     @ScaledMetric(relativeTo: .largeTitle) private var logoSize: CGFloat = 84
     @State private var isShowingTour = false
+    @State private var contactRequest: ContactRequest?
 
     var body: some View {
         NavigationStack {
@@ -47,8 +48,22 @@ struct AboutView: View {
                         Image(systemName: "icloud")
                     }
                 }
+
+                Section {
+                    Button {
+                        contactRequest = ContactRequest()
+                    } label: {
+                        Label("Bize Ulaş", systemImage: "envelope")
+                    }
+                    .accessibilityIdentifier("about.contact")
+                } header: {
+                    Text("İletişim")
+                } footer: {
+                    Text("Görüş, öneri ve sorularını bize e-posta ile iletebilirsin.")
+                }
             }
             .accessibilityIdentifier("about.sheet")
+            .contactSupport(trigger: $contactRequest)
             // Replaying the tour just presents it again; it never touches the per-device "seen" flag.
             .fullScreenCover(isPresented: $isShowingTour) {
                 OnboardingView(onFinish: { isShowingTour = false }, source: "replay")

@@ -30,6 +30,7 @@ private struct ExamImagesScreen: View {
     /// Page images already decoded by the list, handed to the full-screen viewer.
     @State private var pagePreviews: [Int: UIImage] = [:]
     @State private var openedPage: OpenedPage?
+    @State private var contactRequest: ContactRequest?
 
     init(viewModel: ExamDocumentViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -41,6 +42,17 @@ private struct ExamImagesScreen: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle(viewModel.title)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        contactRequest = ContactRequest(context: viewModel.supportContext)
+                    } label: {
+                        Label("Bize Ulaş", systemImage: "envelope")
+                    }
+                    .accessibilityIdentifier("exam.contact")
+                }
+            }
+            .contactSupport(trigger: $contactRequest)
             .task(id: loadAttempt) {
                 await viewModel.loadIfNeeded()
             }

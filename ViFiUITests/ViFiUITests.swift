@@ -366,6 +366,43 @@ nonisolated final class ViFiUITests: XCTestCase {
         XCTAssertTrue(updateButton.waitForExistence(timeout: Timeout.transition), "The update button is missing")
         XCTAssertTrue(updateButton.isHittable, "The update button must be reachable on the blocking screen")
     }
+
+    // MARK: - Contact
+
+    @MainActor
+    func testAboutSheetShowsContactRow() {
+        let app = launchApp()
+
+        tapElement("toolbar.about", in: app)
+
+        let sheet = app.element("about.sheet")
+        XCTAssertTrue(sheet.waitForExistence(timeout: Timeout.transition), "The about sheet did not appear")
+
+        // The contact row sits at the bottom of the About list; reveal it before asserting.
+        let contact = app.element("about.contact")
+        for _ in 0..<5 where !contact.exists {
+            sheet.swipeUp()
+        }
+        XCTAssertTrue(contact.waitForExistence(timeout: Timeout.transition), "The contact row is missing from About")
+    }
+
+    @MainActor
+    func testImageExamViewerShowsContactButton() {
+        let app = launchApp()
+        openRows(MockArchive.engineeringMathematics + ["2019 FİNAL"], in: app)
+
+        XCTAssertTrue(app.element("exam.images").waitForExistence(timeout: Timeout.content))
+        XCTAssertTrue(app.element("exam.contact").waitForExistence(timeout: Timeout.transition), "The contact button is missing from the image viewer")
+    }
+
+    @MainActor
+    func testPDFExamViewerShowsContactButton() {
+        let app = launchApp()
+        openRows(MockArchive.engineeringMathematics + ["2018 VİZE"], in: app)
+
+        XCTAssertTrue(app.element("exam.pdf").waitForExistence(timeout: Timeout.content))
+        XCTAssertTrue(app.element("exam.contact").waitForExistence(timeout: Timeout.transition), "The contact button is missing from the PDF viewer")
+    }
 }
 
 // MARK: - Steps

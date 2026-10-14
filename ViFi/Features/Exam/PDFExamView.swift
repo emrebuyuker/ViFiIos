@@ -33,6 +33,7 @@ private struct PDFExamScreen: View {
     @State private var fileAttempt = 0
     @State private var currentPage = 0
     @State private var isPageIndicatorVisible = true
+    @State private var contactRequest: ContactRequest?
 
     init(viewModel: ExamDocumentViewModel) {
         _viewModel = State(initialValue: viewModel)
@@ -45,12 +46,21 @@ private struct PDFExamScreen: View {
             .navigationTitle(viewModel.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        contactRequest = ContactRequest(context: viewModel.supportContext)
+                    } label: {
+                        Label("Bize Ulaş", systemImage: "envelope")
+                    }
+                    .accessibilityIdentifier("exam.contact")
+                }
                 if let document = viewModel.document, document.fileURLs.count > 1 {
                     ToolbarItem(placement: .topBarTrailing) {
                         filePicker(fileCount: document.fileURLs.count)
                     }
                 }
             }
+            .contactSupport(trigger: $contactRequest)
             .task(id: loadAttempt) {
                 await viewModel.loadIfNeeded()
             }

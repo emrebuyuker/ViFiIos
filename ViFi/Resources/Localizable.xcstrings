@@ -34,6 +34,9 @@
         }
       }
     },
+    "%@ adresine e-posta gönderebilirsiniz." : {
+
+    },
     "%@ numarasına gönderilen 6 haneli kodu gir." : {
       "comment" : "Login code step; the argument is the formatted number, e.g. “+90 532 123 45 67”.",
       "localizations" : {
@@ -217,6 +220,9 @@
     "Ad" : {
 
     },
+    "Adresi Kopyala" : {
+
+    },
     "Ana Sayfa" : {
       "comment" : "Toolbar button (house icon) that returns to the university list.",
       "localizations" : {
@@ -324,6 +330,9 @@
           }
         }
       }
+    },
+    "Bize Ulaş" : {
+
     },
     "Bölüm" : {
 
@@ -818,6 +827,9 @@
     "Görsel yüklenemedi" : {
 
     },
+    "Görüş, öneri ve sorularını bize e-posta ile iletebilirsin." : {
+
+    },
     "Güncelle" : {
       "comment" : "Update alert button that opens the App Store.",
       "localizations" : {
@@ -943,6 +955,9 @@
       }
     },
     "İleri" : {
+
+    },
+    "İletişim" : {
 
     },
     "İnternet bağlantısı yok. Bağlantını kontrol edip tekrar dene." : {
@@ -1083,6 +1098,9 @@
           }
         }
       }
+    },
+    "Mail uygulaması bulunamadı" : {
+
     },
     "Mevcut Dersler" : {
 

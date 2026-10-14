@@ -39,6 +39,12 @@ final class ExamDocumentViewModel {
             .joined(separator: " › ")
     }
 
+    /// A one-line reference to this exam, prefilled into a "Bize Ulaş" e-mail so support knows which
+    /// exam the user is writing about, e.g. "Sınav: BOZOK ÜNİVERSİTESİ › … › 2019 FİNAL".
+    var supportContext: String {
+        "Sınav: " + path.displayNames.joined(separator: " › ")
+    }
+
     var document: ExamDocument? { state.value }
 
     /// Fetches the exam's files.
