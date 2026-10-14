@@ -44,7 +44,6 @@ targets:
         CFBundleDevelopmentRegion: tr
         CFBundleLocalizations:
           - tr
-          - en
         ITSAppUsesNonExemptEncryption: false
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false

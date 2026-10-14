@@ -10,12 +10,6 @@
     "%@ - Dosya %lld" : {
       "comment" : "File name of a shared PDF when an exam has several, e.g. “2018 VİZE - Dosya 2”. Avoid / \\ : characters.",
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ - File %2$lld"
-          }
-        },
         "tr" : {
           "stringUnit" : {
             "state" : "new",
@@ -38,15 +32,7 @@
 
     },
     "%@ numarasına gönderilen 6 haneli kodu gir." : {
-      "comment" : "Login code step; the argument is the formatted number, e.g. “+90 532 123 45 67”.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter the 6-digit code sent to %@."
-          }
-        }
-      }
+      "comment" : "Login code step; the argument is the formatted number, e.g. “+90 532 123 45 67”."
     },
     "%@: gönderene %lld coin verildi." : {
       "localizations" : {
@@ -81,27 +67,7 @@
       }
     },
     "%lld bölüm" : {
-      "comment" : "Row subtitle of a faculty: its number of departments.",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld department"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld departments"
-                }
-              }
-            }
-          }
-        }
-      }
+      "comment" : "Row subtitle of a faculty: its number of departments."
     },
     "%lld coin · Bakiyen: %lld" : {
       "localizations" : {
@@ -114,102 +80,22 @@
       }
     },
     "%lld ders" : {
-      "comment" : "Row subtitle of a department: its number of courses.",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld course"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld courses"
-                }
-              }
-            }
-          }
-        }
-      }
+      "comment" : "Row subtitle of a department: its number of courses."
     },
     "%lld fakülte" : {
-      "comment" : "Row subtitle of a university: its number of faculties.",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld faculty"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld faculties"
-                }
-              }
-            }
-          }
-        }
-      }
+      "comment" : "Row subtitle of a university: its number of faculties."
     },
     "%lld gönderim onay bekliyor." : {
 
     },
     "%lld sayfa" : {
-      "comment" : "Subtitle of an image exam: its number of pages.",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld page"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld pages"
-                }
-              }
-            }
-          }
-        }
-      }
+      "comment" : "Subtitle of an image exam: its number of pages."
     },
     "%lld sayfa seçildi" : {
 
     },
     "%lld sınav" : {
-      "comment" : "Row subtitle of a course: its number of exams.",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld exam"
-                }
-              },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld exams"
-                }
-              }
-            }
-          }
-        }
-      }
+      "comment" : "Row subtitle of a course: its number of exams."
     },
     "Aç (%lld coin)" : {
 
@@ -224,15 +110,7 @@
 
     },
     "Ana Sayfa" : {
-      "comment" : "Toolbar button (house icon) that returns to the university list.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Home"
-          }
-        }
-      }
+      "comment" : "Toolbar button (house icon) that returns to the university list."
     },
     "Ara" : {
 
@@ -247,15 +125,7 @@
 
     },
     "Arşive tekrar ulaşmak için numaranı yeniden doğrulaman gerekir." : {
-      "comment" : "Sign-out confirmation message.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "You’ll need to verify your number again to access the archive."
-          }
-        }
-      }
+      "comment" : "Sign-out confirmation message."
     },
     "Arşive ulaşmak için birkaç bilgini tamamla. Bu bilgiler profilinde saklanır." : {
 
@@ -273,15 +143,7 @@
 
     },
     "Belge indiriliyor…" : {
-      "comment" : "Loading indicator while a PDF exam is downloaded.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Downloading document…"
-          }
-        }
-      }
+      "comment" : "Loading indicator while a PDF exam is downloaded."
     },
     "Bildirim yok" : {
 
@@ -299,37 +161,13 @@
 
     },
     "Bir sorun oluştu" : {
-      "comment" : "Error state title.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Something Went Wrong"
-          }
-        }
-      }
+      "comment" : "Error state title."
     },
     "Bir sorun oluştu. Lütfen tekrar dene." : {
-      "comment" : "Generic sign-in or account error.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Something went wrong. Please try again."
-          }
-        }
-      }
+      "comment" : "Generic sign-in or account error."
     },
     "Bitti" : {
-      "comment" : "Button that closes the About sheet.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Done"
-          }
-        }
-      }
+      "comment" : "Button that closes the About sheet."
     },
     "Bize Ulaş" : {
 
@@ -338,62 +176,22 @@
 
     },
     "Bölümler" : {
-      "comment" : "List title: the departments of a faculty.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Departments"
-          }
-        }
-      }
+      "comment" : "List title: the departments of a faculty."
     },
     "Bölümlerde ara" : {
-      "comment" : "Search field prompt on a department list.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search departments"
-          }
-        }
-      }
+      "comment" : "Search field prompt on a department list."
     },
     "Bu bölüm için arşivde kayıtlı ders yok. Aşağıdan ekleyebilirsin." : {
 
     },
     "Bu bölümde henüz ders yok" : {
-      "comment" : "Empty state title: a department without courses.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No Courses Yet"
-          }
-        }
-      }
+      "comment" : "Empty state title: a department without courses."
     },
     "Bu derste henüz sınav yok" : {
-      "comment" : "Empty state title: a course without exams.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No Exams Yet"
-          }
-        }
-      }
+      "comment" : "Empty state title: a course without exams."
     },
     "Bu fakültede henüz bölüm yok" : {
-      "comment" : "Empty state title: a faculty without departments.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No Departments Yet"
-          }
-        }
-      }
+      "comment" : "Empty state title: a faculty without departments."
     },
     "Bu gönderim arşive eklenmez ve coin verilmez." : {
 
@@ -405,65 +203,25 @@
 
     },
     "Bu hesap devre dışı bırakıldı." : {
-      "comment" : "Sign-in error: an admin disabled the account.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This account has been disabled."
-          }
-        }
-      }
+      "comment" : "Sign-in error: an admin disabled the account."
     },
     "Bu içeriğe şu anda erişilemiyor." : {
-      "comment" : "Error: the database refused the read.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This content isn’t available right now."
-          }
-        }
-      }
+      "comment" : "Error: the database refused the read."
     },
     "Bu işlem için yetkin yok." : {
 
     },
     "Bu seviyeye döner" : {
-      "comment" : "Accessibility hint of a breadcrumb chip.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Goes back to this level."
-          }
-        }
-      }
+      "comment" : "Accessibility hint of a breadcrumb chip."
     },
     "Bu sınav kilitli." : {
 
     },
     "Bu sınavda dosya yok" : {
-      "comment" : "Empty state title: a PDF exam without files.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This Exam Has No Files"
-          }
-        }
-      }
+      "comment" : "Empty state title: a PDF exam without files."
     },
     "Bu sınavda sayfa yok" : {
-      "comment" : "Empty state title: an image exam without pages.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This Exam Has No Pages"
-          }
-        }
-      }
+      "comment" : "Empty state title: an image exam without pages."
     },
     "Bu sınavı açmak için yeterli coin yok." : {
 
@@ -472,51 +230,19 @@
 
     },
     "Bu üniversitede henüz fakülte yok" : {
-      "comment" : "Empty state title: a university without faculties.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No Faculties Yet"
-          }
-        }
-      }
+      "comment" : "Empty state title: a university without faculties."
     },
     "Cihaz doğrulanamadı. Lütfen daha sonra tekrar dene." : {
-      "comment" : "Sign-in error: Firebase could not verify the app (APNs, reCAPTCHA or App Check).",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your device couldn’t be verified. Please try again later."
-          }
-        }
-      }
+      "comment" : "Sign-in error: Firebase could not verify the app (APNs, reCAPTCHA or App Check)."
     },
     "Cinsiyet" : {
 
     },
     "Çıkış Yap" : {
-      "comment" : "Button that signs the user out.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign Out"
-          }
-        }
-      }
+      "comment" : "Button that signs the user out."
     },
     "Çıkış yapılsın mı?" : {
-      "comment" : "Sign-out confirmation title.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign out?"
-          }
-        }
-      }
+      "comment" : "Sign-out confirmation title."
     },
     "Coin bakiyen" : {
 
@@ -525,26 +251,10 @@
 
     },
     "Çok fazla deneme yapıldı. Lütfen bir süre sonra tekrar dene." : {
-      "comment" : "Sign-in error: rate limited or SMS quota exceeded.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Too many attempts. Please try again later."
-          }
-        }
-      }
+      "comment" : "Sign-in error: rate limited or SMS quota exceeded."
     },
     "Daha Sonra" : {
-      "comment" : "Update alert button that dismisses the alert.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not Now"
-          }
-        }
-      }
+      "comment" : "Update alert button that dismisses the alert."
     },
     "Ders" : {
 
@@ -562,148 +272,52 @@
 
     },
     "Dersler" : {
-      "comment" : "List title: the courses of a department.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Courses"
-          }
-        }
-      }
+      "comment" : "List title: the courses of a department."
     },
     "Dersler yükleniyor…" : {
 
     },
     "Derslerde ara" : {
-      "comment" : "Search field prompt on a course list.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search courses"
-          }
-        }
-      }
+      "comment" : "Search field prompt on a course list."
     },
     "Doğrula" : {
-      "comment" : "Login button that signs in with the entered code.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verify"
-          }
-        }
-      }
+      "comment" : "Login button that signs in with the entered code."
     },
     "Doğrula ve Hesabı Sil" : {
-      "comment" : "Button that confirms the re-verification code and deletes the account.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verify and Delete Account"
-          }
-        }
-      }
+      "comment" : "Button that confirms the re-verification code and deletes the account."
     },
     "Doğrulama iptal edildi. Kod almak için tekrar dene." : {
-      "comment" : "Sign-in error: the user closed the reCAPTCHA page.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verification was cancelled. Try again to get a code."
-          }
-        }
-      }
+      "comment" : "Sign-in error: the user closed the reCAPTCHA page."
     },
     "Doğrulama kodu" : {
-      "comment" : "Label of the 6-digit verification code field.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verification code"
-          }
-        }
-      }
+      "comment" : "Label of the 6-digit verification code field."
     },
     "Dosya" : {
-      "comment" : "Label of the picker that switches between the PDF files of an exam; also the fallback name of a saved file.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "File"
-          }
-        }
-      }
+      "comment" : "Label of the picker that switches between the PDF files of an exam; also the fallback name of a saved file."
     },
     "Dosya %lld" : {
-      "comment" : "Item of the PDF file picker, e.g. “Dosya 2”.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "File %lld"
-          }
-        }
-      }
+      "comment" : "Item of the PDF file picker, e.g. “Dosya 2”."
     },
     "Dosya boş görünüyor. Lütfen başka bir dosya seç." : {
 
     },
     "Dosya bulunamadı" : {
-      "comment" : "Row subtitle of an exam that has no files and can’t be opened.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No files found"
-          }
-        }
-      }
+      "comment" : "Row subtitle of an exam that has no files and can’t be opened."
     },
     "Dosya cihaza kaydedilemedi. Boş alanını kontrol edip tekrar dene." : {
-      "comment" : "Error: a downloaded file could not be written to the device.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn’t save the file to your device. Check your free storage and try again."
-          }
-        }
-      }
+      "comment" : "Error: a downloaded file could not be written to the device."
     },
     "Dosya okunamadı. Lütfen tekrar dene." : {
 
     },
     "Dosya şu anda sunucudan alınamıyor. Lütfen daha sonra tekrar dene." : {
-      "comment" : "Error: the file host refused the download.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The file can’t be downloaded from the server right now. Please try again later."
-          }
-        }
-      }
+      "comment" : "Error: the file host refused the download."
     },
     "Dosya yok" : {
 
     },
     "Dosyalar" : {
-      "comment" : "Toolbar menu listing the PDF files of an exam.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Files"
-          }
-        }
-      }
+      "comment" : "Toolbar menu listing the PDF files of an exam."
     },
     "Dosyalar hazırlanıyor…" : {
 
@@ -743,40 +357,16 @@
 
     },
     "Fakülteler" : {
-      "comment" : "List title: the faculties of a university.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Faculties"
-          }
-        }
-      }
+      "comment" : "List title: the faculties of a university."
     },
     "Fakültelerde ara" : {
-      "comment" : "Search field prompt on a faculty list.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search faculties"
-          }
-        }
-      }
+      "comment" : "Search field prompt on a faculty list."
     },
     "Farklı ders ekle" : {
 
     },
     "Giriş Yap" : {
-      "comment" : "Title of the login screen.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sign In"
-          }
-        }
-      }
+      "comment" : "Title of the login screen."
     },
     "Gönder" : {
 
@@ -800,29 +390,13 @@
 
     },
     "Görsel" : {
-      "comment" : "Format badge of an exam made of scanned image pages (the other format is “PDF”).",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Images"
-          }
-        }
-      }
+      "comment" : "Format badge of an exam made of scanned image pages (the other format is “PDF”)."
     },
     "Görsel sayfa ekle" : {
 
     },
     "Görsel ve PDF sınavlar tek yerde" : {
-      "comment" : "About screen feature.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Image and PDF exams in one place"
-          }
-        }
-      }
+      "comment" : "About screen feature."
     },
     "Görsel yüklenemedi" : {
 
@@ -831,128 +405,40 @@
 
     },
     "Güncelle" : {
-      "comment" : "Update alert button that opens the App Store.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Update"
-          }
-        }
-      }
+      "comment" : "Update alert button that opens the App Store."
     },
     "Güncelleme Gerekli" : {
 
     },
     "Güvenliğin için %@ numarasına gönderilen 6 haneli kodu gir." : {
-      "comment" : "Re-verification footer; the argument is the formatted number, e.g. “+90 532 123 45 67”.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "For your security, enter the 6-digit code sent to %@."
-          }
-        }
-      }
+      "comment" : "Re-verification footer; the argument is the formatted number, e.g. “+90 532 123 45 67”."
     },
     "Güvenliğin için numaranı yeniden doğrulaman gerekiyor." : {
-      "comment" : "Account error: deleting the account needs a recent sign-in.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "For your security, you need to verify your number again."
-          }
-        }
-      }
+      "comment" : "Account error: deleting the account needs a recent sign-in."
     },
     "Hakkında" : {
-      "comment" : "Toolbar button and screen title: information about the app.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "About"
-          }
-        }
-      }
+      "comment" : "Toolbar button and screen title: information about the app."
     },
     "Henüz üniversite yok" : {
-      "comment" : "Empty state title: the archive has no universities.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No Universities Yet"
-          }
-        }
-      }
+      "comment" : "Empty state title: the archive has no universities."
     },
     "Hesabı Sil" : {
-      "comment" : "Button that deletes the account.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete Account"
-          }
-        }
-      }
+      "comment" : "Button that deletes the account."
     },
     "Hesabın kalıcı olarak silinsin mi?" : {
-      "comment" : "Account deletion confirmation title.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permanently delete your account?"
-          }
-        }
-      }
+      "comment" : "Account deletion confirmation title."
     },
     "Hesabın ve telefon numaran ViFi'den kalıcı olarak silinir; bu işlem geri alınamaz. Uygulamayı yeniden kullanmak istersen numaranı baştan doğrulaman gerekir." : {
-      "comment" : "Account deletion confirmation message.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your account and phone number will be permanently deleted from ViFi; this can’t be undone. To use the app again, you’ll need to verify your number from scratch."
-          }
-        }
-      }
+      "comment" : "Account deletion confirmation message."
     },
     "Hesabını sildiğinde oturumun kapanır ve hesabın kalıcı olarak silinir." : {
-      "comment" : "Footer of the Delete Account button.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deleting your account signs you out and removes your account permanently."
-          }
-        }
-      }
+      "comment" : "Footer of the Delete Account button."
     },
     "Hesap" : {
-      "comment" : "Account screen title and the home toolbar button that opens it.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Account"
-          }
-        }
-      }
+      "comment" : "Account screen title and the home toolbar button that opens it."
     },
     "İçerik bulunamadı." : {
-      "comment" : "Error: the requested archive entry does not exist.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Content not found."
-          }
-        }
-      }
+      "comment" : "Error: the requested archive entry does not exist."
     },
     "İleri" : {
 
@@ -961,29 +447,13 @@
 
     },
     "İnternet bağlantısı yok. Bağlantını kontrol edip tekrar dene." : {
-      "comment" : "Error: offline or the request timed out.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No internet connection. Check your connection and try again."
-          }
-        }
-      }
+      "comment" : "Error: offline or the request timed out."
     },
     "Kadın" : {
 
     },
     "Kapat" : {
-      "comment" : "Accessibility label of the button that closes the full-screen viewer.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Close"
-          }
-        }
-      }
+      "comment" : "Accessibility label of the button that closes the full-screen viewer."
     },
     "Kaydet" : {
 
@@ -1001,103 +471,31 @@
 
     },
     "Kod Gönder" : {
-      "comment" : "Login button that sends the SMS verification code.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Send Code"
-          }
-        }
-      }
+      "comment" : "Login button that sends the SMS verification code."
     },
     "Kod hatalı. SMS ile gelen 6 haneli kodu kontrol edip tekrar dene." : {
-      "comment" : "Sign-in error: wrong verification code.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The code is incorrect. Check the 6-digit code from the SMS and try again."
-          }
-        }
-      }
+      "comment" : "Sign-in error: wrong verification code."
     },
     "Kodu Gir" : {
-      "comment" : "Title of the login screen's code step.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter Code"
-          }
-        }
-      }
+      "comment" : "Title of the login screen's code step."
     },
     "Kodu tekrar gönder" : {
-      "comment" : "Button that sends a new verification code.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Resend code"
-          }
-        }
-      }
+      "comment" : "Button that sends a new verification code."
     },
     "Kodu tekrar gönder (%lld sn)" : {
-      "comment" : "Resend button during the cooldown; the argument is the seconds left.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Resend code (%lld s)"
-          }
-        }
-      }
+      "comment" : "Resend button during the cooldown; the argument is the seconds left."
     },
     "Kodun süresi doldu. Yeni bir kod iste." : {
-      "comment" : "Sign-in error: the verification code or session expired.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The code has expired. Request a new one."
-          }
-        }
-      }
+      "comment" : "Sign-in error: the verification code or session expired."
     },
     "Konum" : {
-      "comment" : "Accessibility label of the breadcrumb trail showing the current location in the archive.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Location"
-          }
-        }
-      }
+      "comment" : "Accessibility label of the breadcrumb trail showing the current location in the archive."
     },
     "Listeden Kaldır" : {
-      "comment" : "Context menu and accessibility action that removes one exam from “Recently Viewed”.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove from List"
-          }
-        }
-      }
+      "comment" : "Context menu and accessibility action that removes one exam from “Recently Viewed”."
     },
     "Lütfen bekle" : {
-      "comment" : "VoiceOver value of a button while its request is running.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Please wait"
-          }
-        }
-      }
+      "comment" : "VoiceOver value of a button while its request is running."
     },
     "Mail uygulaması bulunamadı" : {
 
@@ -1115,37 +513,13 @@
 
     },
     "Numarana tek kullanımlık bir doğrulama kodu SMS ile gönderilir. Standart SMS ücretleri uygulanabilir." : {
-      "comment" : "Login footnote under the Send Code button.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A one-time verification code will be sent to your number by SMS. Standard SMS rates may apply."
-          }
-        }
-      }
+      "comment" : "Login footnote under the Send Code button."
     },
     "Numaranı Doğrula" : {
-      "comment" : "Header of the re-verification section before account deletion.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verify Your Number"
-          }
-        }
-      }
+      "comment" : "Header of the re-verification section before account deletion."
     },
     "Numarayı değiştir" : {
-      "comment" : "Login button that goes back to the phone number step.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Change number"
-          }
-        }
-      }
+      "comment" : "Login button that goes back to the phone number step."
     },
     "Okul" : {
 
@@ -1179,26 +553,10 @@
 
     },
     "Öne Çıkanlar" : {
-      "comment" : "About screen section header: the app’s main features.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Highlights"
-          }
-        }
-      }
+      "comment" : "About screen section header: the app’s main features."
     },
     "Oturumun sona erdi. Lütfen yeniden giriş yap." : {
-      "comment" : "Account error: the user is no longer signed in.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Your session has ended. Please sign in again."
-          }
-        }
-      }
+      "comment" : "Account error: the user is no longer signed in."
     },
     "PDF" : {
 
@@ -1207,26 +565,10 @@
 
     },
     "PDF belge" : {
-      "comment" : "Row subtitle of a PDF exam.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "PDF document"
-          }
-        }
-      }
+      "comment" : "Row subtitle of a PDF exam."
     },
     "PDF belgesi açılamadı. Dosya bozuk olabilir." : {
-      "comment" : "Error: a downloaded PDF could not be opened.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn’t open the PDF. The file may be damaged."
-          }
-        }
-      }
+      "comment" : "Error: a downloaded PDF could not be opened."
     },
     "PDF seç" : {
 
@@ -1259,25 +601,11 @@
 
     },
     "Sayfa %lld" : {
-      "comment" : "Accessibility label of a page image in the full-screen viewer.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Page %lld"
-          }
-        }
-      }
+      "comment" : "Accessibility label of a page image in the full-screen viewer."
     },
     "Sayfa %lld / %lld" : {
       "comment" : "Caption and accessibility label of an exam page, e.g. “Sayfa 2 / 3”.",
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Page %1$lld of %2$lld"
-          }
-        },
         "tr" : {
           "stringUnit" : {
             "state" : "new",
@@ -1289,12 +617,6 @@
     "Sayfa %lld / %lld, yüklenemedi" : {
       "comment" : "Accessibility label of an exam page that failed to load.",
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Page %1$lld of %2$lld, failed to load"
-          }
-        },
         "tr" : {
           "stringUnit" : {
             "state" : "new",
@@ -1304,48 +626,16 @@
       }
     },
     "Sayfa görüntüsü açılamadı. Lütfen daha sonra tekrar dene." : {
-      "comment" : "Error: a downloaded page image could not be decoded.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn’t open the page image. Please try again later."
-          }
-        }
-      }
+      "comment" : "Error: a downloaded page image could not be decoded."
     },
     "Sayfa yüklenemedi" : {
-      "comment" : "Title shown on an exam page that failed to load.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn’t Load Page"
-          }
-        }
-      }
+      "comment" : "Title shown on an exam page that failed to load."
     },
     "Sayfayı tam ekran açar." : {
-      "comment" : "Accessibility hint of an exam page.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opens the page in full screen."
-          }
-        }
-      }
+      "comment" : "Accessibility hint of an exam page."
     },
     "Sayfayı yeniden yükler." : {
-      "comment" : "Accessibility hint of an exam page that failed to load.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reloads the page."
-          }
-        }
-      }
+      "comment" : "Accessibility hint of an exam page that failed to load."
     },
     "Sebep (isteğe bağlı)" : {
 
@@ -1366,51 +656,19 @@
 
     },
     "Sınav" : {
-      "comment" : "Fallback file name of a shared exam whose name is empty.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exam"
-          }
-        }
-      }
+      "comment" : "Fallback file name of a shared exam whose name is empty."
     },
     "Sınav adı" : {
 
     },
     "Sınav Arşivi" : {
-      "comment" : "Tagline under the app name: ViFi is an archive of past university exams.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exam Archive"
-          }
-        }
-      }
+      "comment" : "Tagline under the app name: ViFi is an archive of past university exams."
     },
     "Sınav arşivine ulaşmak için cep telefonu numaranı doğrula." : {
-      "comment" : "Subtitle of the login screen.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verify your mobile number to access the exam archive."
-          }
-        }
-      }
+      "comment" : "Subtitle of the login screen."
     },
     "Sınav belgeleri ViFi'nin çevrim içi arşivinden yüklenir; görüntülemek için internet bağlantısı gerekir. Açtığın sınavlar daha hızlı açılması için cihazında önbelleğe alınır." : {
-      "comment" : "About screen: data source and caching note.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exam documents are loaded from ViFi’s online archive, so viewing them requires an internet connection. Exams you open are cached on your device so they open faster next time."
-          }
-        }
-      }
+      "comment" : "About screen: data source and caching note."
     },
     "Sınav bulunamadı." : {
 
@@ -1428,15 +686,7 @@
 
     },
     "Sınavı açar" : {
-      "comment" : "Accessibility hint of a recently viewed exam card.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opens the exam."
-          }
-        }
-      }
+      "comment" : "Accessibility hint of a recently viewed exam card."
     },
     "Sınavı tek bir PDF olarak ekle." : {
 
@@ -1445,73 +695,25 @@
 
     },
     "Sınavlar" : {
-      "comment" : "List title: the exams of a course.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Exams"
-          }
-        }
-      }
+      "comment" : "List title: the exams of a course."
     },
     "Sınavlar arşivde kalmaya devam eder; yalnızca bu liste boşaltılır." : {
-      "comment" : "Confirmation dialog message before clearing the recently viewed exams.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The exams stay in the archive; only this list is cleared."
-          }
-        }
-      }
+      "comment" : "Confirmation dialog message before clearing the recently viewed exams."
     },
     "Sınavlarda ara" : {
-      "comment" : "Search field prompt on an exam list.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search exams"
-          }
-        }
-      }
+      "comment" : "Search field prompt on an exam list."
     },
     "Son bir adım" : {
 
     },
     "Son görüntülenen sınavlara hızlı erişim" : {
-      "comment" : "About screen feature.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quick access to recently viewed exams"
-          }
-        }
-      }
+      "comment" : "About screen feature."
     },
     "Son Görüntülenenler" : {
-      "comment" : "Home section header: exams the user opened recently.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recently Viewed"
-          }
-        }
-      }
+      "comment" : "Home section header: exams the user opened recently."
     },
     "Son görüntülenenler temizlensin mi?" : {
-      "comment" : "Confirmation dialog title before clearing the recently viewed exams.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear recently viewed exams?"
-          }
-        }
-      }
+      "comment" : "Confirmation dialog title before clearing the recently viewed exams."
     },
     "Soyad" : {
 
@@ -1519,12 +721,6 @@
     "Sürüm %@ (%@)" : {
       "comment" : "App version and build number, e.g. “Sürüm 3.0.0 (6)”.",
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Version %1$@ (%2$@)"
-          }
-        },
         "tr" : {
           "stringUnit" : {
             "state" : "new",
@@ -1534,15 +730,7 @@
       }
     },
     "Tamam" : {
-      "comment" : "Button that dismisses an alert.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OK"
-          }
-        }
-      }
+      "comment" : "Button that dismisses an alert."
     },
     "Tanıtım turunu tekrar izle" : {
 
@@ -1554,84 +742,28 @@
 
     },
     "Tekrar Dene" : {
-      "comment" : "Button that retries a failed load.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Try Again"
-          }
-        }
-      }
+      "comment" : "Button that retries a failed load."
     },
     "Telefon" : {
 
     },
     "Telefon numarası" : {
-      "comment" : "Label of the phone number field and of the number on the account screen.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Phone number"
-          }
-        }
-      }
+      "comment" : "Label of the phone number field and of the number on the account screen."
     },
     "Telefon numarası geçersiz. 5 ile başlayan 10 haneli cep telefonu numaranı gir." : {
-      "comment" : "Sign-in error: the phone number was rejected.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The phone number is invalid. Enter your 10-digit mobile number starting with 5."
-          }
-        }
-      }
+      "comment" : "Sign-in error: the phone number was rejected."
     },
     "Telefon numarası yok" : {
-      "comment" : "Account screen when the account has no phone number.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No phone number"
-          }
-        }
-      }
+      "comment" : "Account screen when the account has no phone number."
     },
     "Telefon numarası, %@" : {
-      "comment" : "VoiceOver label of the phone number field; the argument is the fixed country code “+90”.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Phone number, %@"
-          }
-        }
-      }
+      "comment" : "VoiceOver label of the phone number field; the argument is the fixed country code “+90”."
     },
     "Temizle" : {
-      "comment" : "Button in the “Recently Viewed” header that clears the list.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear"
-          }
-        }
-      }
+      "comment" : "Button in the “Recently Viewed” header that clears the list."
     },
     "Tümünü Temizle" : {
-      "comment" : "Destructive confirmation button that clears the recently viewed exams.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear All"
-          }
-        }
-      }
+      "comment" : "Destructive confirmation button that clears the recently viewed exams."
     },
     "Tür" : {
 
@@ -1640,97 +772,33 @@
 
     },
     "Üniversite ara" : {
-      "comment" : "Search field prompt on the university list.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Search universities"
-          }
-        }
-      }
+      "comment" : "Search field prompt on the university list."
     },
     "Üniversiteler" : {
-      "comment" : "List and breadcrumb title: the list of universities.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Universities"
-          }
-        }
-      }
+      "comment" : "List and breadcrumb title: the list of universities."
     },
     "Üniversitelerin geçmiş sınavlarına hızlıca ulaş." : {
-      "comment" : "Home screen header subtitle.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quickly find past exams from universities."
-          }
-        }
-      }
+      "comment" : "Home screen header subtitle."
     },
     "Vazgeç" : {
-      "comment" : "Button that cancels preparing the pages for sharing.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cancel"
-          }
-        }
-      }
+      "comment" : "Button that cancels preparing the pages for sharing."
     },
     "Veri Kaynağı" : {
-      "comment" : "About screen section header: where the exam files come from.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Data Source"
-          }
-        }
-      }
+      "comment" : "About screen section header: where the exam files come from."
     },
     "ViFi %@ App Store'da. En iyi deneyim için uygulamayı güncelle." : {
       "comment" : "Update alert message. The argument is the new version number, e.g. “3.1.0”.",
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ViFi %@ is available on the App Store. Update the app for the best experience."
-          }
-        }
-      }
+      "extractionState" : "stale"
     },
     "ViFi, üniversitelerin geçmiş sınavlarını tek bir arşivde toplar. Üniversiteni, fakülteni, bölümünü ve dersini seç; sınavları görsel ya da PDF olarak incele ve paylaş." : {
       "comment" : "About screen: what the app does.",
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ViFi brings past university exams together in one archive. Choose your university, faculty, department and course, then view and share exams as images or PDFs."
-          }
-        }
-      }
+      "extractionState" : "stale"
     },
     "ViFi, üniversitelerin geçmiş sınavlarını tek bir arşivde toplar. Üniversiteni, fakülteni, bölümünü ve dersini seç; sınavları görsel ya da PDF olarak incele." : {
 
     },
     "Yakınlaştırarak ayrıntılı inceleme" : {
-      "comment" : "About screen feature: pages can be zoomed in.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zoom in to see every detail"
-          }
-        }
-      }
+      "comment" : "About screen feature: pages can be zoomed in."
     },
     "Yeni bölüm" : {
 
@@ -1748,15 +816,7 @@
 
     },
     "Yeni içerik eklendiğinde burada görünecek." : {
-      "comment" : "Empty state message below the titles above.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New content will appear here once it’s added."
-          }
-        }
-      }
+      "comment" : "Empty state message below the titles above."
     },
     "Yeni sınav" : {
 
@@ -1765,15 +825,7 @@
 
     },
     "Yeni sürüm mevcut" : {
-      "comment" : "Alert title: a newer version is on the App Store.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "New Version Available"
-          }
-        }
-      }
+      "comment" : "Alert title: a newer version is on the App Store."
     },
     "Yeni üniversite" : {
 
@@ -1782,15 +834,7 @@
 
     },
     "Yükleniyor…" : {
-      "comment" : "Loading indicator.",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loading…"
-          }
-        }
-      }
+      "comment" : "Loading indicator."
     }
   },
   "version" : "1.0"

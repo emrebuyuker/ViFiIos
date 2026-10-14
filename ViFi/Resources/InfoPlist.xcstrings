@@ -4,12 +4,6 @@
     "CFBundleDisplayName" : {
       "comment" : "Bundle display name",
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ViFi"
-          }
-        },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
