@@ -15,6 +15,7 @@ struct LoginView: View {
 private struct LoginScreen: View {
     @State private var viewModel: LoginViewModel
     @State private var isPhoneFocused = false
+    @State private var contactRequest: ContactRequest?
     @FocusState private var isCodeFocused: Bool
 
     init(auth: any AuthServicing, analytics: any AnalyticsTracking) {
@@ -41,6 +42,7 @@ private struct LoginScreen: View {
             .frame(maxWidth: .infinity)
         }
         .scrollDismissesKeyboard(.interactively)
+        .contactSupport(trigger: $contactRequest)
         .background(Color(.systemGroupedBackground))
         .animation(.smooth, value: viewModel.step)
         .animation(.smooth, value: viewModel.errorMessage)
@@ -97,6 +99,15 @@ private struct LoginScreen: View {
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
+
+        // Gives users a way out when the SMS code never arrives (e.g. the backend's "Error code: 39").
+        Button {
+            contactRequest = ContactRequest(context: "Giriş ekranı")
+        } label: {
+            Label("Giriş yapamıyor musun? Bize Ulaş", systemImage: "envelope")
+                .font(.footnote)
+        }
+        .accessibilityIdentifier("login.contact")
     }
 
     @ViewBuilder

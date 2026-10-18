@@ -181,6 +181,7 @@ nonisolated final class ViFiUITests: XCTestCase {
         let app = launchSignedOutApp()
 
         XCTAssertTrue(app.element("login.phone").exists)
+        XCTAssertTrue(app.element("login.contact").exists, "The number screen offers a way to contact support")
         XCTAssertFalse(app.element("home.list").exists)
         XCTAssertFalse(app.element("login.sendCode").isEnabled, "Sending needs a complete number")
     }
