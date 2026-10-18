@@ -80,7 +80,9 @@ private extension AnalyticsEvent {
             return ["action": action]
         case let .submissionApproved(tier):
             return ["tier": tier.rawValue]
-        case let .examUnlockFailed(reason), let .examSubmitFailed(reason), let .loginFailed(reason):
+        case let .loginFailed(reason, step):
+            return ["reason": reason, "step": step]
+        case let .examUnlockFailed(reason), let .examSubmitFailed(reason):
             return ["reason": reason]
         case .recentExamOpened, .earnCoinsTapped, .loginSucceeded, .profileCompleted, .profileUpdated,
              .signedOut, .accountDeleted, .submissionRejected:

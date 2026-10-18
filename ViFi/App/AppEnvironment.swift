@@ -40,6 +40,8 @@ final class AppEnvironment {
     let onboarding: OnboardingStore
     /// Requests and reports the OS notification permission.
     @ObservationIgnored let notifications: any NotificationServicing
+    /// Reports failed sign-in attempts for support diagnostics (why a number could not sign in).
+    @ObservationIgnored let loginDiagnostics: any LoginDiagnosticsReporting
     /// The in-app notification inbox (public announcements + per-device read state).
     let announcements: AnnouncementsStore
 
@@ -63,7 +65,8 @@ final class AppEnvironment {
         onboardingDefaults: UserDefaults = .standard,
         notifications: any NotificationServicing,
         announcementsReader: any AnnouncementsReading,
-        announcementsDefaults: UserDefaults = .standard
+        announcementsDefaults: UserDefaults = .standard,
+        loginDiagnostics: any LoginDiagnosticsReporting = NoopLoginDiagnosticsReporter()
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -87,6 +90,7 @@ final class AppEnvironment {
         onboarding = OnboardingStore(defaults: onboardingDefaults)
         self.notifications = notifications
         announcements = AnnouncementsStore(reader: announcementsReader, defaults: announcementsDefaults)
+        self.loginDiagnostics = loginDiagnostics
     }
 
     /// Production services backed by Firebase and the App Store.
@@ -128,7 +132,8 @@ final class AppEnvironment {
             storageBucket: bucket ?? "",
             recents: RecentExamsStore(),
             notifications: SystemNotificationService(),
-            announcementsReader: FirebaseAnnouncementsReader()
+            announcementsReader: FirebaseAnnouncementsReader(),
+            loginDiagnostics: FirebaseLoginDiagnosticsService()
         )
     }
 

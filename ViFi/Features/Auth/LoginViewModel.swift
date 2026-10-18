@@ -29,15 +29,24 @@ final class LoginViewModel {
 
     @ObservationIgnored private let auth: any AuthServicing
     @ObservationIgnored private let analytics: any AnalyticsTracking
+    @ObservationIgnored private let diagnostics: any LoginDiagnosticsReporting
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private var verificationID: String?
     /// The last code sent, kept across `changeNumber()` so re-entering the same number cannot skip the cooldown.
     @ObservationIgnored private var lastSentCode: SentCode?
+    /// The most recent failure, used to prefill the support e-mail ("Bize Ulaş") with what went wrong.
+    @ObservationIgnored private var lastFailureInfo: LoginFailureInfo?
 
     /// - Parameter now: The clock the resend cooldown is measured with (injected by tests).
-    init(auth: any AuthServicing, analytics: any AnalyticsTracking, now: @escaping () -> Date = Date.init) {
+    init(
+        auth: any AuthServicing,
+        analytics: any AnalyticsTracking,
+        diagnostics: any LoginDiagnosticsReporting = NoopLoginDiagnosticsReporter(),
+        now: @escaping () -> Date = Date.init
+    ) {
         self.auth = auth
         self.analytics = analytics
+        self.diagnostics = diagnostics
         self.now = now
     }
 
@@ -63,6 +72,15 @@ final class LoginViewModel {
     func canResendCode(at date: Date) -> Bool {
         guard case .code = step else { return false }
         return !isWorking && resendCooldownRemaining(at: date) == 0
+    }
+
+    /// Prefilled into the "Bize Ulaş" e-mail on the login screen: the last failure's details when there is one,
+    /// otherwise just the typed number, so support sees what the user was trying. `nil` when there is nothing
+    /// useful to add (the e-mail still opens with its standard footer).
+    var supportContext: String? {
+        if let lastFailureInfo { return lastFailureInfo.supportContext }
+        guard let phoneNumber else { return nil }
+        return "Giriş sorunu bildirimi\nNumara: \(phoneNumber.e164)"
     }
 
     // MARK: - Input
@@ -123,7 +141,7 @@ final class LoginViewModel {
                 try await auth.signIn(verificationID: verificationID, code: code)
                 analytics.track(.loginSucceeded)
             } catch {
-                self?.fail(with: error)
+                self?.fail(with: error, stage: .verify)
             }
         }
     }
@@ -150,7 +168,7 @@ final class LoginViewModel {
                 let verificationID = try await auth.sendVerificationCode(to: phoneNumber.e164)
                 self?.didSendCode(to: phoneNumber, verificationID: verificationID)
             } catch {
-                self?.fail(with: error)
+                self?.fail(with: error, stage: .sendCode)
             }
         }
     }
@@ -174,13 +192,25 @@ final class LoginViewModel {
         resendAvailableAt = sentCode.resendAvailableAt
     }
 
-    private func fail(with error: any Error) {
+    private func fail(with error: any Error, stage: LoginFailureStage) {
         isWorking = false
         guard !(error is CancellationError) else { return }
         errorMessage = error.userMessage
-        analytics.track(.loginFailed(reason: (error as? AuthError)?.analyticsReason ?? "unknown"))
 
-        switch error as? AuthError {
+        let authError = error as? AuthError
+        let info = LoginFailureInfo(
+            reason: authError?.analyticsReason ?? "unknown",
+            backendCode: authError.flatMap(Self.backendCode(for:)),
+            stage: stage,
+            phoneNumber: attemptedNumber?.e164,
+            occurredAt: now()
+        )
+        lastFailureInfo = info
+        analytics.track(.loginFailed(reason: info.reason, step: stage.rawValue))
+        // Fire-and-forget: the reporter throttles duplicates and never blocks or surfaces.
+        diagnostics.report(info)
+
+        switch authError {
         case .invalidCode:
             // Ready for the next attempt; the message stays until the user types again.
             codeText = ""
@@ -191,6 +221,20 @@ final class LoginViewModel {
             lastSentCode = nil
         default:
             break
+        }
+    }
+
+    /// The number the failed attempt used: the one on the code step, otherwise the number being typed.
+    private var attemptedNumber: PhoneNumber? {
+        if case let .code(phoneNumber) = step { return phoneNumber }
+        return phoneNumber
+    }
+
+    /// The backend code behind an error, when we know it (39 for the SMS anti-abuse rejection).
+    private static func backendCode(for error: AuthError) -> Int? {
+        switch error {
+        case .smsTemporarilyUnavailable: 39
+        default: nil
         }
     }
 }

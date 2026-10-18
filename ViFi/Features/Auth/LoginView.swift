@@ -5,8 +5,12 @@ struct LoginView: View {
     @Environment(AppEnvironment.self) private var environment
 
     var body: some View {
-        LoginScreen(auth: environment.auth, analytics: environment.analytics)
-            .onAppear { environment.analytics.track(.screenView(name: "Login")) }
+        LoginScreen(
+            auth: environment.auth,
+            analytics: environment.analytics,
+            diagnostics: environment.loginDiagnostics
+        )
+        .onAppear { environment.analytics.track(.screenView(name: "Login")) }
     }
 }
 
@@ -18,8 +22,8 @@ private struct LoginScreen: View {
     @State private var contactRequest: ContactRequest?
     @FocusState private var isCodeFocused: Bool
 
-    init(auth: any AuthServicing, analytics: any AnalyticsTracking) {
-        _viewModel = State(initialValue: LoginViewModel(auth: auth, analytics: analytics))
+    init(auth: any AuthServicing, analytics: any AnalyticsTracking, diagnostics: any LoginDiagnosticsReporting) {
+        _viewModel = State(initialValue: LoginViewModel(auth: auth, analytics: analytics, diagnostics: diagnostics))
     }
 
     var body: some View {
@@ -100,9 +104,10 @@ private struct LoginScreen: View {
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
 
-        // Gives users a way out when the SMS code never arrives (e.g. the backend's "Error code: 39").
+        // Gives users a way out when the SMS code never arrives (e.g. the backend's "Error code: 39"); the
+        // e-mail is prefilled with what went wrong so support can diagnose it.
         Button {
-            contactRequest = ContactRequest(context: "Giriş ekranı")
+            contactRequest = ContactRequest(context: viewModel.supportContext ?? "Giriş ekranı")
         } label: {
             Label("Giriş yapamıyor musun? Bize Ulaş", systemImage: "envelope")
                 .font(.footnote)

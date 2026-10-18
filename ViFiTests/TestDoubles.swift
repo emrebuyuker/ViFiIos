@@ -126,6 +126,17 @@ final class AnalyticsSpy: AnalyticsTracking {
     }
 }
 
+// MARK: - Login diagnostics
+
+/// Records every reported sign-in failure, in order.
+final class SpyLoginDiagnosticsReporter: LoginDiagnosticsReporting {
+    private(set) var reports: [LoginFailureInfo] = []
+
+    func report(_ info: LoginFailureInfo) {
+        reports.append(info)
+    }
+}
+
 // MARK: - Auth
 
 /// An `AuthServicing` that answers with scripted replies and records every call.

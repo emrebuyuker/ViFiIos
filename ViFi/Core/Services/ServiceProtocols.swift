@@ -117,7 +117,8 @@ nonisolated enum AnalyticsEvent: Equatable, Sendable {
     // Login funnel
     case loginCodeRequested(isResend: Bool)
     case loginSucceeded
-    case loginFailed(reason: String)
+    /// `step` is the `LoginFailureStage` raw value ("send_code" | "verify"); `reason` is `AuthError.analyticsReason`.
+    case loginFailed(reason: String, step: String)
 
     // Activation
     case onboardingCompleted(method: String, source: String)
