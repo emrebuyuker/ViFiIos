@@ -166,6 +166,9 @@ extension FirebaseAuthService {
     }
 
     nonisolated static func authError(from error: NSError) -> AuthError {
+        if isSMSTemporarilyUnavailable(error) {
+            return .smsTemporarilyUnavailable
+        }
         guard error.domain == AuthErrors.domain, let code = AuthErrorCode(rawValue: error.code) else {
             return error.domain == NSURLErrorDomain ? .offline : .unknown(message: genericErrorMessage)
         }
@@ -202,5 +205,56 @@ extension FirebaseAuthService {
 
     nonisolated static var genericErrorMessage: String {
         String(localized: "Bir sorun oluştu. Lütfen tekrar dene.")
+    }
+
+    /// Key Firebase uses for the raw backend error body it tucks inside an `internalError`'s user info.
+    private nonisolated static let backendDeserializedResponseKey = "FIRAuthErrorUserInfoDeserializedResponseKey"
+    /// Google's SMS anti-abuse rejection. It reaches the client as a generic `internalError` (`17999`) with the
+    /// real cause ("Error code: 39", HTTP 503) buried in the deserialized backend response.
+    private nonisolated static let smsAntiAbuseBackendCode = 39
+
+    /// Whether `error` is the SMS anti-abuse rejection the backend reports as "Error code: 39". Firebase maps it
+    /// to a vague `internalError`, so we dig the backend code out of the deserialized response (and its
+    /// `NSUnderlyingError` ancestors) to tell the user it is a temporary SMS outage rather than "something broke".
+    nonisolated static func isSMSTemporarilyUnavailable(_ error: NSError) -> Bool {
+        errorChain(from: error).contains { nsError in
+            guard let response = nsError.userInfo[backendDeserializedResponseKey] as? [String: Any] else {
+                return false
+            }
+            return backendErrorCode(in: response) == smsAntiAbuseBackendCode
+        }
+    }
+
+    /// `error` together with its `NSUnderlyingError` ancestors, capped so a cyclic chain can never loop forever.
+    private nonisolated static func errorChain(from error: NSError) -> [NSError] {
+        var chain: [NSError] = []
+        var current: NSError? = error
+        while let nsError = current, chain.count < 8 {
+            chain.append(nsError)
+            current = nsError.userInfo[NSUnderlyingErrorKey] as? NSError
+        }
+        return chain
+    }
+
+    /// The numeric code in a deserialized backend error whose message reads e.g. "Error code: 39", checking both
+    /// the top-level `message` and any nested `errors` entries.
+    private nonisolated static func backendErrorCode(in response: [String: Any]) -> Int? {
+        var messages: [String] = []
+        if let message = response["message"] as? String {
+            messages.append(message)
+        }
+        if let errors = response["errors"] as? [[String: Any]] {
+            messages.append(contentsOf: errors.compactMap { $0["message"] as? String })
+        }
+        return messages.lazy.compactMap(parsedBackendErrorCode(from:)).first
+    }
+
+    private nonisolated static func parsedBackendErrorCode(from message: String) -> Int? {
+        let lowercased = message.lowercased()
+        guard let marker = lowercased.range(of: "error code:") else { return nil }
+        let digits = lowercased[marker.upperBound...]
+            .drop { $0 == " " }
+            .prefix { $0.isNumber }
+        return Int(digits)
     }
 }

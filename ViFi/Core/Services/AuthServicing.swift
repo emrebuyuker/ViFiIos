@@ -60,6 +60,9 @@ nonisolated enum AuthError: LocalizedError, Equatable {
     case codeExpired
     /// Too many attempts from this device or number, or the SMS quota is exhausted.
     case tooManyRequests
+    /// The SMS provider refused to send a code right now (Firebase's anti-abuse "Error code: 39"): a
+    /// temporary, server-side condition tied to the number, not a mistake the user can fix by retrying faster.
+    case smsTemporarilyUnavailable
     case offline
     /// The user closed the reCAPTCHA page.
     case verificationCancelled
@@ -83,6 +86,11 @@ nonisolated enum AuthError: LocalizedError, Equatable {
             String(localized: "Kodun süresi doldu. Yeni bir kod iste.")
         case .tooManyRequests:
             String(localized: "Çok fazla deneme yapıldı. Lütfen bir süre sonra tekrar dene.")
+        case .smsTemporarilyUnavailable:
+            String(
+                localized:
+                    "SMS servisinde geçici bir sorun nedeniyle kod gönderilemedi. Lütfen bir süre sonra tekrar dene; sorun sürerse bizimle iletişime geç."
+            )
         case .offline:
             String(localized: "İnternet bağlantısı yok. Bağlantını kontrol edip tekrar dene.")
         case .verificationCancelled:
@@ -107,6 +115,7 @@ nonisolated enum AuthError: LocalizedError, Equatable {
         case .invalidCode: "invalid_code"
         case .codeExpired: "code_expired"
         case .tooManyRequests: "too_many_requests"
+        case .smsTemporarilyUnavailable: "sms_temporarily_unavailable"
         case .offline: "offline"
         case .verificationCancelled: "verification_cancelled"
         case .appVerificationFailed: "app_verification_failed"
