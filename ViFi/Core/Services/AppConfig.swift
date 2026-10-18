@@ -24,7 +24,7 @@ enum AppStoreLink {
     /// The app's App Store page, used only when the remote config omits `storeURL`.
     ///
     /// The remote config's `storeURL` is the primary source; this is the built-in safety net.
-    static let productURL: URL? = URL(string: "https://apps.apple.com/tr/app/vifi/id6670324094")
+    static let productURL: URL? = URL(string: "https://apps.apple.com/tr/app/vifi/id1470918849")
 }
 
 extension Bundle {
