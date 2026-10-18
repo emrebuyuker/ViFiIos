@@ -1,5 +1,6 @@
 import os
 import SwiftUI
+import UserNotifications
 
 /// Gates the app behind sign-in, hosts the navigation stack and app-wide concerns (update prompt).
 struct RootView: View {
@@ -35,6 +36,9 @@ struct RootView: View {
         }
         .task { await environment.session.observeUserChanges() }
         .task { await observeUpdateStatus() }
+        // Clear the icon badge at launch as well: `scenePhase` does not deliver its initial `.active` through
+        // `onChange`, so a cold start opened from a notification would otherwise keep the badge.
+        .task { clearNotificationBadge() }
         .onChange(of: environment.session.state) { _, state in
             // The next user starts on the home screen, not deep in the previous user's stack, with a clean
             // profile read and without the previous user's recently-viewed list. Downloaded files are kept
@@ -51,9 +55,16 @@ struct RootView: View {
             }
         }
         .onChange(of: scenePhase) { _, phase in
-            // Trim the on-disk file cache back within budget while the app is idle.
-            if phase == .background {
+            switch phase {
+            case .active:
+                // Clear the home-screen icon badge the moment the app is opened or resumed, so a delivered
+                // push notification does not leave a stale count behind once the user is back in the app.
+                clearNotificationBadge()
+            case .background:
+                // Trim the on-disk file cache back within budget while the app is idle.
                 Task { await environment.fileLoader.pruneDiskCache() }
+            default:
+                break
             }
         }
         .onOpenURL { url in
@@ -128,6 +139,13 @@ struct RootView: View {
         case let .exam(path, .pdf):
             PDFExamView(path: path)
         }
+    }
+
+    /// Resets the home-screen icon badge to zero. Called when the app becomes active (and once at launch) so a
+    /// push notification's badge does not linger after the user has opened the app. Pure UserNotifications, so it
+    /// touches no Firebase and is safe on sample data too.
+    private func clearNotificationBadge() {
+        UNUserNotificationCenter.current().setBadgeCount(0)
     }
 
     // MARK: - App update
