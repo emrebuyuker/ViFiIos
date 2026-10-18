@@ -179,6 +179,15 @@ service cloud.firestore {
       }
     }
 
+    // Login failure diagnostics, written only by the `recordLoginDiagnostic` Cloud Function (Admin SDK, which
+    // bypasses these rules) and read by admins to look up why a specific number could not sign in. Phone numbers
+    // are stored salted-hashed + last 4 only, with a 60-day TTL. Clients never read or write here — not even an
+    // admin's device (the write path is the function, and there is no client read use).
+    match /loginDiagnostics/{diagnosticId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Deny-by-default for every path not opened above.
     match /{document=**} {
       allow read, write: if false;

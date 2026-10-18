@@ -10,13 +10,20 @@
 // an already-unlocked exam is a no-op that charges nothing.
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { defineSecret } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { createHash } from 'node:crypto';
 
 initializeApp();
 
 // The archive, wallets, unlocks and ledger all live in the named `vifi` database (not `(default)`).
 const db = getFirestore('vifi');
+
+// Salt for hashing phone numbers in login diagnostics. A phone number is low-entropy (10^10), so an unsalted hash
+// is trivially reversible; this secret keeps the stored hashes from being turned back into numbers. Set it before
+// deploying: `firebase functions:secrets:set LOGIN_DIAGNOSTIC_SALT`. Never committed to the (public) repo.
+const DIAGNOSTIC_SALT = defineSecret('LOGIN_DIAGNOSTIC_SALT');
 
 // Coins charged to unlock one exam. Keep in step with the client's `ExamLock.unlockCost`.
 const UNLOCK_COST = 100;
@@ -79,3 +86,61 @@ export const unlockExam = onCall({ region: 'europe-west1' }, async (request) => 
     return { alreadyUnlocked: false, balance: newBalance };
   });
 });
+
+// Records a failed sign-in attempt for support diagnostics, so we can later look up why a specific number could
+// not sign in (e.g. the backend's SMS anti-abuse "Error code: 39", or an App Check failure).
+//
+// App Check is deliberately NOT enforced: a sign-in that fails *because* App Check cannot be minted must still be
+// recordable. Instead the server records whether a valid App Check token was present (`appCheckServer`), and the
+// client sends its own on-device probe result (`appCheckClient`). The caller is unauthenticated (the sign-in just
+// failed), so nothing here trusts `auth`; inputs are validated and clamped, and the collection is admin-read-only.
+//
+// Phone numbers are never stored raw — only a salted SHA-256 hash (for exact match via a tool) plus the last 4
+// digits (for coarse console lookup). Records auto-expire after 60 days via the `expireAt` TTL field; enable the
+// TTL policy on `loginDiagnostics.expireAt` in the console.
+const DIAGNOSTIC_TTL_DAYS = 60;
+
+function clampString(value, max) {
+  return typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : null;
+}
+
+export const recordLoginDiagnostic = onCall(
+  { region: 'europe-west1', enforceAppCheck: false, secrets: [DIAGNOSTIC_SALT] },
+  async (request) => {
+    const data = request.data ?? {};
+
+    const reason = clampString(data.reason, 64) ?? 'unknown';
+    const step = data.step === 'send_code' || data.step === 'verify' ? data.step : 'unknown';
+
+    const phoneNumber = typeof data.phoneNumber === 'string' ? data.phoneNumber.trim() : '';
+    let numberHash = null;
+    let last4 = null;
+    if (/^\+90[0-9]{10}$/.test(phoneNumber)) {
+      numberHash = createHash('sha256').update(`${DIAGNOSTIC_SALT.value()}:${phoneNumber}`).digest('hex');
+      last4 = phoneNumber.slice(-4);
+    }
+
+    // Server-verified App Check result. With enforcement off, `request.app` is set only for a valid token; a
+    // present-but-invalid token leaves it undefined, so the raw header distinguishes "invalid" from "absent".
+    const sentAppCheck = request.rawRequest?.headers?.['x-firebase-appcheck'];
+    const appCheckServer = request.app ? 'valid' : sentAppCheck ? 'invalid' : 'absent';
+
+    await db.collection('loginDiagnostics').add({
+      numberHash,
+      last4,
+      reason,
+      step,
+      backendCode: Number.isInteger(data.backendCode) ? data.backendCode : null,
+      appCheckClient: clampString(data.appCheckStatus, 32),
+      appCheckServer,
+      appVersion: clampString(data.appVersion, 32),
+      osVersion: clampString(data.osVersion, 32),
+      deviceModel: clampString(data.deviceModel, 64),
+      occurredAt: clampString(data.occurredAt, 40),
+      createdAt: FieldValue.serverTimestamp(),
+      expireAt: new Date(Date.now() + DIAGNOSTIC_TTL_DAYS * 24 * 60 * 60 * 1000),
+    });
+
+    return { ok: true };
+  }
+);

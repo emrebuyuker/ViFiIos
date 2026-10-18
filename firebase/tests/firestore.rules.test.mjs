@@ -301,3 +301,31 @@ describe('Firestore rules — coins (admin-written), entitlements (server-only),
     await assertFails(device(db(users.bob), 'alice', 'tok3').set({ platform: 'ios' }));
   });
 });
+
+describe('Firestore rules — login diagnostics (admin-read, server-write only)', () => {
+  beforeEach(async () => {
+    await env.clearFirestore();
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().collection('loginDiagnostics').doc('d1').set({
+        numberHash: 'hash', last4: '2233', reason: 'sms_temporarily_unavailable', step: 'send_code',
+      });
+    });
+  });
+
+  test('an admin can read diagnostics', async () => {
+    await assertSucceeds(db(users.admin).collection('loginDiagnostics').doc('d1').get());
+  });
+
+  test('a +90 user, other users, a fake admin and anonymous cannot read diagnostics', async () => {
+    for (const user of [users.alice, users.usPhone, users.emailOnly, users.fakeAdmin, null]) {
+      await assertFails(db(user).collection('loginDiagnostics').doc('d1').get());
+    }
+  });
+
+  test('nobody can write diagnostics from a client — not even an admin (only the Cloud Function may)', async () => {
+    for (const user of [users.admin, users.alice, null]) {
+      await assertFails(db(user).collection('loginDiagnostics').doc('d2').set({ reason: 'x' }));
+      await assertFails(db(user).collection('loginDiagnostics').doc('d1').delete());
+    }
+  });
+});
