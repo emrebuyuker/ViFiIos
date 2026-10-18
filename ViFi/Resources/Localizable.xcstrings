@@ -368,6 +368,9 @@
     "Giriş Yap" : {
       "comment" : "Title of the login screen."
     },
+    "Giriş yapamıyor musun? Bize Ulaş" : {
+
+    },
     "Gönder" : {
 
     },
@@ -702,6 +705,9 @@
     },
     "Sınavlarda ara" : {
       "comment" : "Search field prompt on an exam list."
+    },
+    "SMS servisinde geçici bir sorun nedeniyle kod gönderilemedi. Lütfen bir süre sonra tekrar dene; sorun sürerse bizimle iletişime geç." : {
+
     },
     "Son bir adım" : {
 
