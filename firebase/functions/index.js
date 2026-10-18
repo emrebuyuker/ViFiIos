@@ -116,7 +116,9 @@ export const recordLoginDiagnostic = onCall(
     let numberHash = null;
     let last4 = null;
     if (/^\+90[0-9]{10}$/.test(phoneNumber)) {
-      numberHash = createHash('sha256').update(`${DIAGNOSTIC_SALT.value()}:${phoneNumber}`).digest('hex');
+      // Trim the salt so the hash is stable regardless of a trailing newline in the stored secret; the lookup
+      // script (scripts/lookup-login-diagnostics.mjs) trims identically so its hash matches this one.
+      numberHash = createHash('sha256').update(`${DIAGNOSTIC_SALT.value().trim()}:${phoneNumber}`).digest('hex');
       last4 = phoneNumber.slice(-4);
     }
 
