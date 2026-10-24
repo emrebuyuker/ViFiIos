@@ -63,6 +63,26 @@ Değerleri Console'dan (Realtime Database) veya admin bir oturumla yazın — al
 > Zorunlu güncellemeyi yalnızca kullanıcılara sunulmuş (App Store'da yayınlanmış) bir sürümü `minimumVersion` yaparak
 > tetikleyin; aksi halde kullanıcılar indiremeyecekleri bir sürüm için kilitlenir.
 
+Android aynı şemayı kendi düğümünden okur (`config/appUpdate/android`, alan adları birebir aynı — `storeURL` dahil;
+Android sürümleri iOS ile aynı seridedir, ör. `3.1.0`):
+
+```json
+{
+  "config": {
+    "appUpdate": {
+      "android": {
+        "minimumVersion": "3.1.0",
+        "latestVersion": "3.1.0",
+        "storeURL": "https://play.google.com/store/apps/details?id=com.salticusteam.vifi",
+        "message": "Daha iyi bir deneyim için uygulamayı güncelle."
+      }
+    }
+  }
+}
+```
+
+> Android'de de `minimumVersion` yalnızca Google Play'de yayınlanmış bir sürüm olmalıdır.
+
 ## Belirteç iptali
 
 ```bash

@@ -223,37 +223,48 @@ describe('admin', () => {
 });
 
 describe('config (app update policy)', () => {
-  const validPolicy = {
-    minimumVersion: '3.1.0', latestVersion: '3.2.0', storeURL: 'https://apps.apple.com/app/id1', message: 'Güncelle',
-  };
+  // iOS and Android each read their own node (`config/appUpdate/<platform>`) under the same schema.
+  for (const platform of ['ios', 'android']) {
+    describe(platform, () => {
+      const node = `config/appUpdate/${platform}`;
+      const validPolicy = {
+        minimumVersion: '3.1.0', latestVersion: '3.2.0', storeURL: 'https://apps.apple.com/app/id1', message: 'Güncelle',
+      };
 
-  test('anyone can read the policy, signed in or not', async () => {
-    await assertSucceeds(db(null).ref('config').get());
-    await assertSucceeds(db(null).ref('config/appUpdate/ios').get());
-    await assertSucceeds(db(users.alice).ref('config/appUpdate/ios').get());
-    await assertSucceeds(db(users.usPhone).ref('config/appUpdate/ios').get());
-  });
+      test('anyone can read the policy, signed in or not', async () => {
+        await assertSucceeds(db(null).ref('config').get());
+        await assertSucceeds(db(null).ref(node).get());
+        await assertSucceeds(db(users.alice).ref(node).get());
+        await assertSucceeds(db(users.usPhone).ref(node).get());
+      });
 
-  test('nobody but an admin can write it', async () => {
-    await assertFails(db(null).ref('config/appUpdate/ios').set(validPolicy));
-    await assertFails(db(users.alice).ref('config/appUpdate/ios').set(validPolicy));
-    await assertFails(db(users.fakeAdmin).ref('config/appUpdate/ios').set(validPolicy));
-    await assertFails(db(users.alice).ref('config/appUpdate/ios/minimumVersion').set('9.9.9'));
-  });
+      test('nobody but an admin can write it', async () => {
+        await assertFails(db(null).ref(node).set(validPolicy));
+        await assertFails(db(users.alice).ref(node).set(validPolicy));
+        await assertFails(db(users.fakeAdmin).ref(node).set(validPolicy));
+        await assertFails(db(users.alice).ref(`${node}/minimumVersion`).set('9.9.9'));
+      });
 
-  test('an admin can write a valid policy', async () => {
-    const admin = db(users.admin);
-    await assertSucceeds(admin.ref('config/appUpdate/ios').set(validPolicy));
-    await assertSucceeds(admin.ref('config/appUpdate/ios/minimumVersion').set('3.3.0'));
-  });
+      test('an admin can write a valid policy', async () => {
+        const admin = db(users.admin);
+        await assertSucceeds(admin.ref(node).set(validPolicy));
+        await assertSucceeds(admin.ref(`${node}/minimumVersion`).set('3.3.0'));
+      });
 
-  test('the admin is still bound by the schema', async () => {
-    const admin = db(users.admin);
-    await assertFails(admin.ref('config/appUpdate/ios/minimumVersion').set('three'));
-    await assertFails(admin.ref('config/appUpdate/ios/minimumVersion').set(3));
-    await assertFails(admin.ref('config/appUpdate/ios/storeURL').set('http://insecure.example'));
-    await assertFails(admin.ref('config/appUpdate/ios/extra').set('x'));
-    await assertFails(admin.ref('config/appUpdate/ios/message').set('x'.repeat(301)));
+      test('the admin is still bound by the schema', async () => {
+        const admin = db(users.admin);
+        await assertFails(admin.ref(`${node}/minimumVersion`).set('three'));
+        await assertFails(admin.ref(`${node}/minimumVersion`).set(3));
+        await assertFails(admin.ref(`${node}/storeURL`).set('http://insecure.example'));
+        await assertFails(admin.ref(`${node}/storeUrl`).set('https://play.google.com/x'));
+        await assertFails(admin.ref(`${node}/extra`).set('x'));
+        await assertFails(admin.ref(`${node}/message`).set('x'.repeat(301)));
+      });
+    });
+  }
+
+  test('a platform without a rule cannot be written, not even by an admin', async () => {
+    await assertFails(db(users.admin).ref('config/appUpdate/web').set({ minimumVersion: '1.0.0' }));
   });
 });
 
