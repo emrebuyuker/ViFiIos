@@ -12,6 +12,11 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "hosting": {
+    "public": "hosting",
+    "cleanUrls": true,
+    "trailingSlash": false
+  },
   "functions": [
     {
       "source": "functions",

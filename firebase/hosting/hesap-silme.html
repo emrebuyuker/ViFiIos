@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ViFi – Hesap Silme</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main>
+  <header>
+    <div class="brand">ViFi</div>
+    <h1>Hesabını ve verilerini silme</h1>
+    <p class="meta">ViFi – Sınav Arşivi · Geliştirici: Emre Büyüker (buyukeryazilim) · Son güncelleme: 26 Ekim 2026</p>
+  </header>
+
+  <p>ViFi hesabını ve hesabına bağlı verileri istediğin zaman silebilirsin. Aşağıdaki iki yoldan birini kullan.</p>
+
+  <h2>1. Uygulamanın içinden (önerilen)</h2>
+  <div class="card">
+    <ol>
+      <li>ViFi uygulamasını aç ve telefon numaranla giriş yap.</li>
+      <li><strong>Hesap</strong> ekranına git.</li>
+      <li><strong>Hesabı sil</strong>'e dokun ve silme işlemini onayla.</li>
+      <li>Güvenlik için son girişinin üzerinden uzun süre geçtiyse SMS koduyla yeniden doğrulaman istenebilir.</li>
+    </ol>
+    <p>İşlem tamamlandığında hesabın hemen silinir ve oturumun kapatılır.</p>
+  </div>
+
+  <h2>2. E-posta ile</h2>
+  <div class="card">
+    <p>Uygulamaya erişemiyorsan <a href="mailto:buyukeryazilim@gmail.com?subject=ViFi%20hesap%20silme">buyukeryazilim@gmail.com</a>
+      adresine <strong>“ViFi hesap silme”</strong> konulu bir e-posta gönder ve hesabına kayıtlı telefon numarasını yaz.
+      Talebin en geç <strong>30 gün</strong> içinde yerine getirilir ve sonuç e-postayla bildirilir.</p>
+  </div>
+
+  <h2>Hangi veriler silinir?</h2>
+  <table>
+    <tr><th>Veri</th><th>Ne olur?</th></tr>
+    <tr><td>Hesap: telefon numarası ve kullanıcı kimliği</td><td>Hemen silinir.</td></tr>
+    <tr><td>Profil: ad, soyad, cinsiyet, üniversite, fakülte, bölüm</td><td>Hemen silinir.</td></tr>
+    <tr><td>Cihazdaki veriler: indirilen sınav dosyaları, son bakılanlar, ayarlar</td><td>Hemen silinir.</td></tr>
+    <tr><td>Coin bakiyesi ve açılan sınav kayıtları</td><td>En geç 30 gün içinde silinir.</td></tr>
+    <tr><td>Onay bekleyen sınav gönderimleri</td><td>En geç 30 gün içinde silinir.</td></tr>
+  </table>
+
+  <h2>Saklanan veriler ve süreleri</h2>
+  <ul>
+    <li><strong>Arşive eklenmiş sınavlar:</strong> Gönderdiğin ve onaylanarak arşive eklenen sınav dosyaları, diğer
+      öğrencilerin kullanımı için arşivde kalır. Bu dosyalarda adın veya telefon numaran gösterilmez.</li>
+    <li><strong>Giriş hatası kayıtları:</strong> Giriş sırasında hata alındıysa, telefon numarasının yalnızca geri
+      çevrilemeyen şifreli özeti ve son 4 hanesi tutulur; bu kayıtlar <strong>60 gün</strong> sonra kendiliğinden silinir.</li>
+    <li><strong>Kullanım istatistikleri:</strong> Google Analytics'e gönderilen anonim kullanım olayları, Google Analytics
+      saklama süresi (en fazla 14 ay) sonunda silinir.</li>
+  </ul>
+
+  <p>Ayrıntılar için <a href="/gizlilik">Gizlilik Politikası</a>'na bakabilirsin.</p>
+
+  <footer>
+    <a href="/gizlilik">Gizlilik Politikası</a>
+    <a href="mailto:buyukeryazilim@gmail.com">İletişim</a>
+  </footer>
+</main>
+</body>
+</html>
