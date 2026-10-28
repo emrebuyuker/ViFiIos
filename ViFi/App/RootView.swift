@@ -35,6 +35,9 @@ struct RootView: View {
             }
         }
         .task { await environment.session.observeUserChanges() }
+        // Follow the device's premium (subscription) state for the app's lifetime; it is tied to the Apple ID,
+        // not the signed-in user, so it is never reset on sign-out.
+        .task { await environment.subscription.observe() }
         .task { await observeUpdateStatus() }
         // Clear the icon badge at launch as well: `scenePhase` does not deliver its initial `.active` through
         // `onChange`, so a cold start opened from a notification would otherwise keep the badge.
@@ -218,8 +221,15 @@ private struct ProfileGate<Content: View>: View {
             .task(id: user.id) { await environment.profile.load(uid: user.id) }
             // Follow the user's coin balance for as long as they are signed in, so every screen shows it.
             .task(id: user.id) { await environment.wallet.observe(uid: user.id) }
-            // Load the user's unlocked exams, for the archive's lock state.
-            .task(id: user.id) { await environment.unlocks.load(uid: user.id) }
+            // Load the user's unlocked exams, for the archive's lock state. Then retry any paid single-exam
+            // purchase whose server unlock did not complete earlier (dropped network, or Ask to Buy approved
+            // later), so the user never loses a purchase.
+            .task(id: user.id) {
+                await environment.unlocks.load(uid: user.id)
+                if let examId = await environment.examPurchaseService.recoverPendingUnlock() {
+                    environment.unlocks.markUnlocked(examId)
+                }
+            }
             // Keep the notification inbox (public announcements) in step while signed in.
             .task(id: user.id) { await environment.announcements.observe() }
             // Identify the user for analytics: id + admin now, enriched with profile segments once loaded.

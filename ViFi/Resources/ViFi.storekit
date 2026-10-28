@@ -1,0 +1,143 @@
+{
+  "identifier" : "3FB0C68E-A2F5-4DF0-8818-5733EB3BB8EB",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "29.99",
+      "familyShareable" : false,
+      "internalID" : "2978570D-D06F-458F-8AEB-694FAE955451",
+      "localizations" : [
+        {
+          "description" : "Tek bir sınavı kalıcı olarak aç.",
+          "displayName" : "Tek Sınav Aç",
+          "locale" : "tr_TR"
+        }
+      ],
+      "productID" : "com.BuyukerYazilim.ViFi2.exam.unlock",
+      "referenceName" : "Tek Sınav Aç",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6670000000",
+    "_developerTeamID" : "A9ZTFRX9B5",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "tr_TR",
+    "_storefront" : "TUR",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "834FA022-E65A-4A9C-87EC-D15800AB1968",
+      "localizations" : [
+
+      ],
+      "name" : "ViFi Premium",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "59.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "11FE6E41-83DF-4A82-9BD9-DBE2383FBC48",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Tüm sınavlara sınırsız eriş. Aylık yenilenir.",
+              "displayName" : "Aylık Premium",
+              "locale" : "tr_TR"
+            }
+          ],
+          "productID" : "com.BuyukerYazilim.ViFi2.premium.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Aylık Premium",
+          "subscriptionGroupID" : "834FA022-E65A-4A9C-87EC-D15800AB1968",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "399.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "2C478469-84F5-4B7C-B89D-5DD9EFB3080C",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Tüm sınavlara sınırsız eriş. Yıllık yenilenir, en avantajlı.",
+              "displayName" : "Yıllık Premium",
+              "locale" : "tr_TR"
+            }
+          ],
+          "productID" : "com.BuyukerYazilim.ViFi2.premium.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Yıllık Premium",
+          "subscriptionGroupID" : "834FA022-E65A-4A9C-87EC-D15800AB1968",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

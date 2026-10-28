@@ -23,6 +23,8 @@ final class AppEnvironment {
     @ObservationIgnored let moderationService: any ModerationServicing
     /// Unlocks a locked exam by spending coins (via the server-side Cloud Function).
     @ObservationIgnored let unlockService: any ExamUnlockServicing
+    /// Unlocks a single exam paid for with money (StoreKit consumable + the server-side Cloud Function).
+    @ObservationIgnored let examPurchaseService: any ExamPurchaseServicing
     /// The bundled lists backing the profile pickers (free text is always allowed on top).
     @ObservationIgnored let catalog: UniversityCatalog
     /// The Storage bucket, for building canonical file URLs (e.g. previewing a submission's pending files).
@@ -36,6 +38,8 @@ final class AppEnvironment {
     let wallet: CoinWalletStore
     /// The signed-in user's unlocked exams, for the archive's lock state.
     let unlocks: ExamUnlocksStore
+    /// The device's premium (subscription) state; when active, the whole archive is unlocked.
+    let subscription: SubscriptionStore
     /// Whether the first-launch onboarding tour should be shown (a per-device flag).
     let onboarding: OnboardingStore
     /// Requests and reports the OS notification permission.
@@ -58,6 +62,8 @@ final class AppEnvironment {
         moderationService: any ModerationServicing,
         unlockService: any ExamUnlockServicing,
         unlocksReader: any UnlocksReading,
+        examPurchaseService: any ExamPurchaseServicing,
+        subscriptionService: any SubscriptionServicing,
         catalog: UniversityCatalog,
         storageBucket: String = "",
         recents: RecentExamsStore,
@@ -79,6 +85,7 @@ final class AppEnvironment {
         self.walletReader = walletReader
         self.moderationService = moderationService
         self.unlockService = unlockService
+        self.examPurchaseService = examPurchaseService
         self.catalog = catalog
         self.storageBucket = storageBucket
         self.recents = recents
@@ -87,6 +94,7 @@ final class AppEnvironment {
         profile = ProfileStore(service: profileService)
         wallet = CoinWalletStore(reader: walletReader)
         unlocks = ExamUnlocksStore(reader: unlocksReader)
+        subscription = SubscriptionStore(service: subscriptionService)
         onboarding = OnboardingStore(defaults: onboardingDefaults)
         self.notifications = notifications
         announcements = AnnouncementsStore(reader: announcementsReader, defaults: announcementsDefaults)
@@ -128,6 +136,8 @@ final class AppEnvironment {
             moderationService: FirebaseModerationService(repository: repository, rewards: rewardsConfig),
             unlockService: FirebaseExamUnlockService(),
             unlocksReader: FirebaseUnlocksReader(),
+            examPurchaseService: StoreKitExamPurchaseService(),
+            subscriptionService: StoreKitSubscriptionService(),
             catalog: .bundled(),
             storageBucket: bucket ?? "",
             recents: RecentExamsStore(),
@@ -178,5 +188,7 @@ enum LaunchArgument {
     static let showOnboarding = "-ViFiShowOnboarding"
     /// With `-ViFiMockData`: reports notification permission as not-yet-asked, so the priming screen shows.
     static let notificationsPrompt = "-ViFiNotificationsPrompt"
+    /// With `-ViFiMockData`: starts with an active premium subscription (whole archive unlocked, coins hidden).
+    static let subscribed = "-ViFiSubscribed"
     #endif
 }

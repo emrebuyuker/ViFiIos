@@ -14,6 +14,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { createHash } from 'node:crypto';
+import { verifyExamUnlockTransaction } from './appStore.js';
 
 initializeApp();
 
@@ -146,3 +147,74 @@ export const recordLoginDiagnostic = onCall(
     return { ok: true };
   }
 );
+
+// `purchaseExamUnlock` unlocks a single exam paid for with money (the `exam.unlock` consumable) instead of
+// coins. The client sends the purchase's signed StoreKit 2 transaction; we verify Apple's signature here (a
+// client cannot be trusted to claim it paid), then record the unlock — no coins are touched. It is idempotent
+// and replay-safe: each transaction id can unlock exactly one exam, once.
+export const purchaseExamUnlock = onCall({ region: 'europe-west1' }, async (request) => {
+  const { auth, data } = request;
+  const phoneNumber = auth?.token?.phone_number ?? '';
+  if (!auth || !/^\+90[0-9]{10}$/.test(phoneNumber)) {
+    throw new HttpsError('permission-denied', 'Bu işlem için giriş yapmış olman gerekiyor.');
+  }
+
+  const examId = typeof data?.examId === 'string' ? data.examId.trim() : '';
+  if (!examId) {
+    throw new HttpsError('invalid-argument', 'Sınav kimliği gerekli.');
+  }
+  const signedTransaction = typeof data?.signedTransaction === 'string' ? data.signedTransaction : '';
+  if (!signedTransaction) {
+    throw new HttpsError('invalid-argument', 'Satın alma bilgisi gerekli.');
+  }
+
+  // Verify the purchase with Apple before granting anything.
+  let transactionId;
+  try {
+    ({ transactionId } = await verifyExamUnlockTransaction(signedTransaction));
+  } catch (error) {
+    console.error('Exam unlock purchase verification failed:', error);
+    throw new HttpsError('failed-precondition', 'Satın alma doğrulanamadı.');
+  }
+
+  const uid = auth.uid;
+  const examSnapshot = await db.collection('exams').doc(examId).get();
+  if (!examSnapshot.exists || examSnapshot.get('status') !== 'published') {
+    throw new HttpsError('not-found', 'Sınav bulunamadı.');
+  }
+
+  const unlockRef = db.collection('users').doc(uid).collection('unlocks').doc(examId);
+  // Binds the transaction id to the exam it unlocked, so the same purchase cannot be replayed for another exam.
+  const transactionRef = db.collection('purchasedTransactions').doc(transactionId);
+
+  return db.runTransaction(async (transaction) => {
+    const transactionSnapshot = await transaction.get(transactionRef);
+    const unlockSnapshot = await transaction.get(unlockRef);
+
+    if (transactionSnapshot.exists) {
+      // Already consumed. A retry for the same (uid, exam) is idempotent; anything else is a replay.
+      if (transactionSnapshot.get('uid') === uid && transactionSnapshot.get('examId') === examId) {
+        return { alreadyUnlocked: true };
+      }
+      throw new HttpsError('failed-precondition', 'Bu satın alma zaten kullanıldı.');
+    }
+
+    // The exam may already be unlocked (with coins, or an earlier purchase). Still consume this transaction id
+    // so it cannot be reused, but do not rewrite the unlock.
+    if (!unlockSnapshot.exists) {
+      transaction.set(unlockRef, {
+        examId,
+        source: 'purchase',
+        transactionId,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    }
+    transaction.set(transactionRef, {
+      uid,
+      examId,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    return { alreadyUnlocked: unlockSnapshot.exists };
+  });
+});

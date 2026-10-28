@@ -55,6 +55,21 @@ nonisolated final class ExamUnlockUITests: XCTestCase {
     }
 
     @MainActor
+    func testBuyingALockedExamWithMoneyOpensIt() {
+        let app = launchApp(noCoins: true)
+        openRows(engineeringMathematics, in: app)
+
+        // Even with no coins, the money option can unlock a single exam directly (mock store succeeds).
+        tap("row.2023 VİZE", in: app)
+        XCTAssertTrue(app.element("exam.unlock.sheet").waitForExistence(timeout: Timeout.transition),
+                      "The unlock sheet did not appear for a locked exam")
+        tap("exam.unlock.buy", in: app)
+
+        XCTAssertTrue(app.element("exam.images").waitForExistence(timeout: Timeout.content),
+                      "Buying the exam with money did not open it")
+    }
+
+    @MainActor
     func testFreeExamOpensWithoutTheUnlockSheet() {
         let app = launchApp(noCoins: false)
         openRows(engineeringMathematics + ["2018 VİZE"], in: app)

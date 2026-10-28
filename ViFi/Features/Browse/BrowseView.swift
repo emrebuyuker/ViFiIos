@@ -26,6 +26,7 @@ private struct BrowseScreen: View {
     /// The locked exam the user tapped, shown in the unlock sheet.
     @State private var examToUnlock: ArchiveItem?
     @State private var isShowingAddExam = false
+    @State private var isShowingPaywall = false
 
     init(path: ArchivePath, repository: any ArchiveRepository) {
         _viewModel = State(initialValue: BrowseViewModel(path: path, repository: repository))
@@ -109,17 +110,25 @@ private struct BrowseScreen: View {
                 examName: exam.name,
                 balance: environment.wallet.balance,
                 unlock: { await unlock(exam) },
+                purchaseWithMoney: { await purchaseWithMoney(exam) },
                 onUnlocked: { open(exam) },
                 onEarnCoins: {
                     environment.analytics.track(.earnCoinsTapped)
                     examToUnlock = nil
                     isShowingAddExam = true
+                },
+                onGoPremium: {
+                    examToUnlock = nil
+                    isShowingPaywall = true
                 }
             )
         }
         .sheet(isPresented: $isShowingAddExam) {
             AddExamView()
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $isShowingPaywall) {
+            PaywallView()
         }
     }
 
@@ -134,9 +143,11 @@ private struct BrowseScreen: View {
         return ExamLock.freeExamIds(orderedExams: exams)
     }
 
-    /// Whether `item` is a locked exam (has files, and is neither free nor unlocked by the user).
+    /// Whether `item` is a locked exam (has files, and is neither free nor unlocked by the user). An active
+    /// premium subscription unlocks the whole archive, so nothing is locked for a subscriber.
     private func isLocked(_ item: ArchiveItem) -> Bool {
         guard item.level == .exam, item.exam != nil else { return false }
+        if environment.subscription.isSubscribed { return false }
         return !ExamLock.isAccessible(item, freeIds: freeExamIds, unlockedIds: environment.unlocks.unlockedIds)
     }
 
@@ -163,6 +174,25 @@ private struct BrowseScreen: View {
             let reason = (error as? ExamUnlockError)?.analyticsReason ?? "unknown"
             environment.analytics.track(.examUnlockFailed(reason: reason))
             return error.userMessage
+        }
+    }
+
+    /// Buys just `exam` with money (StoreKit + server verification).
+    private func purchaseWithMoney(_ exam: ArchiveItem) async -> ExamPurchaseOutcome {
+        guard let examId = exam.path.components.last else { return .cancelled }
+        do {
+            let result = try await environment.examPurchaseService.purchaseUnlock(examId: examId)
+            switch result {
+            case .success:
+                environment.unlocks.markUnlocked(examId)
+                return .unlocked
+            case .cancelled:
+                return .cancelled
+            case .pending:
+                return .failed(String(localized: "Satın alma onay bekliyor; onaylanınca sınav açılır."))
+            }
+        } catch {
+            return .failed(error.userMessage)
         }
     }
 

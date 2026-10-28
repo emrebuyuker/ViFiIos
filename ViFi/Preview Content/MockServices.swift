@@ -32,6 +32,8 @@ extension AppEnvironment {
             moderationService: MockModerationService(),
             unlockService: MockExamUnlockService(),
             unlocksReader: StubUnlocksReader(),
+            examPurchaseService: MockExamPurchaseService(),
+            subscriptionService: MockSubscriptionService(subscribed: arguments.contains(LaunchArgument.subscribed)),
             catalog: .bundled(),
             recents: RecentExamsStore(defaults: .mockSuite),
             // Keep the prefetch throttle out of the real defaults, so a mock/UI-test run never suppresses a
@@ -606,6 +608,73 @@ final class MockExamUnlockService: ExamUnlockServicing {
         unlockedExamIds.append(examId)
         return ExamUnlockResult(balance: 20, alreadyUnlocked: false)
     }
+}
+
+/// In-memory subscription for previews and UI tests: no StoreKit. Starts not-subscribed unless seeded, and a
+/// purchase flips the live state so the paywall → unlock flow can be exercised.
+final class MockSubscriptionService: SubscriptionServicing {
+    private var subscribed: Bool
+    private let latency: Duration
+    private var continuation: AsyncStream<Bool>.Continuation?
+
+    init(subscribed: Bool = false, latency: Duration = .milliseconds(300)) {
+        self.subscribed = subscribed
+        self.latency = latency
+    }
+
+    func subscriptionOptions() async throws -> [SubscriptionOption] {
+        try? await Task.sleep(for: latency)
+        return [
+            SubscriptionOption(
+                id: StoreProductID.monthly, displayName: "Aylık Premium", displayPrice: "₺49,99", period: .monthly
+            ),
+            SubscriptionOption(
+                id: StoreProductID.yearly, displayName: "Yıllık Premium", displayPrice: "₺349,99", period: .yearly
+            ),
+        ]
+    }
+
+    func isSubscribed() async -> Bool { subscribed }
+
+    func statusChanges() -> AsyncStream<Bool> {
+        AsyncStream { continuation in
+            continuation.yield(subscribed)
+            self.continuation = continuation
+        }
+    }
+
+    func purchase(productID: String) async throws -> PurchaseResult {
+        try? await Task.sleep(for: latency)
+        subscribed = true
+        continuation?.yield(true)
+        return .success
+    }
+
+    func restore() async throws {
+        try? await Task.sleep(for: latency)
+    }
+}
+
+/// In-memory single-exam purchase for previews and UI tests: no StoreKit or Cloud Function. Succeeds unless
+/// `failure` is set, and records which exams were "bought".
+final class MockExamPurchaseService: ExamPurchaseServicing {
+    private let latency: Duration
+    private let failure: SubscriptionError?
+    private(set) var purchasedExamIds: [String] = []
+
+    init(latency: Duration = .milliseconds(300), failure: SubscriptionError? = nil) {
+        self.latency = latency
+        self.failure = failure
+    }
+
+    func purchaseUnlock(examId: String) async throws -> PurchaseResult {
+        try? await Task.sleep(for: latency)
+        if let failure { throw failure }
+        purchasedExamIds.append(examId)
+        return .success
+    }
+
+    func recoverPendingUnlock() async -> String? { nil }
 }
 
 /// Notification permission in memory, for previews and UI tests: never shows a real system prompt.

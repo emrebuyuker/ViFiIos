@@ -35,6 +35,8 @@ targets:
         excludes:
           # Generated from `info:` below and wired up as INFOPLIST_FILE, not a resource.
           - Resources/Info.plist
+          # A StoreKit testing configuration wired into the scheme's run action, not bundled as a resource.
+          - Resources/ViFi.storekit
     info:
       path: ViFi/Resources/Info.plist
       properties:
@@ -162,6 +164,8 @@ schemes:
         ViFiUITests: [test]
     run:
       config: Debug
+      # Local StoreKit products for simulator testing, until the App Store Connect products are live.
+      storeKitConfiguration: ViFi/Resources/ViFi.storekit
     test:
       config: Debug
       gatherCoverageData: true

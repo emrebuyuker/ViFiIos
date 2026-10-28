@@ -32,6 +32,8 @@ private struct AccountScreen: View {
     @State private var viewModel: AccountViewModel
     @State private var isConfirmingSignOut = false
     @State private var isConfirmingDeletion = false
+    @State private var isShowingPaywall = false
+    @Environment(\.openURL) private var openURL
     /// Whether the signed-in user is an admin (reveals the moderation tools); resolved on appear.
     @State private var isAdmin = false
     @FocusState private var isCodeFocused: Bool
@@ -58,7 +60,10 @@ private struct AccountScreen: View {
         NavigationStack {
             List {
                 profileSection
-                coinSection
+                premiumSection
+                if !environment.subscription.isSubscribed {
+                    coinSection
+                }
                 if isAdmin {
                     moderationSection
                 }
@@ -94,6 +99,9 @@ private struct AccountScreen: View {
                     .disabled(viewModel.isWorking)
                     .accessibilityIdentifier("account.done")
                 }
+            }
+            .sheet(isPresented: $isShowingPaywall) {
+                PaywallView()
             }
             .confirmationDialog("Çıkış yapılsın mı?", isPresented: $isConfirmingSignOut, titleVisibility: .visible) {
                 Button("Çıkış Yap", role: .destructive) {
@@ -148,6 +156,14 @@ private struct AccountScreen: View {
             .disabled(viewModel.isWorking)
             .accessibilityIdentifier("account.editProfile")
         }
+    }
+
+    private var premiumSection: some View {
+        AccountPremiumSection(
+            isSubscribed: environment.subscription.isSubscribed,
+            onUpgrade: { isShowingPaywall = true },
+            onManage: { openURL(PremiumLegal.manageSubscriptionsURL) }
+        )
     }
 
     private var coinSection: some View {
@@ -301,6 +317,62 @@ private struct AccountScreen: View {
             Text("Numaranı Doğrula")
         } footer: {
             Text("Güvenliğin için \(viewModel.formattedPhoneNumber) numarasına gönderilen 6 haneli kodu gir.")
+        }
+    }
+}
+
+/// The account's premium row: an upgrade prompt when not subscribed, or the active status with a manage link.
+private struct AccountPremiumSection: View {
+    let isSubscribed: Bool
+    let onUpgrade: () -> Void
+    let onManage: () -> Void
+
+    var body: some View {
+        if isSubscribed {
+            Section {
+                HStack(spacing: 14) {
+                    IconBadge(systemName: "crown.fill", tint: .orange)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("ViFi Premium")
+                            .font(.headline)
+                        Text("Tüm sınavlar açık")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 4)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("account.premium.active")
+
+                Button("Aboneliği Yönet", action: onManage)
+                    .accessibilityIdentifier("account.premium.manage")
+            } footer: {
+                Text("Aboneliğini App Store ayarlarından yönetebilir veya iptal edebilirsin.")
+            }
+        } else {
+            Section {
+                Button(action: onUpgrade) {
+                    HStack(spacing: 14) {
+                        IconBadge(systemName: "crown.fill", tint: .orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("ViFi Premium'a Geç")
+                                .font(.headline)
+                            Text("Tüm sınavlara sınırsız eriş")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.vertical, 4)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("account.premium.upgrade")
+            }
         }
     }
 }

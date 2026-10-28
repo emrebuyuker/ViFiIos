@@ -97,6 +97,27 @@
     "%lld sınav" : {
       "comment" : "Row subtitle of a course: its number of exams."
     },
+    "Abone Ol" : {
+
+    },
+    "Abone Ol · %@" : {
+
+    },
+    "Aboneliği Yönet" : {
+
+    },
+    "Aboneliğini App Store ayarlarından yönetebilir veya iptal edebilirsin." : {
+
+    },
+    "Abonelik planları yüklenemedi." : {
+
+    },
+    "Abonelik şu anda mağazadan alınamıyor. Lütfen daha sonra tekrar dene." : {
+
+    },
+    "Abonelik, dönem sonunda otomatik olarak yenilenir. Yenilemeyi, dönem bitiminden en az 24 saat önce App Store ayarlarından kapatabilirsin." : {
+
+    },
     "Aç (%lld coin)" : {
 
     },
@@ -111,6 +132,9 @@
     },
     "Ana Sayfa" : {
       "comment" : "Toolbar button (house icon) that returns to the university list."
+    },
+    "App Store'a ulaşılamıyor. Bağlantını kontrol edip tekrar dene." : {
+
     },
     "Ara" : {
 
@@ -131,6 +155,9 @@
 
     },
     "Atla" : {
+
+    },
+    "Aylık" : {
 
     },
     "Başla" : {
@@ -347,6 +374,9 @@
     "Ekran kaydı sırasında sınav içeriği gizlenir" : {
 
     },
+    "En avantajlı" : {
+
+    },
     "En fazla %lld sayfa ekleyebilirsin." : {
 
     },
@@ -365,10 +395,16 @@
     "Farklı ders ekle" : {
 
     },
+    "Geri yüklenecek bir abonelik bulunamadı." : {
+
+    },
     "Giriş Yap" : {
       "comment" : "Title of the login screen."
     },
     "Giriş yapamıyor musun? Bize Ulaş" : {
+
+    },
+    "Gizlilik Politikası" : {
 
     },
     "Gönder" : {
@@ -425,6 +461,9 @@
     "Henüz üniversite yok" : {
       "comment" : "Empty state title: the archive has no universities."
     },
+    "Her dersin tüm sınavları açık" : {
+
+    },
     "Hesabı Sil" : {
       "comment" : "Button that deletes the account."
     },
@@ -452,6 +491,12 @@
     "İnternet bağlantısı yok. Bağlantını kontrol edip tekrar dene." : {
       "comment" : "Error: offline or the request timed out."
     },
+    "İstediğin kadar görüntüle ve indir" : {
+
+    },
+    "İstediğin zaman iptal et" : {
+
+    },
     "Kadın" : {
 
     },
@@ -462,6 +507,9 @@
 
     },
     "Kaydı durdurduğunda içerik yeniden görünür." : {
+
+    },
+    "Kilitli sınav kalmaz, coin gerekmez" : {
 
     },
     "Kilitli, %lld coin" : {
@@ -493,6 +541,9 @@
     },
     "Konum" : {
       "comment" : "Accessibility label of the breadcrumb trail showing the current location in the archive."
+    },
+    "Kullanım Koşulları" : {
+
     },
     "Listeden Kaldır" : {
       "comment" : "Context menu and accessibility action that removes one exam from “Recently Viewed”."
@@ -561,6 +612,9 @@
     "Oturumun sona erdi. Lütfen yeniden giriş yap." : {
       "comment" : "Account error: the user is no longer signed in."
     },
+    "Parayla bu sınavı aç" : {
+
+    },
     "PDF" : {
 
     },
@@ -585,6 +639,9 @@
     "PDF'i değiştir" : {
 
     },
+    "Premium ile her dersteki bütün sınavlar kilitsiz açılır; coin biriktirmene gerek kalmaz." : {
+
+    },
     "Profil" : {
 
     },
@@ -601,6 +658,18 @@
 
     },
     "Reddet" : {
+
+    },
+    "Satın alımları geri yükle" : {
+
+    },
+    "Satın alma doğrulanamadı. Lütfen tekrar dene." : {
+
+    },
+    "Satın alma onay bekliyor; onaylanınca aboneliğin başlar." : {
+
+    },
+    "Satın alma onay bekliyor; onaylanınca sınav açılır." : {
 
     },
     "Sayfa %lld" : {
@@ -744,6 +813,9 @@
     "Tarih" : {
 
     },
+    "Tek tek açmak yerine Premium'a geç" : {
+
+    },
     "Tekrar dene" : {
 
     },
@@ -768,6 +840,12 @@
     "Temizle" : {
       "comment" : "Button in the “Recently Viewed” header that clears the list."
     },
+    "Tüm sınavlar açık" : {
+
+    },
+    "Tüm sınavlara sınırsız eriş" : {
+
+    },
     "Tümünü Temizle" : {
       "comment" : "Destructive confirmation button that clears the recently viewed exams."
     },
@@ -791,6 +869,15 @@
     },
     "Veri Kaynağı" : {
       "comment" : "About screen section header: where the exam files come from."
+    },
+    "veya" : {
+
+    },
+    "ViFi Premium" : {
+
+    },
+    "ViFi Premium'a Geç" : {
+
     },
     "ViFi, üniversitelerin geçmiş sınavlarını tek bir arşivde toplar. Üniversiteni, fakülteni, bölümünü ve dersini seç; sınavları görsel ya da PDF olarak incele." : {
 
@@ -829,6 +916,9 @@
 
     },
     "Yıl" : {
+
+    },
+    "Yıllık" : {
 
     },
     "Yükleniyor…" : {
