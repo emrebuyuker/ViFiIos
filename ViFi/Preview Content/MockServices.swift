@@ -14,6 +14,8 @@ extension AppEnvironment {
         // `-ViFiShowOnboarding` forces it visible to exercise the tour itself.
         let onboardingDefaults = UserDefaults.mockSuite
         OnboardingStore.seed(seen: !arguments.contains(LaunchArgument.showOnboarding), into: onboardingDefaults)
+        let promptDefaults = UserDefaults.mockSuite
+        seedNotificationPromptHistory(arguments: arguments, into: promptDefaults)
         let environment = AppEnvironment(
             repository: MockArchiveRepository(),
             fileLoader: RemoteFileLoader(),
@@ -40,19 +42,50 @@ extension AppEnvironment {
             // later live warm (the mock repository's prefetch is a no-op anyway).
             prefetcherDefaults: .mockSuite,
             onboardingDefaults: onboardingDefaults,
-            // Permission is "authorized" by default so the priming screen stays out of the way; the
-            // `-ViFiNotificationsPrompt` argument reports it not-determined to exercise priming.
-            notifications: MockNotificationService(granted: !arguments.contains(LaunchArgument.notificationsPrompt)),
+            // Permission is "authorized" by default so the permission flow stays out of the way; the
+            // notification launch arguments start it elsewhere (see `mockNotificationPermission`).
+            notifications: MockNotificationService(permission: mockNotificationPermission(arguments: arguments)),
             inboxReader: StubInboxReader(),
             inboxDefaults: .mockSuite,
             notificationAdmin: MockNotificationAdminService(),
-            deviceRegistrar: MockDeviceRegistrar()
+            deviceRegistrar: MockDeviceRegistrar(),
+            notificationSettingsService: StubNotificationSettingsService(
+                // Only the consent re-ask starts with a recorded "no"; otherwise the user never answered.
+                consent: arguments.contains(LaunchArgument.consentReask) ? NotificationConsent(marketing: false) : nil
+            ),
+            notificationPromptDefaults: promptDefaults
         )
         // `-ViFiOpenNotification <id>` starts as if the push of that notification had been tapped.
         if let tapped = openedNotificationId(arguments: arguments) {
             environment.notificationRouter.receive(notificationId: tapped)
         }
         return environment
+    }
+
+    /// What the mock reports for the OS notification permission: not asked yet with `-ViFiNotificationsPrompt`,
+    /// denied with `-ViFiNotificationsDenied`, only provisional with `-ViFiNotificationsReask`, otherwise allowed.
+    private static func mockNotificationPermission(arguments: [String]) -> NotificationPermission {
+        if arguments.contains(LaunchArgument.notificationsPrompt) { return .notDetermined }
+        if arguments.contains(LaunchArgument.notificationsDenied) { return .denied }
+        if arguments.contains(LaunchArgument.notificationsReask) { return .provisional }
+        return .authorized
+    }
+
+    /// Starts the permission flow's history as if it was already offered, so an ordinary mock launch shows no
+    /// sheet. `-ViFiNotificationsPrompt` leaves it blank (a fresh install); the re-ask arguments add a "no" from
+    /// 31 days ago, which makes the one contextual re-ask due.
+    private static func seedNotificationPromptHistory(arguments: [String], into defaults: UserDefaults) {
+        guard !arguments.contains(LaunchArgument.notificationsPrompt) else { return }
+        let longAgo = Date.now.addingTimeInterval(-31 * 24 * 60 * 60)
+        let history = NotificationPromptHistory(defaults: defaults, now: { longAgo })
+        history.markPrimingOffered()
+        history.markConsentOffered()
+        if arguments.contains(LaunchArgument.notificationsReask) {
+            history.recordPermissionDeclined()
+        }
+        if arguments.contains(LaunchArgument.consentReask) {
+            history.recordConsentDeclined()
+        }
     }
 
     /// The notification id following `-ViFiOpenNotification`, if the argument is present.
@@ -692,21 +725,31 @@ final class MockExamPurchaseService: ExamPurchaseServicing {
     func recoverPendingUnlock() async -> String? { nil }
 }
 
-/// Notification permission in memory, for previews and UI tests: never shows a real system prompt.
+/// Notification permission in memory, for previews and UI tests: never shows a real system prompt. It follows
+/// the system's rules: provisional authorization only from "not asked", a full request is granted unless the user
+/// already refused (the system never asks twice).
 final class MockNotificationService: NotificationServicing {
-    private var granted: Bool
+    private var current: NotificationPermission
 
-    init(granted: Bool = true) {
-        self.granted = granted
+    init(permission: NotificationPermission = .authorized) {
+        current = permission
     }
 
     func permission() async -> NotificationPermission {
-        granted ? .authorized : .notDetermined
+        current
+    }
+
+    @discardableResult
+    func requestProvisionalAuthorization() async -> Bool {
+        guard current == .notDetermined else { return false }
+        current = .provisional
+        return true
     }
 
     @discardableResult
     func requestAuthorization() async -> Bool {
-        granted = true
+        guard current != .denied else { return false }
+        current = .authorized
         return true
     }
 }

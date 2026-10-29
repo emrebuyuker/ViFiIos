@@ -56,6 +56,9 @@ struct RootView: View {
                 // A tapped push belongs to the account that received it; the next one must not open its inbox.
                 environment.notificationRouter.reset()
                 environment.deviceRegistration.userDidSignOut()
+                // The next user starts without the previous one's campaign consent or a queued permission offer.
+                environment.notificationSettings.reset()
+                environment.notificationPrompts.dismiss()
                 // Clear the analytics identity so the next user is not attributed to the previous one.
                 environment.analytics.setUser(nil)
             }
@@ -143,6 +146,8 @@ struct RootView: View {
             InboxView()
                 .presentationDragIndicator(.visible)
         }
+        // The notification permission flow (OS permission, then the campaign consent), once nothing else is up.
+        .presentsNotificationPrompts()
     }
 
     @ViewBuilder
@@ -261,6 +266,8 @@ private struct ProfileGate<Content: View>: View {
             }
             // Store this device's push token under the user (now, or as soon as Messaging hands it over).
             .task(id: user.id) { environment.deviceRegistration.userDidSignIn(uid: user.id) }
+            // Follow the user's campaign-notification consent (Account's switch, the permission flow).
+            .task(id: user.id) { await environment.notificationSettings.observe(uid: user.id) }
             // Identify the user for analytics: id + admin now, enriched with profile segments once loaded.
             .task(id: user.id) {
                 isAdmin = await environment.auth.isCurrentUserAdmin()

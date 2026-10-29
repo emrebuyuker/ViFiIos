@@ -10,9 +10,19 @@ final class SystemNotificationService: NotificationServicing {
     }
 
     @discardableResult
+    func requestProvisionalAuthorization() async -> Bool {
+        // Only a user who was never asked: asking again after a decision would change nothing but cost a call.
+        guard await permission() == .notDetermined else { return false }
+        return await request(options: [.alert, .badge, .sound, .provisional])
+    }
+
+    @discardableResult
     func requestAuthorization() async -> Bool {
-        let granted = (try? await UNUserNotificationCenter.current()
-            .requestAuthorization(options: [.alert, .badge, .sound])) ?? false
+        await request(options: [.alert, .badge, .sound])
+    }
+
+    private func request(options: UNAuthorizationOptions) async -> Bool {
+        let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(options: options)) ?? false
         if granted {
             UIApplication.shared.registerForRemoteNotifications()
         }

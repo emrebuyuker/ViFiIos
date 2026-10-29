@@ -19,7 +19,11 @@ struct AddExamView: View {
             rewardsConfig: environment.rewardsConfig,
             repository: environment.repository,
             analytics: environment.analytics,
-            onSubmitted: { dismiss() }
+            onSubmitted: { [prompts = environment.notificationPrompts] in
+                dismiss()
+                // After a "no" to notifications, the moment the user waits for the approval is the one to ask again.
+                Task { await prompts.examWasSubmitted() }
+            }
         )
         .onAppear { environment.analytics.track(.screenView(name: "AddExam")) }
     }

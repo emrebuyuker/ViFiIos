@@ -133,6 +133,14 @@ nonisolated enum AnalyticsEvent: Equatable, Sendable {
     case updateAction(action: String)
     case submissionApproved(tier: SubmissionTier)
     case submissionRejected
+
+    // Notification permission (step 1/2) and campaign consent (step 2/2); `source` is prompt | reask | settings.
+    case notificationPrimingShown(source: NotificationPromptSource)
+    case notificationPrimingAccepted(source: NotificationPromptSource)
+    case notificationPrimingDeclined(source: NotificationPromptSource)
+    case marketingConsentShown(source: NotificationPromptSource)
+    case marketingConsentAccepted(source: NotificationPromptSource)
+    case marketingConsentDeclined(source: NotificationPromptSource)
 }
 
 /// The signed-in user's analytics identity: a stable id plus low-cardinality, canonical segment

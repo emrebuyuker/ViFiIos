@@ -49,6 +49,12 @@ private extension AnalyticsEvent {
         case .updateAction: "update_action"
         case .submissionApproved: "submission_approved"
         case .submissionRejected: "submission_rejected"
+        case .notificationPrimingShown: "notification_priming_shown"
+        case .notificationPrimingAccepted: "notification_priming_accepted"
+        case .notificationPrimingDeclined: "notification_priming_declined"
+        case .marketingConsentShown: "marketing_consent_shown"
+        case .marketingConsentAccepted: "marketing_consent_accepted"
+        case .marketingConsentDeclined: "marketing_consent_declined"
         }
     }
 
@@ -84,6 +90,10 @@ private extension AnalyticsEvent {
             return ["reason": reason, "step": step]
         case let .examUnlockFailed(reason), let .examSubmitFailed(reason):
             return ["reason": reason]
+        case let .notificationPrimingShown(source), let .notificationPrimingAccepted(source),
+             let .notificationPrimingDeclined(source), let .marketingConsentShown(source),
+             let .marketingConsentAccepted(source), let .marketingConsentDeclined(source):
+            return ["source": source.rawValue]
         case .recentExamOpened, .earnCoinsTapped, .loginSucceeded, .profileCompleted, .profileUpdated,
              .signedOut, .accountDeleted, .submissionRejected:
             return nil

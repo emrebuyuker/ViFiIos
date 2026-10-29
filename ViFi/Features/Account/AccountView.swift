@@ -74,6 +74,7 @@ private struct AccountScreen: View {
                 if isAdmin {
                     moderationSection
                 }
+                NotificationSettingsEntrySection(isDisabled: viewModel.isWorking)
                 phoneSection
                 signOutSection
                 deleteSection

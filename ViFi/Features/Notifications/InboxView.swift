@@ -42,6 +42,7 @@ struct InboxView: View {
                     AddExamView()
                         .presentationDragIndicator(.visible)
                 }
+                .offersMarketingConsentReask()
         }
     }
 

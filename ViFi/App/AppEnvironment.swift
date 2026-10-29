@@ -54,6 +54,10 @@ final class AppEnvironment {
     let deviceRegistration: DeviceRegistrationStore
     /// Admin-only targeted notification sending ("Bildirim Gönder"; NOTIFICATIONS.md).
     @ObservationIgnored let notificationAdmin: any NotificationAdminServicing
+    /// The signed-in user's campaign-notification consent (Apple 4.5.4), live from Firestore.
+    let notificationSettings: NotificationSettingsStore
+    /// Decides when the notification permission flow is offered and hands it to the screen that presents it.
+    let notificationPrompts: NotificationPromptCoordinator
 
     init(
         repository: any ArchiveRepository,
@@ -80,6 +84,8 @@ final class AppEnvironment {
         inboxDefaults: UserDefaults = .standard,
         notificationAdmin: any NotificationAdminServicing,
         deviceRegistrar: any DeviceRegistering,
+        notificationSettingsService: any NotificationSettingsServicing,
+        notificationPromptDefaults: UserDefaults = .standard,
         loginDiagnostics: any LoginDiagnosticsReporting = NoopLoginDiagnosticsReporter()
     ) {
         self.repository = repository
@@ -109,6 +115,14 @@ final class AppEnvironment {
         notificationRouter = NotificationRouter()
         deviceRegistration = DeviceRegistrationStore(registrar: deviceRegistrar)
         self.notificationAdmin = notificationAdmin
+        let settings = NotificationSettingsStore(service: notificationSettingsService)
+        notificationSettings = settings
+        notificationPrompts = NotificationPromptCoordinator(
+            notifications: notifications,
+            settings: settings,
+            history: NotificationPromptHistory(defaults: notificationPromptDefaults),
+            analytics: analytics
+        )
         self.loginDiagnostics = loginDiagnostics
     }
 
@@ -156,6 +170,7 @@ final class AppEnvironment {
             inboxReader: FirebaseInboxReader(),
             notificationAdmin: FirebaseNotificationAdminService(),
             deviceRegistrar: FirebaseDeviceRegistrar(),
+            notificationSettingsService: FirebaseNotificationSettingsService(),
             loginDiagnostics: FirebaseLoginDiagnosticsService()
         )
     }
@@ -199,8 +214,17 @@ enum LaunchArgument {
     static let noCoins = "-ViFiNoCoins"
     /// With `-ViFiMockData`: forces the first-launch onboarding tour to show (mock otherwise starts past it).
     static let showOnboarding = "-ViFiShowOnboarding"
-    /// With `-ViFiMockData`: reports notification permission as not-yet-asked, so the priming screen shows.
+    /// With `-ViFiMockData`: reports notification permission as not-yet-asked, so the permission flow shows (step
+    /// 1/2; "Bildirimleri Aç" leads on to step 2/2, the campaign consent).
     static let notificationsPrompt = "-ViFiNotificationsPrompt"
+    /// With `-ViFiMockData`: reports notification permission as denied in the system settings.
+    static let notificationsDenied = "-ViFiNotificationsDenied"
+    /// With `-ViFiMockData`: starts as if the user declined the permission step 31 days ago (so the contextual
+    /// re-ask after an exam submission is due) and notifications are only provisionally allowed.
+    static let notificationsReask = "-ViFiNotificationsReask"
+    /// With `-ViFiMockData`: starts as if the user declined the campaign consent 31 days ago (so the re-ask is
+    /// offered when the inbox opens); campaigns are off.
+    static let consentReask = "-ViFiConsentReask"
     /// With `-ViFiMockData`: starts with an active premium subscription (whole archive unlocked, coins hidden).
     static let subscribed = "-ViFiSubscribed"
     /// With `-ViFiMockData` and the notification id as the next argument: starts as if that push had been

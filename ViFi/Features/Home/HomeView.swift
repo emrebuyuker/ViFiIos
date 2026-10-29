@@ -19,7 +19,6 @@ private struct HomeScreen: View {
     @State private var isShowingAbout = false
     @State private var isShowingAccount = false
     @State private var isShowingAddExam = false
-    @State private var isShowingPriming = false
 
     init(repository: any ArchiveRepository) {
         _viewModel = State(initialValue: BrowseViewModel(path: .root, repository: repository))
@@ -94,21 +93,16 @@ private struct HomeScreen: View {
             AddExamView()
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $isShowingPriming, onDismiss: trackScreen) {
-            NotificationPrimingView(
-                onEnable: {
-                    isShowingPriming = false
-                    Task { await environment.notifications.requestAuthorization() }
-                },
-                onDismiss: { isShowingPriming = false }
-            )
-        }
         .task {
             trackScreen()
             await loadIfNeeded()
         }
-        // Offer notifications once the user has a profile (this screen) and the onboarding tour is gone.
-        .task { await offerNotificationsIfNeeded() }
+        // Allow notifications quietly (provisional, no prompt) as soon as the user has a profile (this screen),
+        // then offer the permission flow once the onboarding tour is gone. `RootView` presents the flow.
+        .task {
+            await environment.notificationPrompts.prepare()
+            await offerNotificationsIfNeeded()
+        }
         .onChange(of: environment.onboarding.isPresenting) { _, isPresenting in
             if !isPresenting {
                 Task { await offerNotificationsIfNeeded() }
@@ -238,19 +232,15 @@ private struct HomeScreen: View {
         isShowingAddExam = true
     }
 
-    /// Shows the notification pre-permission screen once per device: after the profile is in place (this
-    /// screen), after the onboarding tour, and only while the OS permission has not been decided yet.
+    /// Queues the notification permission flow (once per device; see `NotificationPromptCoordinator`): after the
+    /// profile is in place (this screen) and after the onboarding tour.
     private func offerNotificationsIfNeeded() async {
-        guard !environment.onboarding.isPresenting,
-              !isShowingPriming,
-              !NotificationPrimingDefaults.hasOffered(),
-              await environment.notifications.permission() == .notDetermined else { return }
-        NotificationPrimingDefaults.markOffered()
-        isShowingPriming = true
+        guard !environment.onboarding.isPresenting else { return }
+        await environment.notificationPrompts.offerFirstRunIfNeeded()
     }
 
     /// Opens the inbox for a tapped push, once nothing else is in the way. The onboarding tour is left to finish (it
-    /// calls this again). Sheets with nothing to lose (About, the notification priming) make way; any other modal —
+    /// calls this again). Sheets with nothing to lose (About, the notification permission flow) make way; any other modal —
     /// adding an exam, the account screen and its forms, a paywall or unlock sheet over an exam list — may hold the
     /// user's work or a purchase, so it is never closed: the inbox opens as soon as it is. (SwiftUI cannot present
     /// the inbox over another sheet; trying would leave it marked open but invisible, and the bell dead.)
@@ -263,7 +253,7 @@ private struct HomeScreen: View {
             return
         }
         isShowingAbout = false
-        isShowingPriming = false
+        environment.notificationPrompts.dismiss()
         while ModalPresentation.isShowing {
             try? await Task.sleep(for: .milliseconds(500))
             guard !Task.isCancelled, notificationRouter.pending != nil else { return }
@@ -274,17 +264,6 @@ private struct HomeScreen: View {
     /// Logged on every appearance (and after the About and Account sheets close) so time is credited to Home.
     private func trackScreen() {
         environment.analytics.track(.screenView(name: "Home"))
-    }
-}
-
-/// Whether the app shows a modal (sheet, cover or alert) over its main screen, from any view. SwiftUI offers no
-/// app-wide view of that, so it is read from the key window's presentation chain.
-private enum ModalPresentation {
-    static var isShowing: Bool {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap(\.windows)
-            .contains { $0.isKeyWindow && $0.rootViewController?.presentedViewController != nil }
     }
 }
 
