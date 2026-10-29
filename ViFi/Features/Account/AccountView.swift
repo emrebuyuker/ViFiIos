@@ -218,6 +218,23 @@ private struct AccountScreen: View {
                 .padding(.vertical, 4)
             }
             .accessibilityIdentifier("account.moderation")
+
+            NavigationLink {
+                NotificationComposerView()
+            } label: {
+                HStack(spacing: 14) {
+                    IconBadge(systemName: "megaphone.fill")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Bildirim Gönder")
+                            .font(.headline)
+                        Text("Duyuru ve kampanya gönder")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            .accessibilityIdentifier("account.notificationComposer")
         }
     }
 
