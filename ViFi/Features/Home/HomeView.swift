@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The root screen: hero header, recently opened exams and the university list.
 struct HomeView: View {
@@ -115,12 +116,9 @@ private struct HomeScreen: View {
             }
         }
         // A tapped push opens the inbox from here: this screen exists only once every gate (required update,
-        // sign-in, profile) is passed, so a tap that launched the app waits for it.
-        .onChange(of: environment.notificationRouter.pending, initial: true) { _, pending in
-            if pending != nil {
-                Task { await showPendingNotification() }
-            }
-        }
+        // sign-in, profile) is passed, so a tap that launched the app waits for it. Keyed on the request, so a newer
+        // tap replaces a waiting one.
+        .task(id: environment.notificationRouter.pending) { await showPendingNotification() }
         // The inbox is presented from `RootView`; time on Home is credited again once it closes.
         .onChange(of: environment.notificationRouter.isInboxPresented) { _, isPresented in
             if !isPresented {
@@ -251,24 +249,42 @@ private struct HomeScreen: View {
         isShowingPriming = true
     }
 
-    /// Opens the inbox for a tapped push, once nothing else is in the way: the onboarding tour is left to finish
-    /// (it calls this again), and a sheet of this screen is closed first so the inbox can take its place.
+    /// Opens the inbox for a tapped push, once nothing else is in the way. The onboarding tour is left to finish (it
+    /// calls this again). Sheets with nothing to lose (About, the notification priming) make way; any other modal —
+    /// adding an exam, the account screen and its forms, a paywall or unlock sheet over an exam list — may hold the
+    /// user's work or a purchase, so it is never closed: the inbox opens as soon as it is. (SwiftUI cannot present
+    /// the inbox over another sheet; trying would leave it marked open but invisible, and the bell dead.)
     private func showPendingNotification() async {
-        guard environment.notificationRouter.pending != nil, !environment.onboarding.isPresenting else { return }
-        if isShowingAbout || isShowingAccount || isShowingAddExam || isShowingPriming {
-            isShowingAbout = false
-            isShowingAccount = false
-            isShowingAddExam = false
-            isShowingPriming = false
-            // Let the closing sheet finish before the next one is presented.
-            try? await Task.sleep(for: .milliseconds(600))
+        let notificationRouter = environment.notificationRouter
+        guard notificationRouter.pending != nil, !environment.onboarding.isPresenting else { return }
+        if notificationRouter.isInboxPresented {
+            // Already open: just move the highlight to the tapped entry.
+            notificationRouter.deliverPending()
+            return
         }
-        environment.notificationRouter.deliverPending()
+        isShowingAbout = false
+        isShowingPriming = false
+        while ModalPresentation.isShowing {
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled, notificationRouter.pending != nil else { return }
+        }
+        notificationRouter.deliverPending()
     }
 
     /// Logged on every appearance (and after the About and Account sheets close) so time is credited to Home.
     private func trackScreen() {
         environment.analytics.track(.screenView(name: "Home"))
+    }
+}
+
+/// Whether the app shows a modal (sheet, cover or alert) over its main screen, from any view. SwiftUI offers no
+/// app-wide view of that, so it is read from the key window's presentation chain.
+private enum ModalPresentation {
+    static var isShowing: Bool {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .contains { $0.isKeyWindow && $0.rootViewController?.presentedViewController != nil }
     }
 }
 
