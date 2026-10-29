@@ -26,24 +26,31 @@ final class AccountViewModel {
     @ObservationIgnored private let deleteUserData: @MainActor () async throws -> Void
     /// Run once the account has been deleted, to wipe the user's locally cached exam data.
     @ObservationIgnored private let onDeleted: @MainActor () async -> Void
+    /// Runs before signing out, while the user can still write (removes this device's push registration).
+    /// Best-effort: it cannot fail, and never keeps the user from signing out.
+    @ObservationIgnored private let beforeSignOut: @MainActor () async -> Void
     @ObservationIgnored private var verificationID: String?
+    @ObservationIgnored private var isSigningOut = false
 
     /// - Parameters:
     ///   - now: The clock the resend cooldown is measured with (injected by tests).
     ///   - deleteUserData: Removes the user's server-side data (profile) before the account is deleted.
     ///   - onDeleted: Called after a successful deletion, to purge locally cached exam files.
+    ///   - beforeSignOut: Called before signing out, while the user can still write (best-effort cleanup).
     init(
         user: AuthUser,
         auth: any AuthServicing,
         now: @escaping () -> Date = Date.init,
         deleteUserData: @escaping @MainActor () async throws -> Void = {},
-        onDeleted: @escaping @MainActor () async -> Void = {}
+        onDeleted: @escaping @MainActor () async -> Void = {},
+        beforeSignOut: @escaping @MainActor () async -> Void = {}
     ) {
         self.user = user
         self.auth = auth
         self.now = now
         self.deleteUserData = deleteUserData
         self.onDeleted = onDeleted
+        self.beforeSignOut = beforeSignOut
     }
 
     /// `+90 532 123 45 67`.
@@ -67,8 +74,12 @@ final class AccountViewModel {
 
     // MARK: - Actions
 
-    func signOut() {
-        guard !isWorking else { return }
+    /// Signs out, after the best-effort cleanup that needs the user to still be signed in.
+    func signOut() async {
+        guard !isWorking, !isSigningOut else { return }
+        isSigningOut = true
+        defer { isSigningOut = false }
+        await beforeSignOut()
         do {
             try auth.signOut()
         } catch {

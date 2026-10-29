@@ -5,8 +5,9 @@ import os
 import UIKit
 import UserNotifications
 
-/// The single FCM topic every signed-in device subscribes to, so a Firebase Console broadcast reaches
-/// everyone (the simple v1 of #11). Per-user and segmented delivery come with the V2 notification work.
+/// The single FCM topic every signed-in device subscribes to, so a broadcast to everyone also reaches app
+/// versions that do not register their device token (4.0.0 reads the public announcements, too). Segmented and
+/// personal notifications go to the registered device tokens instead (`DeviceRegistrationStore`).
 enum PushTopic {
     static let broadcast = "all"
 }
@@ -80,9 +81,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 // MARK: - Cloud Messaging
 
 extension AppDelegate: MessagingDelegate {
-    /// Fires once the FCM token is available (at launch and on refresh). Subscribing to the broadcast topic is
+    /// Fires once the FCM token is available (at launch and on refresh). Hands it to the device registration
+    /// (stored under the signed-in user, now or at sign-in) and subscribes to the broadcast topic, which is
     /// idempotent, so re-subscribing on every launch is safe.
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        environment.deviceRegistration.tokenDidChange(fcmToken)
         messaging.subscribe(toTopic: PushTopic.broadcast) { error in
             if let error {
                 Logger.app.notice("Broadcast topic subscribe failed: \(String(describing: error), privacy: .public)")
@@ -105,14 +108,17 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         return [.banner, .list, .sound]
     }
 
-    /// Handles a tap on a notification. The announcements the user can read live in the app's inbox, so a tap
-    /// just opens the app there; it is reported to Messaging for delivery metrics.
+    /// Handles a tap on a notification: the notification inbox opens on it (once the app is past its gates, on a
+    /// cold start as well as a warm one — see `NotificationRouter`). A push without a `notificationId` still
+    /// opens the inbox, just without a highlight. The tap is also reported to Messaging for delivery metrics.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
+        let userInfo = response.notification.request.content.userInfo
         if FirebaseApp.app() != nil {
-            Messaging.messaging().appDidReceiveMessage(response.notification.request.content.userInfo)
+            Messaging.messaging().appDidReceiveMessage(userInfo)
         }
+        environment.notificationRouter.receive(notificationId: NotificationPayloadParser.notificationId(fromPush: userInfo))
     }
 }

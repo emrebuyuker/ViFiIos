@@ -18,7 +18,6 @@ private struct HomeScreen: View {
     @State private var isShowingAbout = false
     @State private var isShowingAccount = false
     @State private var isShowingAddExam = false
-    @State private var isShowingInbox = false
     @State private var isShowingPriming = false
 
     init(repository: any ArchiveRepository) {
@@ -63,9 +62,9 @@ private struct HomeScreen: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
-                    isShowingInbox = true
+                    environment.notificationRouter.openInbox()
                 } label: {
-                    Label("Bildirimler", systemImage: environment.announcements.unreadCount > 0 ? "bell.badge.fill" : "bell")
+                    Label("Bildirimler", systemImage: environment.inbox.unreadCount > 0 ? "bell.badge.fill" : "bell")
                 }
                 .accessibilityIdentifier("toolbar.inbox")
             }
@@ -94,10 +93,6 @@ private struct HomeScreen: View {
             AddExamView()
                 .presentationDragIndicator(.visible)
         }
-        .sheet(isPresented: $isShowingInbox, onDismiss: trackScreen) {
-            InboxView()
-                .presentationDragIndicator(.visible)
-        }
         .sheet(isPresented: $isShowingPriming, onDismiss: trackScreen) {
             NotificationPrimingView(
                 onEnable: {
@@ -116,6 +111,20 @@ private struct HomeScreen: View {
         .onChange(of: environment.onboarding.isPresenting) { _, isPresenting in
             if !isPresenting {
                 Task { await offerNotificationsIfNeeded() }
+                Task { await showPendingNotification() }
+            }
+        }
+        // A tapped push opens the inbox from here: this screen exists only once every gate (required update,
+        // sign-in, profile) is passed, so a tap that launched the app waits for it.
+        .onChange(of: environment.notificationRouter.pending, initial: true) { _, pending in
+            if pending != nil {
+                Task { await showPendingNotification() }
+            }
+        }
+        // The inbox is presented from `RootView`; time on Home is credited again once it closes.
+        .onChange(of: environment.notificationRouter.isInboxPresented) { _, isPresented in
+            if !isPresented {
+                trackScreen()
             }
         }
         .task { await viewModel.refreshOnArchiveChanges() }
@@ -240,6 +249,21 @@ private struct HomeScreen: View {
               await environment.notifications.permission() == .notDetermined else { return }
         NotificationPrimingDefaults.markOffered()
         isShowingPriming = true
+    }
+
+    /// Opens the inbox for a tapped push, once nothing else is in the way: the onboarding tour is left to finish
+    /// (it calls this again), and a sheet of this screen is closed first so the inbox can take its place.
+    private func showPendingNotification() async {
+        guard environment.notificationRouter.pending != nil, !environment.onboarding.isPresenting else { return }
+        if isShowingAbout || isShowingAccount || isShowingAddExam || isShowingPriming {
+            isShowingAbout = false
+            isShowingAccount = false
+            isShowingAddExam = false
+            isShowingPriming = false
+            // Let the closing sheet finish before the next one is presented.
+            try? await Task.sleep(for: .milliseconds(600))
+        }
+        environment.notificationRouter.deliverPending()
     }
 
     /// Logged on every appearance (and after the About and Account sheets close) so time is credited to Home.

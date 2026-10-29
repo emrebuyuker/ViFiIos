@@ -15,6 +15,10 @@ struct ProfileCompletionView: View {
             onSaved: {
                 environment.profile.update($0)
                 environment.analytics.track(.profileCompleted)
+            },
+            // Signing out first removes this device's push registration, while the user can still write.
+            beforeSignOut: { [registration = environment.deviceRegistration] in
+                await registration.unregister(uid: user.id)
             }
         )
         .onAppear { environment.analytics.track(.screenView(name: "ProfileCompletion")) }
@@ -25,13 +29,15 @@ struct ProfileCompletionView: View {
 private struct ProfileCompletionScreen: View {
     @State private var viewModel: ProfileFormViewModel
     private let auth: any AuthServicing
+    private let beforeSignOut: @MainActor () async -> Void
 
     init(
         user: AuthUser,
         profileService: any ProfileServicing,
         catalog: UniversityCatalog,
         auth: any AuthServicing,
-        onSaved: @escaping (UserProfile) -> Void
+        onSaved: @escaping (UserProfile) -> Void,
+        beforeSignOut: @escaping @MainActor () async -> Void
     ) {
         _viewModel = State(initialValue: ProfileFormViewModel(
             user: user,
@@ -41,6 +47,7 @@ private struct ProfileCompletionScreen: View {
             onSaved: onSaved
         ))
         self.auth = auth
+        self.beforeSignOut = beforeSignOut
     }
 
     var body: some View {
@@ -64,7 +71,10 @@ private struct ProfileCompletionScreen: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Çıkış Yap") {
-                        try? auth.signOut()
+                        Task {
+                            await beforeSignOut()
+                            try? auth.signOut()
+                        }
                     }
                     .disabled(viewModel.isWorking)
                     .accessibilityIdentifier("profile.signOut")

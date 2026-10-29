@@ -14,7 +14,7 @@ extension AppEnvironment {
         // `-ViFiShowOnboarding` forces it visible to exercise the tour itself.
         let onboardingDefaults = UserDefaults.mockSuite
         OnboardingStore.seed(seen: !arguments.contains(LaunchArgument.showOnboarding), into: onboardingDefaults)
-        return AppEnvironment(
+        let environment = AppEnvironment(
             repository: MockArchiveRepository(),
             fileLoader: RemoteFileLoader(),
             updateChecker: StubUpdateChecker(status: mockUpdateStatus(arguments: arguments)),
@@ -43,11 +43,24 @@ extension AppEnvironment {
             // Permission is "authorized" by default so the priming screen stays out of the way; the
             // `-ViFiNotificationsPrompt` argument reports it not-determined to exercise priming.
             notifications: MockNotificationService(granted: !arguments.contains(LaunchArgument.notificationsPrompt)),
-            announcementsReader: StubAnnouncementsReader(),
-            announcementsDefaults: .mockSuite,
+            inboxReader: StubInboxReader(),
+            inboxDefaults: .mockSuite,
             notificationAdmin: MockNotificationAdminService(),
             deviceRegistrar: MockDeviceRegistrar()
         )
+        // `-ViFiOpenNotification <id>` starts as if the push of that notification had been tapped.
+        if let tapped = openedNotificationId(arguments: arguments) {
+            environment.notificationRouter.receive(notificationId: tapped)
+        }
+        return environment
+    }
+
+    /// The notification id following `-ViFiOpenNotification`, if the argument is present.
+    private static func openedNotificationId(arguments: [String]) -> String? {
+        guard let index = arguments.firstIndex(of: LaunchArgument.openNotification), index + 1 < arguments.count else {
+            return nil
+        }
+        return arguments[index + 1]
     }
 
     /// No stored profile with `-ViFiProfileIncomplete` (the completion gate is shown), otherwise a sample one
@@ -698,34 +711,117 @@ final class MockNotificationService: NotificationServicing {
     }
 }
 
-/// Serves a fixed set of announcements, once (sample inbox content for previews and UI tests).
-final class StubAnnouncementsReader: AnnouncementsReading {
-    private let announcements: [Announcement]
+/// Serves a fixed sample inbox for previews and UI tests: public announcements and the user's own notifications
+/// (one with an exam action, one with the premium action), plus an in-memory read marker that `markRead` moves
+/// like the server would. The streams end after their first value, except the read marker, which stays open.
+final class StubInboxReader: InboxReading {
+    private let broadcast: [InboxItem]
+    private let personal: [InboxItem]
+    private var readAt: Date?
+    private var markerContinuations: [AsyncStream<Result<Date?, InboxError>>.Continuation] = []
 
-    init(announcements: [Announcement] = StubAnnouncementsReader.samples) {
-        self.announcements = announcements
+    init(
+        broadcast: [InboxItem] = StubInboxReader.broadcastSamples,
+        personal: [InboxItem] = StubInboxReader.personalSamples,
+        readAt: Date? = nil
+    ) {
+        self.broadcast = broadcast
+        self.personal = personal
+        self.readAt = readAt
     }
 
-    func announcementsChanges() -> AsyncStream<[Announcement]> {
-        let announcements = announcements
+    func broadcastChanges() -> AsyncStream<InboxFeed> {
+        let items = broadcast
         return AsyncStream { continuation in
-            continuation.yield(announcements)
+            continuation.yield(.success(items))
             continuation.finish()
         }
     }
 
-    static let samples: [Announcement] = [
-        Announcement(
+    func personalChanges(uid: String) -> AsyncStream<InboxFeed> {
+        let items = personal
+        return AsyncStream { continuation in
+            continuation.yield(.success(items))
+            continuation.finish()
+        }
+    }
+
+    func readMarkerChanges(uid: String) -> AsyncStream<Result<Date?, InboxError>> {
+        let (stream, continuation) = AsyncStream.makeStream(of: Result<Date?, InboxError>.self)
+        continuation.yield(.success(readAt))
+        markerContinuations.append(continuation)
+        return stream
+    }
+
+    func markRead(uid: String) async throws {
+        let marker = Date.now
+        readAt = marker
+        for continuation in markerContinuations {
+            continuation.yield(.success(marker))
+        }
+    }
+
+    /// The public announcements.
+    static let broadcastSamples: [InboxItem] = [
+        InboxItem(
             id: "a1",
+            source: .broadcast,
+            kind: .general,
             title: "Yeni sınavlar eklendi",
             body: "Bilgisayar Mühendisliği'ne 2024 vize ve finalleri eklendi.",
-            createdAt: Date(timeIntervalSince1970: 1_760_000_000)
+            imageURL: nil,
+            action: nil,
+            createdAt: Date(timeIntervalSince1970: 1_763_000_000),
+            expiresAt: nil
         ),
-        Announcement(
+        InboxItem(
             id: "a2",
+            source: .broadcast,
+            kind: .general,
             title: "ViFi'ye hoş geldin",
             body: "Geçmiş sınavlara tek yerden ulaş, sınav ekleyerek coin kazan.",
-            createdAt: Date(timeIntervalSince1970: 1_759_000_000)
+            imageURL: nil,
+            action: nil,
+            createdAt: Date(timeIntervalSince1970: 1_759_000_000),
+            expiresAt: nil
+        ),
+        // Past its validity: never shown.
+        InboxItem(
+            id: "a-expired",
+            source: .broadcast,
+            kind: .general,
+            title: "Süresi dolmuş duyuru",
+            body: "Bu bildirim listede görünmemeli.",
+            imageURL: nil,
+            action: nil,
+            createdAt: Date(timeIntervalSince1970: 1_760_000_000),
+            expiresAt: Date(timeIntervalSince1970: 1_760_500_000)
+        ),
+    ]
+
+    /// The signed-in user's own notifications.
+    static let personalSamples: [InboxItem] = [
+        InboxItem(
+            id: "p-exam",
+            source: .personal,
+            kind: .system,
+            title: "Sınavın onaylandı",
+            body: "Gönderdiğin sınav arşive eklendi. Göz atmak ister misin?",
+            imageURL: nil,
+            action: .exam(NotificationExamTarget(examId: "2018 VİZE", path: .mockPDFExam, kind: .pdf)),
+            createdAt: Date(timeIntervalSince1970: 1_762_000_000),
+            expiresAt: nil
+        ),
+        InboxItem(
+            id: "p-paywall",
+            source: .personal,
+            kind: .promo,
+            title: "Premium'da bahar fırsatı",
+            body: "Tüm arşivin kilidini aç, kampanyalı fiyatı kaçırma.",
+            imageURL: nil,
+            action: .paywall,
+            createdAt: Date(timeIntervalSince1970: 1_761_000_000),
+            expiresAt: nil
         ),
     ]
 }

@@ -46,12 +46,14 @@ final class AppEnvironment {
     @ObservationIgnored let notifications: any NotificationServicing
     /// Reports failed sign-in attempts for support diagnostics (why a number could not sign in).
     @ObservationIgnored let loginDiagnostics: any LoginDiagnosticsReporting
-    /// The in-app notification inbox (public announcements + per-device read state).
-    let announcements: AnnouncementsStore
+    /// The in-app notification inbox: public announcements + the user's own notifications, with the unread count.
+    let inbox: InboxStore
+    /// Opens the inbox from a tapped push (once the app is past its gates) and from the bell.
+    let notificationRouter: NotificationRouter
+    /// Registers this device's push token under the signed-in user (targeted and personal notifications).
+    let deviceRegistration: DeviceRegistrationStore
     /// Admin-only targeted notification sending ("Bildirim Gönder"; NOTIFICATIONS.md).
     @ObservationIgnored let notificationAdmin: any NotificationAdminServicing
-    /// Keeps this device's push token under the signed-in user, for targeted and personal notifications.
-    @ObservationIgnored let deviceRegistrar: any DeviceRegistering
 
     init(
         repository: any ArchiveRepository,
@@ -74,8 +76,8 @@ final class AppEnvironment {
         prefetcherDefaults: UserDefaults = .standard,
         onboardingDefaults: UserDefaults = .standard,
         notifications: any NotificationServicing,
-        announcementsReader: any AnnouncementsReading,
-        announcementsDefaults: UserDefaults = .standard,
+        inboxReader: any InboxReading,
+        inboxDefaults: UserDefaults = .standard,
         notificationAdmin: any NotificationAdminServicing,
         deviceRegistrar: any DeviceRegistering,
         loginDiagnostics: any LoginDiagnosticsReporting = NoopLoginDiagnosticsReporter()
@@ -103,9 +105,10 @@ final class AppEnvironment {
         subscription = SubscriptionStore(service: subscriptionService)
         onboarding = OnboardingStore(defaults: onboardingDefaults)
         self.notifications = notifications
-        announcements = AnnouncementsStore(reader: announcementsReader, defaults: announcementsDefaults)
+        inbox = InboxStore(reader: inboxReader, defaults: inboxDefaults)
+        notificationRouter = NotificationRouter()
+        deviceRegistration = DeviceRegistrationStore(registrar: deviceRegistrar)
         self.notificationAdmin = notificationAdmin
-        self.deviceRegistrar = deviceRegistrar
         self.loginDiagnostics = loginDiagnostics
     }
 
@@ -150,7 +153,7 @@ final class AppEnvironment {
             storageBucket: bucket ?? "",
             recents: RecentExamsStore(),
             notifications: SystemNotificationService(),
-            announcementsReader: FirebaseAnnouncementsReader(),
+            inboxReader: FirebaseInboxReader(),
             notificationAdmin: FirebaseNotificationAdminService(),
             deviceRegistrar: FirebaseDeviceRegistrar(),
             loginDiagnostics: FirebaseLoginDiagnosticsService()
@@ -200,5 +203,8 @@ enum LaunchArgument {
     static let notificationsPrompt = "-ViFiNotificationsPrompt"
     /// With `-ViFiMockData`: starts with an active premium subscription (whole archive unlocked, coins hidden).
     static let subscribed = "-ViFiSubscribed"
+    /// With `-ViFiMockData` and the notification id as the next argument: starts as if that push had been
+    /// tapped, so the inbox opens on it once the app is past its gates.
+    static let openNotification = "-ViFiOpenNotification"
     #endif
 }

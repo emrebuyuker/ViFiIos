@@ -29,10 +29,10 @@ struct AccountViewModelTests {
     // MARK: - Signing out
 
     @Test("Signing out ends the session")
-    func signOut() {
+    func signOut() async {
         let viewModel = makeViewModel()
 
-        viewModel.signOut()
+        await viewModel.signOut()
 
         #expect(auth.calls == [.signOut])
         #expect(auth.currentUser == nil)
@@ -40,11 +40,11 @@ struct AccountViewModelTests {
     }
 
     @Test("A failed sign-out shows the message and keeps the session")
-    func signOutFailure() {
+    func signOutFailure() async {
         auth.signOutError = AuthError.unknown(message: "Çıkış yapılamadı.")
         let viewModel = makeViewModel()
 
-        viewModel.signOut()
+        await viewModel.signOut()
 
         #expect(viewModel.errorMessage == "Çıkış yapılamadı.")
         #expect(auth.currentUser == Fixture.user)
@@ -58,7 +58,7 @@ struct AccountViewModelTests {
         let task = try #require(viewModel.deleteAccount())
         await gate.waitForArrival()
 
-        viewModel.signOut()
+        await viewModel.signOut()
         #expect(auth.count(of: .signOut) == 0)
 
         gate.open()
@@ -471,5 +471,61 @@ struct AccountDeletionDataTests {
 
         #expect(spy.calls == 1)
         #expect(auth.currentUser == nil)
+    }
+}
+
+// MARK: - Sign-out cleanup hook
+
+@Suite("AccountViewModel sign-out cleanup", .timeLimit(.minutes(1)))
+struct AccountSignOutCleanupTests {
+    private let auth = StubAuthService(currentUser: Fixture.user)
+
+    @Test("The cleanup hook runs before the session ends")
+    func signOutRunsHookFirst() async {
+        let order = OrderRecorder()
+        let viewModel = AccountViewModel(
+            user: Fixture.user,
+            auth: auth,
+            beforeSignOut: { [auth] in order.record("hook, signed in: \(auth.currentUser != nil)") }
+        )
+
+        await viewModel.signOut()
+
+        #expect(order.events == ["hook, signed in: true"])
+        #expect(auth.calls == [.signOut])
+        #expect(auth.currentUser == nil)
+    }
+
+    @Test("A second sign-out while the cleanup is running is ignored")
+    func signOutIgnoresDoubleTap() async {
+        let gate = AsyncGate()
+        let hookRuns = OrderRecorder()
+        let viewModel = AccountViewModel(
+            user: Fixture.user,
+            auth: auth,
+            beforeSignOut: {
+                hookRuns.record("hook")
+                await gate.pass()
+            }
+        )
+        let first = Task { await viewModel.signOut() }
+        await gate.waitForArrival()
+
+        await viewModel.signOut()
+        gate.open()
+        await first.value
+
+        #expect(hookRuns.events == ["hook"])
+        #expect(auth.count(of: .signOut) == 1)
+    }
+}
+
+/// Records what happened, in order.
+@MainActor
+private final class OrderRecorder {
+    private(set) var events: [String] = []
+
+    func record(_ event: String) {
+        events.append(event)
     }
 }

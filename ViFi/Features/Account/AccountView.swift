@@ -12,13 +12,19 @@ struct AccountView: View {
                 auth: environment.auth,
                 profileName: environment.profile.profile?.fullName,
                 // Removes the server-side profile before the account is deleted, so nothing is left orphaned.
-                deleteUserData: { [profileService = environment.profileService] in
+                deleteUserData: { [profileService = environment.profileService, registration = environment.deviceRegistration] in
+                    // The device's push registration goes first, while the user can still write.
+                    await registration.unregister(uid: user.id)
                     try await profileService.deleteProfile(uid: user.id)
                 },
                 // Deleting the account wipes the user's cached exam files from the device.
                 onDeleted: { [fileLoader = environment.fileLoader, analytics = environment.analytics] in
                     analytics.track(.accountDeleted)
                     await fileLoader.purge()
+                },
+                // Signing out first removes this device's push registration, while the user can still write.
+                beforeSignOut: { [registration = environment.deviceRegistration] in
+                    await registration.unregister(uid: user.id)
                 }
             )
         }
@@ -47,10 +53,11 @@ private struct AccountScreen: View {
         auth: any AuthServicing,
         profileName: String?,
         deleteUserData: @escaping @MainActor () async throws -> Void,
-        onDeleted: @escaping @MainActor () async -> Void
+        onDeleted: @escaping @MainActor () async -> Void,
+        beforeSignOut: @escaping @MainActor () async -> Void
     ) {
         _viewModel = State(initialValue: AccountViewModel(
-            user: user, auth: auth, deleteUserData: deleteUserData, onDeleted: onDeleted
+            user: user, auth: auth, deleteUserData: deleteUserData, onDeleted: onDeleted, beforeSignOut: beforeSignOut
         ))
         self.user = user
         self.profileName = profileName
@@ -105,9 +112,11 @@ private struct AccountScreen: View {
             }
             .confirmationDialog("Çıkış yapılsın mı?", isPresented: $isConfirmingSignOut, titleVisibility: .visible) {
                 Button("Çıkış Yap", role: .destructive) {
-                    viewModel.signOut()
-                    if viewModel.errorMessage == nil {
-                        environment.analytics.track(.signedOut)
+                    Task {
+                        await viewModel.signOut()
+                        if viewModel.errorMessage == nil {
+                            environment.analytics.track(.signedOut)
+                        }
                     }
                 }
                 .accessibilityIdentifier("account.signOut.confirm")

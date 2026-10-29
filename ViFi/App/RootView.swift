@@ -52,7 +52,10 @@ struct RootView: View {
                 environment.wallet.reset()
                 environment.unlocks.reset()
                 environment.recents.clear()
-                environment.announcements.reset()
+                environment.inbox.reset()
+                // A tapped push belongs to the account that received it; the next one must not open its inbox.
+                environment.notificationRouter.reset()
+                environment.deviceRegistration.userDidSignOut()
                 // Clear the analytics identity so the next user is not attributed to the previous one.
                 environment.analytics.setUser(nil)
             }
@@ -64,6 +67,9 @@ struct RootView: View {
                 // push notification does not leave a stale count behind once the user is back in the app.
                 clearNotificationBadge()
             case .background:
+                // The icon badge shows what is waiting in the inbox while the app is away (pushes themselves
+                // do not carry a badge count).
+                setNotificationBadge(environment.inbox.unreadCount)
                 // Trim the on-disk file cache back within budget while the app is idle.
                 Task { await environment.fileLoader.pruneDiskCache() }
             default:
@@ -119,6 +125,7 @@ struct RootView: View {
     private var archive: some View {
         @Bindable var router = router
         @Bindable var onboarding = environment.onboarding
+        @Bindable var notificationRouter = environment.notificationRouter
         return NavigationStack(path: $router.path) {
             HomeView()
                 .navigationDestination(for: Route.self, destination: destination)
@@ -129,6 +136,12 @@ struct RootView: View {
         // or finishing marks it seen (per device), so it shows only once; it is replayable from About.
         .fullScreenCover(isPresented: $onboarding.isPresenting) {
             OnboardingView(onFinish: { environment.onboarding.markSeen() })
+        }
+        // The notification inbox: opened from the bell and from a tapped push (see `NotificationRouter`). It is
+        // presented from here, not from the home screen, so it also opens over a pushed exam or list.
+        .sheet(isPresented: $notificationRouter.isInboxPresented, onDismiss: notificationRouter.inboxDidDismiss) {
+            InboxView()
+                .presentationDragIndicator(.visible)
         }
     }
 
@@ -148,7 +161,12 @@ struct RootView: View {
     /// push notification's badge does not linger after the user has opened the app. Pure UserNotifications, so it
     /// touches no Firebase and is safe on sample data too.
     private func clearNotificationBadge() {
-        UNUserNotificationCenter.current().setBadgeCount(0)
+        setNotificationBadge(0)
+    }
+
+    /// Sets the home-screen icon badge (a no-op until the user has allowed badges).
+    private func setNotificationBadge(_ count: Int) {
+        UNUserNotificationCenter.current().setBadgeCount(count)
     }
 
     // MARK: - App update
@@ -202,6 +220,12 @@ private enum UpdatePromptDefaults {
     }
 }
 
+/// What the inbox listeners are keyed on: restarted for another user or after a retry.
+private struct InboxObservation: Equatable {
+    let userId: String
+    let retry: Int
+}
+
 /// Second gate behind sign-in: the archive is shown only once the signed-in user has completed their
 /// profile. Loads the profile when the user appears or changes, offering a retry if the read fails.
 private struct ProfileGate<Content: View>: View {
@@ -230,8 +254,13 @@ private struct ProfileGate<Content: View>: View {
                     environment.unlocks.markUnlocked(examId)
                 }
             }
-            // Keep the notification inbox (public announcements) in step while signed in.
-            .task(id: user.id) { await environment.announcements.observe() }
+            // Keep the notification inbox (announcements + the user's own) in step while signed in. A retry from
+            // the inbox's error view changes the key, which restarts the listeners.
+            .task(id: InboxObservation(userId: user.id, retry: environment.inbox.retryToken)) {
+                await environment.inbox.observe(uid: user.id)
+            }
+            // Store this device's push token under the user (now, or as soon as Messaging hands it over).
+            .task(id: user.id) { environment.deviceRegistration.userDidSignIn(uid: user.id) }
             // Identify the user for analytics: id + admin now, enriched with profile segments once loaded.
             .task(id: user.id) {
                 isAdmin = await environment.auth.isCurrentUserAdmin()
