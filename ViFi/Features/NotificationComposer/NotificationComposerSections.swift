@@ -181,7 +181,7 @@ struct NotificationComposerAudienceSection: View {
     private var footer: some View {
         if viewModel.audienceMode == .segment, viewModel.universityId == nil, case .loaded = viewModel.facets {
             Text("Önce bir üniversite seç. Listelerde yalnızca kayıtlı kullanıcısı olanlar görünür.")
-        } else if viewModel.kind == .promo {
+        } else if viewModel.draft.effectiveKind == .promo {
             Text("Kampanyada yalnızca bildirim onayı verenler alır; kesin sayıyı göndermeden önce göreceksin.")
         }
     }
@@ -189,7 +189,7 @@ struct NotificationComposerAudienceSection: View {
 
 // MARK: - Action
 
-/// The button on the notification's card: nothing, Premium, Sınav Ekle or an https link.
+/// The button on the notification's card: nothing, Premium, Sınav Ekle, an https link or a place on the map.
 struct NotificationComposerActionSection: View {
     @Bindable var viewModel: NotificationComposerViewModel
 
@@ -200,6 +200,7 @@ struct NotificationComposerActionSection: View {
                 Text("Premium").tag(NotificationComposerViewModel.ActionChoice.paywall)
                 Text("Sınav Ekle").tag(NotificationComposerViewModel.ActionChoice.addExam)
                 Text("Bağlantı").tag(NotificationComposerViewModel.ActionChoice.url)
+                Text("Konum").tag(NotificationComposerViewModel.ActionChoice.location)
             }
             .accessibilityIdentifier("notificationComposer.action")
 
@@ -210,6 +211,10 @@ struct NotificationComposerActionSection: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .accessibilityIdentifier("notificationComposer.url")
+            }
+
+            if viewModel.actionChoice == .location {
+                NotificationComposerLocationRows(viewModel: viewModel)
             }
         } header: {
             Text("Eylem")

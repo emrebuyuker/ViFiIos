@@ -53,7 +53,8 @@ extension AppEnvironment {
                 // Only the consent re-ask starts with a recorded "no"; otherwise the user never answered.
                 consent: arguments.contains(LaunchArgument.consentReask) ? NotificationConsent(marketing: false) : nil
             ),
-            notificationPromptDefaults: promptDefaults
+            notificationPromptDefaults: promptDefaults,
+            locationPicker: MockLocationPicker()
         )
         // `-ViFiOpenNotification <id>` starts as if the push of that notification had been tapped.
         if let tapped = openedNotificationId(arguments: arguments) {
@@ -864,6 +865,18 @@ final class StubInboxReader: InboxReading {
             imageURL: nil,
             action: .paywall,
             createdAt: Date(timeIntervalSince1970: 1_761_000_000),
+            expiresAt: nil
+        ),
+        // The oldest, so the entries above keep their place in the UI tests that read the top of the list.
+        InboxItem(
+            id: "p-location",
+            source: .personal,
+            kind: .promo,
+            title: "Kampüse yakın kahve fırsatı",
+            body: "ViFi'lilere özel %20 indirim, bu hafta sonuna kadar.",
+            imageURL: nil,
+            action: .location(MockLocationPicker.sampleLocation),
+            createdAt: Date(timeIntervalSince1970: 1_758_000_000),
             expiresAt: nil
         ),
     ]

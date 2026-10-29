@@ -107,7 +107,7 @@ struct NotificationRouterTests {
 
 @Suite("Inbox action button")
 struct InboxActionButtonTests {
-    @Test("Every action the app can offer has a button; a place does not yet")
+    @Test("Every action the app can offer has a button")
     func buttons() throws {
         let target = NotificationExamTarget(examId: "e", path: Fixture.pdfExam, kind: .pdf)
         let place = NotificationLocation(latitude: 41, longitude: 29, name: "Kampüs", address: nil, placeId: nil)
@@ -117,6 +117,6 @@ struct InboxActionButtonTests {
         #expect(NotificationAction.addExam.inboxButton?.title == "Sınav Ekle")
         let link = try #require(URL(string: "https://example.com/duyuru"))
         #expect(NotificationAction.url(link).inboxButton?.title == "Bağlantıyı Aç")
-        #expect(NotificationAction.location(place).inboxButton == nil)
+        #expect(NotificationAction.location(place).inboxButton?.title == "Konuma Git")
     }
 }

@@ -22,12 +22,13 @@ final class NotificationComposerViewModel {
         case segment
     }
 
-    /// The attachment the form offers. Exam and location come with a later phase.
+    /// The attachment the form offers. Exam comes with a later phase.
     enum ActionChoice: Hashable {
         case noAction
         case paywall
         case addExam
         case url
+        case location
     }
 
     /// The kinds an admin can pick; `system` is for automatic messages only.
@@ -46,6 +47,8 @@ final class NotificationComposerViewModel {
     var gender: Gender?
     var actionChoice: ActionChoice = .noAction
     var urlText = ""
+    /// The place picked on the map for a location action; kept while the admin switches actions back and forth.
+    var location: NotificationLocation?
     /// `nil` sends right away. Changed through `setScheduling(_:)` so it always has a sensible value.
     var scheduledAt: Date?
     var expiresAt: Date?
@@ -282,13 +285,19 @@ final class NotificationComposerViewModel {
         case .paywall: .paywall
         case .addExam: .addExam
         case .url: parsedURL.map(NotificationDraft.Action.url)
+        case .location: location.map(NotificationDraft.Action.location)
         }
     }
 
     private func issue(of draft: NotificationDraft) -> NotificationDraft.Issue? {
         if let issue = draft.validationIssue(now: now()) { return issue }
-        // A link that did not parse left the draft without an action; do not send it as if none was chosen.
-        return actionChoice == .url && draft.action == nil ? .invalidURL : nil
+        // A link that did not parse, or a place not picked yet, left the draft without an action; do not send it
+        // as if none was chosen.
+        switch actionChoice {
+        case .url where draft.action == nil: return .invalidURL
+        case .location where draft.action == nil: return .invalidLocation
+        default: return nil
+        }
     }
 
     /// The test copy: addressed to the admin only, so it goes out at once with no validity, and an unfinished
@@ -344,6 +353,7 @@ final class NotificationComposerViewModel {
         gender = nil
         actionChoice = .noAction
         urlText = ""
+        location = nil
         scheduledAt = nil
         expiresAt = nil
     }

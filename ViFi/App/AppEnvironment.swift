@@ -58,6 +58,8 @@ final class AppEnvironment {
     let notificationSettings: NotificationSettingsStore
     /// Decides when the notification permission flow is offered and hands it to the screen that presents it.
     let notificationPrompts: NotificationPromptCoordinator
+    /// The admin's map screen for choosing a campaign's location (Google Maps; a stub in mock mode).
+    @ObservationIgnored let locationPicker: any LocationPicking
 
     init(
         repository: any ArchiveRepository,
@@ -86,7 +88,8 @@ final class AppEnvironment {
         deviceRegistrar: any DeviceRegistering,
         notificationSettingsService: any NotificationSettingsServicing,
         notificationPromptDefaults: UserDefaults = .standard,
-        loginDiagnostics: any LoginDiagnosticsReporting = NoopLoginDiagnosticsReporter()
+        loginDiagnostics: any LoginDiagnosticsReporting = NoopLoginDiagnosticsReporter(),
+        locationPicker: any LocationPicking = GoogleLocationPicker()
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -124,6 +127,7 @@ final class AppEnvironment {
             analytics: analytics
         )
         self.loginDiagnostics = loginDiagnostics
+        self.locationPicker = locationPicker
     }
 
     /// Production services backed by Firebase and the App Store.

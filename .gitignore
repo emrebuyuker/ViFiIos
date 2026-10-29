@@ -41,3 +41,6 @@ fastlane/test_output/
 ROADMAP.md
 FIRESTORE-MIGRATION.md
 NOTIFICATIONS.md
+
+# Local secrets (API keys). The committed template is Config/Secrets.example.xcconfig.
+Config/Secrets.xcconfig

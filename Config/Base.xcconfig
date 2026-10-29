@@ -1,0 +1,11 @@
+// Shared build settings for every target (wired in through `configFiles` in project.yml).
+//
+// Values that must not be committed live in `Secrets.xcconfig`, which is gitignored; copy
+// `Secrets.example.xcconfig` to `Secrets.xcconfig` and fill it in. The include below is optional (`#include?`), so
+// a checkout without the file still builds: the settings keep the empty defaults declared here and the features
+// that need them report themselves as unavailable instead of crashing.
+
+// Google Maps / Places API key, restricted to the app's bundle id in Google Cloud. Empty = maps unavailable.
+GOOGLE_MAPS_API_KEY =
+
+#include? "Secrets.xcconfig"

@@ -2,8 +2,8 @@ import SwiftUI
 
 /// The in-app notification box: the public announcements and the user's own notifications, newest first.
 /// Opening it marks what is there as read. A notification may carry one action (a button, and the card itself is
-/// tappable): open an exam, the premium screen, the add-exam flow or a link. A tapped push opens the inbox on its
-/// notification, which is scrolled to and highlighted (`NotificationRouter`).
+/// tappable): open an exam, the premium screen, the add-exam flow, a link or a place in a maps app. A tapped push
+/// opens the inbox on its notification, which is scrolled to and highlighted (`NotificationRouter`).
 struct InboxView: View {
     @Environment(AppEnvironment.self) private var environment
     @Environment(Router.self) private var router
@@ -11,6 +11,7 @@ struct InboxView: View {
     @Environment(\.openURL) private var openURL
     @State private var isShowingPaywall = false
     @State private var isShowingAddExam = false
+    @State private var locationToOpen: NotificationLocation?
 
     var body: some View {
         NavigationStack {
@@ -43,6 +44,7 @@ struct InboxView: View {
                         .presentationDragIndicator(.visible)
                 }
                 .offersMarketingConsentReask()
+                .locationChoiceSheet(for: $locationToOpen)
         }
     }
 
@@ -114,8 +116,8 @@ struct InboxView: View {
 
     // MARK: - Actions
 
-    /// The button for `action`, or `nil` when there is nothing to offer: no action, a place (Phase 2), or the
-    /// premium screen for someone who is already subscribed.
+    /// The button for `action`, or `nil` when there is nothing to offer: no action, or the premium screen for
+    /// someone who is already subscribed.
     private func button(for action: NotificationAction?) -> InboxActionButton? {
         guard let action else { return nil }
         if case .paywall = action, environment.subscription.isSubscribed { return nil }
@@ -136,8 +138,8 @@ struct InboxView: View {
             isShowingAddExam = true
         case let .url(url):
             openURL(url)
-        case .location:
-            break
+        case let .location(location):
+            locationToOpen = location
         }
     }
 }
@@ -151,15 +153,14 @@ nonisolated struct InboxActionButton: Equatable {
 }
 
 extension NotificationAction {
-    /// The label and symbol of the action's button; `nil` for an action the app does not offer yet (`location`
-    /// arrives with the maps work, NOTIFICATIONS.md phase 2).
+    /// The label and symbol of the action's button; `nil` for an action the app does not offer.
     var inboxButton: InboxActionButton? {
         switch self {
         case .exam: InboxActionButton(title: String(localized: "Sınava Git"), systemImage: "doc.text.magnifyingglass")
         case .paywall: InboxActionButton(title: String(localized: "Premium'a Göz At"), systemImage: "star.fill")
         case .addExam: InboxActionButton(title: String(localized: "Sınav Ekle"), systemImage: "plus.rectangle.on.rectangle")
         case .url: InboxActionButton(title: String(localized: "Bağlantıyı Aç"), systemImage: "safari")
-        case .location: nil
+        case .location: InboxActionButton(title: String(localized: "Konuma Git"), systemImage: "mappin.and.ellipse")
         }
     }
 }

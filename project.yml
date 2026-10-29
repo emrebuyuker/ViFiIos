@@ -9,6 +9,11 @@ options:
   createIntermediateGroups: true
   groupSortPosition: top
 
+# Shared xcconfig; pulls in the gitignored Config/Secrets.xcconfig (Google Maps API key) when it exists.
+configFiles:
+  Debug: Config/Base.xcconfig
+  Release: Config/Base.xcconfig
+
 settings:
   base:
     MARKETING_VERSION: "4.0.0"
@@ -25,6 +30,13 @@ packages:
   Firebase:
     url: https://github.com/firebase/firebase-ios-sdk
     from: 12.0.0
+  # Admin location picker for campaign notifications (map + place search). No CoreLocation / "my location".
+  GoogleMaps:
+    url: https://github.com/googlemaps/ios-maps-sdk
+    from: 11.2.0
+  GooglePlaces:
+    url: https://github.com/googlemaps/ios-places-sdk
+    from: 11.2.0
 
 targets:
   ViFi:
@@ -75,6 +87,12 @@ targets:
         # Firebase Auth verifies the app with a silent push before sending the SMS code.
         UIBackgroundModes:
           - remote-notification
+        # The Google Maps / Places API key, injected from Config/Secrets.xcconfig (never committed). Read by
+        # GoogleMapsConfiguration; empty or unexpanded means the location picker reports itself unavailable.
+        GMSApiKey: $(GOOGLE_MAPS_API_KEY)
+        # Lets the inbox's "Konuma Git" check whether the Google Maps app is installed.
+        LSApplicationQueriesSchemes:
+          - comgooglemaps
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.BuyukerYazilim.ViFi2
@@ -114,6 +132,10 @@ targets:
         product: FirebaseFunctions
       - package: Firebase
         product: FirebaseMessaging
+      - package: GoogleMaps
+        product: GoogleMaps
+      - package: GooglePlaces
+        product: GooglePlaces
     postCompileScripts:
       - name: SwiftLint
         basedOnDependencyAnalysis: false
