@@ -9,12 +9,13 @@ ayrıntılı açıklama için kök [README.md](../README.md) içindeki *Firebase
 | `storage.rules` | Cloud Storage kuralları |
 | `firebase.json`, `.firebaserc` | Emülatör portları ve varsayılan proje (`vifi-831a8`) |
 | `scripts/revoke-download-tokens.mjs` | Storage indirme belirteçlerini yedekler, iptal eder, geri yükler |
-| `tests/` | Kural testleri (emülatör) ve betik testleri |
+| `functions/` | Cloud Functions (europe-west1): `unlockExam`, `recordLoginDiagnostic`, `purchaseExamUnlock` |
+| `tests/` | Kural testleri (emülatör), satın alma doğrulama testleri ve betik testleri |
 
 ## Gereksinimler
 
 - Node.js 22 veya üzeri, Firebase CLI (`npm i -g firebase-tools`), Java 21.
-- Bu klasörde bir kez `npm install` çalıştırın.
+- Bu klasörde ve `functions/` içinde birer kez `npm install` çalıştırın.
 
 ## Testler
 
@@ -34,6 +35,33 @@ Testler yalnızca yerel emülatöre ve bellek içi bir Storage sahtesine bağlan
 ```bash
 cd firebase
 firebase deploy --only database,storage --project vifi-831a8 --account <sahip hesabı>
+```
+
+## Parayla sınav açma (`purchaseExamUnlock`)
+
+Tek sınavın parayla açılmasını iki mağaza için de sunucuda doğrular, ardından aynı Firestore transaction'ında
+`purchasedTransactions/<işlem>` (bir satın alma yalnız bir sınavı bir kez açar) ve `users/<uid>/unlocks/<sınav>`
+(`source: 'purchase'`) yazar. Aynı kullanıcı + sınav + satın alma ile tekrar çağrı idempotenttir.
+
+| Platform | İstek | Doğrulama (`functions/`) | Tekrar kullanım anahtarı |
+|---|---|---|---|
+| iOS (`platform` yok) | `examId`, `signedTransaction` (StoreKit 2 JWS) | `appStore.js` — Apple imzası, paket, ürün | Apple `transactionId` |
+| Android (`platform: 'android'`) | `examId`, `purchaseToken`, `productId` | `googlePlay.js` — Play Developer API `purchases.products.get`: ödendi, ürün `exam_unlock`, `obfuscatedExternalProfileId` = `examId` | `orderId` (yoksa `play-token-<jeton SHA-256>`); kayıtlara `store: 'google_play'` eklenir |
+
+Sunucu satın almayı tüketmez; Android istemcisi kayıt başarılı olunca tüketir. Android hata kodları: geçersiz satın alma
+`failed-precondition`, Google Play'e ulaşılamıyor `unavailable`, API erişimi yok `internal`.
+
+**Android dalı için önkoşul:** `vifi-831a8`'de *Google Play Android Developer API* etkin olmalı ve Functions çalışma
+servis hesabı Play Console → Kullanıcılar ve izinler'de ViFi uygulaması için finansal verileri görüntüleme izniyle davetli
+olmalı. İzin yayılması saatler sürebilir; o sürede çağrılar `internal` döner.
+
+> [!WARNING]
+> Function yayını ortak backend'i değiştirir; yalnız proje sahibinin açık onayıyla yapılır. Yayından sonra iOS sandbox
+> satın almasının hâlâ çalıştığını kontrol edin.
+
+```bash
+cd firebase
+firebase deploy --only functions:purchaseExamUnlock --project vifi-831a8 --account <sahip hesabı>
 ```
 
 ## Güncelleme politikası (`config/appUpdate/ios`)

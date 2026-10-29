@@ -15,6 +15,8 @@ import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { createHash } from 'node:crypto';
 import { verifyExamUnlockTransaction } from './appStore.js';
+import { verifyExamUnlockPurchase } from './googlePlay.js';
+import { recordPurchasedUnlock } from './purchaseUnlock.js';
 
 initializeApp();
 
@@ -148,10 +150,14 @@ export const recordLoginDiagnostic = onCall(
   }
 );
 
-// `purchaseExamUnlock` unlocks a single exam paid for with money (the `exam.unlock` consumable) instead of
-// coins. The client sends the purchase's signed StoreKit 2 transaction; we verify Apple's signature here (a
-// client cannot be trusted to claim it paid), then record the unlock — no coins are touched. It is idempotent
-// and replay-safe: each transaction id can unlock exactly one exam, once.
+// `purchaseExamUnlock` unlocks a single exam paid for with money (the exam-unlock consumable) instead of coins,
+// on either platform:
+// - iOS (no `platform`, or `'ios'`) sends the purchase's signed StoreKit 2 transaction; we verify Apple's signature.
+// - Android (`platform: 'android'`) sends the Google Play purchase token; we look the purchase up with the Play
+//   Developer API and check it was bought for this exam.
+// A client cannot be trusted to claim it paid, so nothing is granted before the store confirms the purchase; then
+// the unlock is recorded — no coins are touched. It is idempotent and replay-safe: each transaction id can unlock
+// exactly one exam, once.
 export const purchaseExamUnlock = onCall({ region: 'europe-west1' }, async (request) => {
   const { auth, data } = request;
   const phoneNumber = auth?.token?.phone_number ?? '';
@@ -163,18 +169,16 @@ export const purchaseExamUnlock = onCall({ region: 'europe-west1' }, async (requ
   if (!examId) {
     throw new HttpsError('invalid-argument', 'Sınav kimliği gerekli.');
   }
-  const signedTransaction = typeof data?.signedTransaction === 'string' ? data.signedTransaction : '';
-  if (!signedTransaction) {
-    throw new HttpsError('invalid-argument', 'Satın alma bilgisi gerekli.');
-  }
 
-  // Verify the purchase with Apple before granting anything.
-  let transactionId;
-  try {
-    ({ transactionId } = await verifyExamUnlockTransaction(signedTransaction));
-  } catch (error) {
-    console.error('Exam unlock purchase verification failed:', error);
-    throw new HttpsError('failed-precondition', 'Satın alma doğrulanamadı.');
+  // The iOS client predates the platform field and sends none.
+  const platform = data?.platform ?? 'ios';
+  let purchase;
+  if (platform === 'ios') {
+    purchase = await verifyAppStorePurchase(data);
+  } else if (platform === 'android') {
+    purchase = await verifyGooglePlayPurchase(data, examId);
+  } else {
+    throw new HttpsError('invalid-argument', 'Desteklenmeyen platform.');
   }
 
   const uid = auth.uid;
@@ -183,38 +187,47 @@ export const purchaseExamUnlock = onCall({ region: 'europe-west1' }, async (requ
     throw new HttpsError('not-found', 'Sınav bulunamadı.');
   }
 
-  const unlockRef = db.collection('users').doc(uid).collection('unlocks').doc(examId);
-  // Binds the transaction id to the exam it unlocked, so the same purchase cannot be replayed for another exam.
-  const transactionRef = db.collection('purchasedTransactions').doc(transactionId);
-
-  return db.runTransaction(async (transaction) => {
-    const transactionSnapshot = await transaction.get(transactionRef);
-    const unlockSnapshot = await transaction.get(unlockRef);
-
-    if (transactionSnapshot.exists) {
-      // Already consumed. A retry for the same (uid, exam) is idempotent; anything else is a replay.
-      if (transactionSnapshot.get('uid') === uid && transactionSnapshot.get('examId') === examId) {
-        return { alreadyUnlocked: true };
-      }
-      throw new HttpsError('failed-precondition', 'Bu satın alma zaten kullanıldı.');
-    }
-
-    // The exam may already be unlocked (with coins, or an earlier purchase). Still consume this transaction id
-    // so it cannot be reused, but do not rewrite the unlock.
-    if (!unlockSnapshot.exists) {
-      transaction.set(unlockRef, {
-        examId,
-        source: 'purchase',
-        transactionId,
-        createdAt: FieldValue.serverTimestamp(),
-      });
-    }
-    transaction.set(transactionRef, {
-      uid,
-      examId,
-      createdAt: FieldValue.serverTimestamp(),
-    });
-
-    return { alreadyUnlocked: unlockSnapshot.exists };
-  });
+  return recordPurchasedUnlock(db, { uid, examId, ...purchase });
 });
+
+// Verifies the StoreKit 2 signed transaction with Apple before granting anything.
+async function verifyAppStorePurchase(data) {
+  const signedTransaction = typeof data?.signedTransaction === 'string' ? data.signedTransaction : '';
+  if (!signedTransaction) {
+    throw new HttpsError('invalid-argument', 'Satın alma bilgisi gerekli.');
+  }
+
+  try {
+    const { transactionId } = await verifyExamUnlockTransaction(signedTransaction);
+    return { transactionId };
+  } catch (error) {
+    console.error('Exam unlock purchase verification failed:', error);
+    throw new HttpsError('failed-precondition', 'Satın alma doğrulanamadı.');
+  }
+}
+
+// Verifies the Google Play purchase with the Play Developer API before granting anything. A rejected purchase is
+// `failed-precondition` (as on iOS); an unreachable Google Play is `unavailable` and missing API access is `internal`,
+// so the client can tell a bad purchase from a temporary failure. It consumes nothing on any failure and retries the
+// purchase on its next launch.
+async function verifyGooglePlayPurchase(data, examId) {
+  const purchaseToken = typeof data?.purchaseToken === 'string' ? data.purchaseToken : '';
+  if (!purchaseToken) {
+    throw new HttpsError('invalid-argument', 'Satın alma bilgisi gerekli.');
+  }
+
+  try {
+    const { transactionId } = await verifyExamUnlockPurchase({ purchaseToken, productId: data?.productId, examId });
+    return { transactionId, store: 'google_play' };
+  } catch (error) {
+    console.error('Google Play exam unlock verification failed:', error);
+    switch (error?.reason) {
+      case 'unavailable':
+        throw new HttpsError('unavailable', "Google Play'e şu an ulaşılamıyor. Lütfen daha sonra tekrar dene.");
+      case 'misconfigured':
+        throw new HttpsError('internal', 'Satın alma şu an doğrulanamıyor. Lütfen daha sonra tekrar dene.');
+      default:
+        throw new HttpsError('failed-precondition', 'Satın alma doğrulanamadı.');
+    }
+  }
+}
