@@ -8,15 +8,27 @@
 // `unlockExam` is a callable: it verifies the signed-in +90 user, then runs one Firestore transaction that
 // checks the balance, debits the cost, writes the unlock and appends a spend ledger entry. It is idempotent —
 // an already-unlocked exam is a no-op that charges nothing.
+//
+// Targeted notifications (`getNotificationAudience`, `previewNotification`, `sendNotification`, `onDeviceWritten`)
+// live in `notifications/`; this file only wires them to their triggers and live dependencies.
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getDatabase } from 'firebase-admin/database';
+import { getMessaging } from 'firebase-admin/messaging';
 import { createHash } from 'node:crypto';
 import { verifyExamUnlockTransaction } from './appStore.js';
 import { verifyExamUnlockPurchase } from './googlePlay.js';
 import { recordPurchasedUnlock } from './purchaseUnlock.js';
+import {
+  getNotificationAudienceHandler,
+  previewNotificationHandler,
+  sendNotificationHandler,
+} from './notifications/admin.js';
+import { onDeviceWrittenHandler } from './notifications/devices.js';
 
 initializeApp();
 
@@ -231,3 +243,45 @@ async function verifyGooglePlayPurchase(data, examId) {
     }
   }
 }
+
+// --- Targeted notifications (NOTIFICATIONS.md §4) ---------------------------------------------------------------
+
+// Live dependencies of the notification handlers. The Realtime Database (profiles) and FCM handles are created on
+// first use: the RTDB URL comes from the deployed function's FIREBASE_CONFIG, which a plain import (tests) lacks.
+const notificationDeps = {
+  db,
+  get rtdb() {
+    return getDatabase();
+  },
+  get messaging() {
+    return getMessaging();
+  },
+  now: () => new Date(),
+};
+
+// Admin-only (`admin: true` claim): the audience pickers' tree — names and counts, no personal data.
+export const getNotificationAudience = onCall({ region: 'europe-west1' }, (request) =>
+  getNotificationAudienceHandler(notificationDeps, request)
+);
+
+// Admin-only: how many users (and registered devices) a notification would reach right now.
+export const previewNotification = onCall({ region: 'europe-west1' }, (request) =>
+  previewNotificationHandler(notificationDeps, request)
+);
+
+// Admin-only: records a notification and schedules or delivers it; idempotent per `notificationId`. A large fan-out
+// reads every recipient's devices, so it gets more time than the 60 s default.
+export const sendNotification = onCall({ region: 'europe-west1', timeoutSeconds: 300 }, (request) =>
+  sendNotificationHandler(notificationDeps, request)
+);
+
+// Removes a re-registered FCM token from the other accounts that still hold it.
+//
+// ⚠️ Verify at deploy time: this is the project's first Firestore trigger and it listens to the NAMED `vifi`
+// database in the eur3 multi-region. The Eventarc trigger location must match the database location (`eur3`) while
+// the function runs in europe-west1; confirm the Firebase CLI resolves it that way (and enables Eventarc and its
+// service agent) before relying on it.
+export const onDeviceWritten = onDocumentWritten(
+  { document: 'users/{uid}/devices/{deviceId}', database: 'vifi', region: 'europe-west1' },
+  (event) => onDeviceWrittenHandler(notificationDeps, event)
+);

@@ -173,10 +173,61 @@ service cloud.firestore {
           && request.resource.data.read is bool;
       }
 
-      // Push-notification device tokens; the owner manages their own.
-      match /devices/{token} {
-        allow read, write: if isOwner(uid);
+      // Push-notification devices, one per app install (document id = the Firebase Installation ID or a per-install
+      // UUID). The owner registers, refreshes and removes their own (sign-out deletes it); the shape is fixed so
+      // the delivery code can trust it. A token that shows up under another account is removed server-side
+      // (`onDeviceWritten`).
+      match /devices/{deviceId} {
+        function isValidDevice(data) {
+          return data.keys().hasOnly(['token', 'platform', 'appVersion', 'updatedAt'])
+            && data.keys().hasAll(['token', 'platform', 'appVersion', 'updatedAt'])
+            && data.token is string
+            && data.token.size() >= 1
+            && data.token.size() <= 4096
+            && data.platform in ['ios', 'android']
+            && data.appVersion is string
+            && data.appVersion.size() <= 32
+            && data.updatedAt == request.time;
+        }
+
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && deviceId.matches('^[A-Za-z0-9_-]{1,128}$')
+          && isValidDevice(request.resource.data);
       }
+
+      // Notification settings written by the owner's app. `notifications` is the campaign consent record (when
+      // and where it was given — Apple 4.5.4); `inbox` holds when the notification page was last opened (unread =
+      // created after `readAt`). Server timestamps only; never deleted from a client. Other settings documents
+      // stay denied.
+      match /settings/notifications {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['marketing', 'source', 'version', 'updatedAt'])
+          && request.resource.data.keys().hasAll(['marketing', 'source', 'version', 'updatedAt'])
+          && request.resource.data.marketing is bool
+          && request.resource.data.source in ['prompt', 'settings']
+          && request.resource.data.version is int
+          && request.resource.data.version >= 1
+          && request.resource.data.version <= 99
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if false;
+      }
+
+      match /settings/inbox {
+        allow read: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['readAt'])
+          && request.resource.data.readAt == request.time;
+        allow delete: if false;
+      }
+    }
+
+    // The admin history of targeted notifications and their delivery state. Written only by the notification
+    // Cloud Functions (Admin SDK); admins read it in the app. Its `events` subcollection stays server-only.
+    match /notifications/{notificationId} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
 
     // Login failure diagnostics, written only by the `recordLoginDiagnostic` Cloud Function (Admin SDK, which

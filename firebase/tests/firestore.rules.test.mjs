@@ -7,7 +7,12 @@
 
 import { after, before, beforeEach, describe, test } from 'node:test';
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/firestore';
 import { contextFor, createFirestoreEnvironment, users } from './helpers.mjs';
+
+/** `request.time` on the server (the test contexts use the compat SDK). */
+const serverTimestamp = () => firebase.firestore.FieldValue.serverTimestamp();
 
 let env;
 
@@ -294,11 +299,135 @@ describe('Firestore rules — coins (admin-written), entitlements (server-only),
   });
 
   test('device tokens: the owner manages their own; others cannot', async () => {
+    const validDevice = { token: 'fcm-token', platform: 'ios', appVersion: '4.1.0', updatedAt: serverTimestamp() };
     await assertSucceeds(device(db(users.alice), 'alice', 'tok1').get());
-    await assertSucceeds(device(db(users.alice), 'alice', 'tok2').set({ platform: 'ios' }));
+    await assertSucceeds(device(db(users.alice), 'alice', 'tok2').set(validDevice));
     await assertSucceeds(device(db(users.alice), 'alice', 'tok1').delete());
     await assertFails(device(db(users.bob), 'alice', 'tok1').get());
-    await assertFails(device(db(users.bob), 'alice', 'tok3').set({ platform: 'ios' }));
+    await assertFails(device(db(users.bob), 'alice', 'tok3').set(validDevice));
+  });
+});
+
+describe('Firestore rules — notification devices, settings and history', () => {
+  const device = (fs, uid, id) => fs.collection('users').doc(uid).collection('devices').doc(id);
+  const settings = (fs, uid, id) => fs.collection('users').doc(uid).collection('settings').doc(id);
+  const notification = (fs, id) => fs.collection('notifications').doc(id);
+
+  const validDevice = (overrides = {}) => ({
+    token: 'fcm-token-1', platform: 'ios', appVersion: '4.1.0', updatedAt: serverTimestamp(), ...overrides,
+  });
+  const validConsent = (overrides = {}) => ({
+    marketing: true, source: 'prompt', version: 1, updatedAt: serverTimestamp(), ...overrides,
+  });
+
+  beforeEach(async () => {
+    await env.clearFirestore();
+    await env.withSecurityRulesDisabled(async (context) => {
+      const seed = context.firestore();
+      await device(seed, 'alice', 'install-a').set({ token: 'fcm-old', platform: 'ios', appVersion: '4.0.0', updatedAt: new Date() });
+      await settings(seed, 'alice', 'notifications').set({ marketing: false, source: 'settings', version: 1, updatedAt: new Date() });
+      await settings(seed, 'alice', 'inbox').set({ readAt: new Date() });
+      await notification(seed, 'n1').set({ kind: 'general', title: 'Duyuru', body: 'x', status: 'sent' });
+    });
+  });
+
+  test('devices: the owner registers an install id or UUID, refreshes and deletes it; reads only their own', async () => {
+    const fs = db(users.alice);
+    await assertSucceeds(device(fs, 'alice', 'cQ1x_Z-9aBcDeFgHiJkLmN').set(validDevice()));
+    await assertSucceeds(device(fs, 'alice', '0F2C1E7A-4B3D-4E5F-8A9B-0C1D2E3F4A5B').set(validDevice({ platform: 'android', appVersion: '' })));
+    await assertSucceeds(device(fs, 'alice', 'install-a').update({ token: 'fcm-new', updatedAt: serverTimestamp() }));
+    await assertSucceeds(device(fs, 'alice', 'install-a').get());
+    await assertSucceeds(device(fs, 'alice', 'install-a').delete());
+    await assertSucceeds(device(fs, 'alice', 'x'.repeat(128)).set(validDevice({ token: 't'.repeat(4096) })));
+  });
+
+  test('devices: anything but the exact shape, a client clock or a bad document id is rejected', async () => {
+    const fs = db(users.alice);
+    await assertFails(device(fs, 'alice', 'd1').set(validDevice({ extra: true })));
+    await assertFails(device(fs, 'alice', 'd2').set(validDevice({ platform: 'web' })));
+    await assertFails(device(fs, 'alice', 'd3').set(validDevice({ token: '' })));
+    await assertFails(device(fs, 'alice', 'd4').set(validDevice({ token: 't'.repeat(4097) })));
+    await assertFails(device(fs, 'alice', 'd5').set(validDevice({ token: 42 })));
+    await assertFails(device(fs, 'alice', 'd6').set(validDevice({ appVersion: '1'.repeat(33) })));
+    await assertFails(device(fs, 'alice', 'd7').set(validDevice({ appVersion: 4 })));
+    await assertFails(device(fs, 'alice', 'd8').set(validDevice({ updatedAt: new Date() })));
+    await assertFails(device(fs, 'alice', 'd9').set({ token: 'fcm', platform: 'ios', updatedAt: serverTimestamp() }));
+    await assertFails(device(fs, 'alice', 'install.a').set(validDevice()));
+    await assertFails(device(fs, 'alice', 'x'.repeat(129)).set(validDevice()));
+    await assertFails(device(fs, 'alice', 'install-a').update({ token: 'fcm-new' })); // keeps the stale updatedAt
+  });
+
+  test('devices: other users, non-+90 users and anonymous cannot read or write someone\'s devices', async () => {
+    for (const user of [users.bob, users.usPhone, users.emailOnly, null]) {
+      await assertFails(device(db(user), 'alice', 'install-a').get());
+      await assertFails(device(db(user), 'alice', 'install-b').set(validDevice()));
+      await assertFails(device(db(user), 'alice', 'install-a').delete());
+    }
+    // Token lookups across accounts are the server's job (`onDeviceWritten`), never a client's.
+    await assertFails(db(users.bob).collectionGroup('devices').where('token', '==', 'fcm-old').get());
+    // Only +90 phone users register devices, even under their own uid.
+    await assertFails(device(db(users.emailOnly), 'dave', 'install-d').set(validDevice()));
+  });
+
+  test('campaign consent: the owner records it with the exact shape and server time', async () => {
+    const fs = db(users.alice);
+    await assertSucceeds(settings(fs, 'alice', 'notifications').get());
+    await assertSucceeds(settings(fs, 'alice', 'notifications').set(validConsent()));
+    await assertSucceeds(settings(fs, 'alice', 'notifications').set(validConsent({ marketing: false, source: 'settings', version: 99 })));
+    await assertSucceeds(settings(db(users.bob), 'bob', 'notifications').set(validConsent()));
+  });
+
+  test('campaign consent: a bad shape, a client clock, deletion or another user is rejected', async () => {
+    const fs = db(users.alice);
+    const doc = settings(fs, 'alice', 'notifications');
+    await assertFails(doc.set(validConsent({ marketing: 'yes' })));
+    await assertFails(doc.set(validConsent({ source: 'admin' })));
+    await assertFails(doc.set(validConsent({ version: 0 })));
+    await assertFails(doc.set(validConsent({ version: 100 })));
+    await assertFails(doc.set(validConsent({ version: 1.5 })));
+    await assertFails(doc.set(validConsent({ updatedAt: new Date() })));
+    await assertFails(doc.set(validConsent({ coins: 10 })));
+    await assertFails(doc.set({ marketing: true, source: 'prompt', updatedAt: serverTimestamp() }));
+    await assertFails(doc.update({ marketing: true })); // keeps the stale updatedAt
+    await assertFails(doc.delete());
+    await assertFails(settings(db(users.bob), 'alice', 'notifications').get());
+    await assertFails(settings(db(users.bob), 'alice', 'notifications').set(validConsent()));
+    await assertFails(settings(db(users.emailOnly), 'dave', 'notifications').set(validConsent()));
+    await assertFails(settings(db(null), 'alice', 'notifications').get());
+  });
+
+  test('inbox read marker: the owner writes only readAt = server time', async () => {
+    const fs = db(users.alice);
+    const doc = settings(fs, 'alice', 'inbox');
+    await assertSucceeds(doc.get());
+    await assertSucceeds(doc.set({ readAt: serverTimestamp() }));
+    await assertSucceeds(doc.update({ readAt: serverTimestamp() }));
+    await assertFails(doc.set({ readAt: new Date() }));
+    await assertFails(doc.set({ readAt: serverTimestamp(), unread: 0 }));
+    await assertFails(doc.set({}));
+    await assertFails(doc.delete());
+    await assertFails(settings(db(users.bob), 'alice', 'inbox').get());
+    await assertFails(settings(db(users.bob), 'alice', 'inbox').set({ readAt: serverTimestamp() }));
+  });
+
+  test('other settings documents stay denied, even to the owner', async () => {
+    const fs = db(users.alice);
+    await assertFails(settings(fs, 'alice', 'privacy').get());
+    await assertFails(settings(fs, 'alice', 'privacy').set({ readAt: serverTimestamp() }));
+  });
+
+  test('notification history: admins read it; nobody writes it from a client', async () => {
+    await assertSucceeds(notification(db(users.admin), 'n1').get());
+    await assertSucceeds(db(users.admin).collection('notifications').where('status', '==', 'scheduled').get());
+    for (const user of [users.alice, users.fakeAdmin, users.emailOnly, null]) {
+      await assertFails(notification(db(user), 'n1').get());
+    }
+    for (const user of [users.admin, users.alice, null]) {
+      await assertFails(notification(db(user), 'n2').set({ kind: 'general', title: 'x', body: 'y', status: 'sent' }));
+      await assertFails(notification(db(user), 'n1').update({ status: 'canceled' }));
+      await assertFails(notification(db(user), 'n1').delete());
+    }
+    await assertFails(notification(db(users.admin), 'n1').collection('events').doc('alice_opened').get());
   });
 });
 
