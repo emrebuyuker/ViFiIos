@@ -186,16 +186,10 @@ test('Android path requires a purchase token', async () => {
   }
 });
 
-test('Android path rejects another product or an over-long exam id before reaching Google Play', async () => {
+test('Android path rejects another product before reaching Google Play', async () => {
   await assertHttpsError(
     purchaseExamUnlock.run(signedIn('u', { platform: 'android', examId: 'e', productId: 'vifi_premium', purchaseToken: 't' })),
     'failed-precondition',
     'Satın alma doğrulanamadı.'
-  );
-  await assertHttpsError(
-    purchaseExamUnlock.run(
-      signedIn('u', { platform: 'android', examId: 'e'.repeat(65), productId: 'exam_unlock', purchaseToken: 't' })
-    ),
-    'failed-precondition'
   );
 });

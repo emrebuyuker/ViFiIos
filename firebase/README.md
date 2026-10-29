@@ -46,7 +46,7 @@ Tek sınavın parayla açılmasını iki mağaza için de sunucuda doğrular, ar
 | Platform | İstek | Doğrulama (`functions/`) | Tekrar kullanım anahtarı |
 |---|---|---|---|
 | iOS (`platform` yok) | `examId`, `signedTransaction` (StoreKit 2 JWS) | `appStore.js` — Apple imzası, paket, ürün | Apple `transactionId` |
-| Android (`platform: 'android'`) | `examId`, `purchaseToken`, `productId` | `googlePlay.js` — Play Developer API `purchases.products.get`: ödendi, ürün `exam_unlock`, `obfuscatedExternalProfileId` = `examId` | `orderId` (yoksa `play-token-<jeton SHA-256>`); kayıtlara `store: 'google_play'` eklenir |
+| Android (`platform: 'android'`) | `examId`, `purchaseToken`, `productId` | `googlePlay.js` — Play Developer API `purchases.products.get`: ödendi, ürün `exam_unlock`, `obfuscatedExternalProfileId` = `examId`'nin SHA-256 özeti (sınav kimlikleri Play'in 64 karakter sınırından uzun) | `orderId` (yoksa `play-token-<jeton SHA-256>`); kayıtlara `store: 'google_play'` eklenir |
 
 Sunucu satın almayı tüketmez; Android istemcisi kayıt başarılı olunca tüketir. Android hata kodları: geçersiz satın alma
 `failed-precondition`, Google Play'e ulaşılamıyor `unavailable`, API erişimi yok `internal`.

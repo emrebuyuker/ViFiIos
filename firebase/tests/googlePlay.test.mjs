@@ -10,12 +10,15 @@ import {
   PACKAGE_NAME,
   PlayVerificationError,
   classifyPlayApiError,
+  examBindingFor,
   transactionIdFor,
   verifyExamUnlockPurchase,
 } from '../functions/googlePlay.js';
 
 const TOKEN = 'opaque-purchase-token.AO-J1Oz';
-const EXAM_ID = 'itu-blg101-2025-vize';
+// A real catalog-path exam id: far longer than Play's 64-character obfuscatedProfileId limit.
+const EXAM_ID = 'sakarya-universitesi__muhendislik-fakultesi__insaat-muhendisligi__betonarme-1__2009-yaz-okulu-vize';
+const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 const ORDER_ID = 'GPA.3372-1234-5678-12345';
 
 /** A paid `exam_unlock` bought for EXAM_ID, as `purchases.products.get` returns it. */
@@ -26,7 +29,7 @@ function paidPurchase(overrides = {}) {
     consumptionState: 0,
     orderId: ORDER_ID,
     productId: EXAM_UNLOCK_PRODUCT_ID,
-    obfuscatedExternalProfileId: EXAM_ID,
+    obfuscatedExternalProfileId: sha256(EXAM_ID),
     obfuscatedExternalAccountId: 'a'.repeat(64),
     ...overrides,
   };
@@ -88,18 +91,20 @@ test('rejects another product without calling Google Play', async () => {
   }
 });
 
-test('rejects a missing exam id or one longer than Play allows without calling Google Play', async () => {
-  for (const examId of ['', undefined, 'e'.repeat(65)]) {
+test('rejects a missing exam id without calling Google Play', async () => {
+  for (const examId of ['', undefined, null, 7]) {
     const { lookup, calls } = fakeLookup(paidPurchase());
     await assertRejected(verifyExamUnlockPurchase(request({ examId }), lookup));
     assert.equal(calls.length, 0);
   }
 });
 
-test('accepts an exam id of exactly 64 characters', async () => {
-  const examId = 'e'.repeat(64);
-  const { lookup } = fakeLookup(paidPurchase({ obfuscatedExternalProfileId: examId }));
-  assert.deepEqual(await verifyExamUnlockPurchase(request({ examId }), lookup), { transactionId: ORDER_ID });
+test('binds an exam id of any length through its 64-character SHA-256 digest', async () => {
+  assert.ok(EXAM_ID.length > 64);
+  assert.equal(examBindingFor(EXAM_ID), sha256(EXAM_ID));
+  assert.equal(examBindingFor(EXAM_ID).length, 64);
+  // The digest of "abc", as the Android client computes it (PlayBillingExamPurchaseServiceTest).
+  assert.equal(examBindingFor('abc'), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
 });
 
 test('rejects a canceled, pending or stateless purchase', async () => {
@@ -114,8 +119,9 @@ test('rejects a purchase resource that names another product', async () => {
   await assertRejected(verifyExamUnlockPurchase(request(), lookup));
 });
 
-test('rejects a purchase bought for another exam or for no exam', async () => {
-  for (const obfuscatedExternalProfileId of ['another-exam', '', undefined, `${EXAM_ID} `]) {
+test('rejects a purchase bought for another exam, for no exam, or bound by the raw exam id', async () => {
+  const wrongBindings = [sha256('another-exam'), '', undefined, EXAM_ID, sha256(EXAM_ID).toUpperCase()];
+  for (const obfuscatedExternalProfileId of wrongBindings) {
     const { lookup } = fakeLookup(paidPurchase({ obfuscatedExternalProfileId }));
     await assertRejected(verifyExamUnlockPurchase(request(), lookup));
   }

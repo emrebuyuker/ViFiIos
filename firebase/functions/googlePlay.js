@@ -1,10 +1,11 @@
 // Google Play purchase verification for the paid single-exam unlock (Android, 4.0.0).
 //
-// The Android client buys the `exam_unlock` one-time product with `obfuscatedProfileId = examId`, then sends the
-// purchase token here. We look the purchase up with the Google Play Developer API — never trust the client — and
-// accept it only when it is paid, for this app's product, and bought for the exam being unlocked. The caller still
-// applies replay protection with the returned transaction id. The server never consumes the purchase: the client
-// consumes it only after the unlock is recorded, so a failed call never loses a paid unlock.
+// The Android client buys the `exam_unlock` one-time product with `obfuscatedProfileId` = the SHA-256 of the exam id
+// (see examBindingFor), then sends the purchase token here. We look the purchase up with the Google Play Developer
+// API — never trust the client — and accept it only when it is paid, for this app's product, and bought for the exam
+// being unlocked. The caller still applies replay protection with the returned transaction id. The server never
+// consumes the purchase: the client consumes it only after the unlock is recorded, so a failed call never loses a
+// paid unlock.
 //
 // Access: the Google Play Android Developer API must be enabled on the project, and the function's runtime service
 // account must be invited in Play Console with permission to view financial data. Until then (or while a new grant
@@ -21,9 +22,6 @@ export const EXAM_UNLOCK_PRODUCT_ID = 'exam_unlock';
 
 // `purchases.products` purchaseState: 0 = purchased, 1 = canceled, 2 = pending.
 const PURCHASE_STATE_PURCHASED = 0;
-
-// Play caps `obfuscatedProfileId` at 64 characters, so a longer exam id can never match a purchase.
-const MAX_EXAM_ID_LENGTH = 64;
 
 // Purchase tokens are opaque; the cap only keeps an abusive input out of the API URL.
 const MAX_PURCHASE_TOKEN_LENGTH = 4096;
@@ -50,6 +48,18 @@ export class PlayVerificationError extends Error {
 }
 
 const rejected = (message) => new PlayVerificationError('rejected', message);
+
+/**
+ * How a purchase names its exam to Google Play: the SHA-256 hex digest of the exam id. Exam ids are catalog paths far
+ * longer than Play's 64-character `obfuscatedProfileId` limit; the digest is exactly 64 characters for any of them.
+ * The Android client computes the same digest (`PlayBillingExamPurchaseService.examBinding`).
+ *
+ * @param {string} examId
+ * @returns {string}
+ */
+export function examBindingFor(examId) {
+  return createHash('sha256').update(examId).digest('hex');
+}
 
 /**
  * Maps a failed Play Developer API call to a verification error. An HTTP 4xx means the token is unknown, malformed
@@ -130,7 +140,7 @@ export async function verifyExamUnlockPurchase({ purchaseToken, productId, examI
   if (productId !== EXAM_UNLOCK_PRODUCT_ID) {
     throw rejected(`unexpected product id ${productId}`);
   }
-  if (typeof examId !== 'string' || !examId || examId.length > MAX_EXAM_ID_LENGTH) {
+  if (typeof examId !== 'string' || !examId) {
     throw rejected('invalid exam id');
   }
 
@@ -151,7 +161,7 @@ export async function verifyExamUnlockPurchase({ purchaseToken, productId, examI
   if (purchase.productId != null && purchase.productId !== EXAM_UNLOCK_PRODUCT_ID) {
     throw rejected(`unexpected purchased product ${purchase.productId}`);
   }
-  if (purchase.obfuscatedExternalProfileId !== examId) {
+  if (purchase.obfuscatedExternalProfileId !== examBindingFor(examId)) {
     throw rejected('purchase was bought for another exam');
   }
   return { transactionId: transactionIdFor(purchase, purchaseToken) };
