@@ -350,7 +350,9 @@ describe('Firestore rules — notification devices, settings and history', () =>
     await assertFails(device(fs, 'alice', 'd5').set(validDevice({ token: 42 })));
     await assertFails(device(fs, 'alice', 'd6').set(validDevice({ appVersion: '1'.repeat(33) })));
     await assertFails(device(fs, 'alice', 'd7').set(validDevice({ appVersion: 4 })));
-    await assertFails(device(fs, 'alice', 'd8').set(validDevice({ updatedAt: new Date() })));
+    // A client clock, clearly off: `new Date()` can land in the same millisecond as `request.time` on a fast local
+    // emulator and then (correctly) pass the rule, which made this assertion flaky.
+    await assertFails(device(fs, 'alice', 'd8').set(validDevice({ updatedAt: new Date(Date.now() - 60_000) })));
     await assertFails(device(fs, 'alice', 'd9').set({ token: 'fcm', platform: 'ios', updatedAt: serverTimestamp() }));
     await assertFails(device(fs, 'alice', 'install.a').set(validDevice()));
     await assertFails(device(fs, 'alice', 'x'.repeat(129)).set(validDevice()));
@@ -385,7 +387,7 @@ describe('Firestore rules — notification devices, settings and history', () =>
     await assertFails(doc.set(validConsent({ version: 0 })));
     await assertFails(doc.set(validConsent({ version: 100 })));
     await assertFails(doc.set(validConsent({ version: 1.5 })));
-    await assertFails(doc.set(validConsent({ updatedAt: new Date() })));
+    await assertFails(doc.set(validConsent({ updatedAt: new Date(Date.now() - 60_000) })));
     await assertFails(doc.set(validConsent({ coins: 10 })));
     await assertFails(doc.set({ marketing: true, source: 'prompt', updatedAt: serverTimestamp() }));
     await assertFails(doc.update({ marketing: true })); // keeps the stale updatedAt
@@ -402,7 +404,7 @@ describe('Firestore rules — notification devices, settings and history', () =>
     await assertSucceeds(doc.get());
     await assertSucceeds(doc.set({ readAt: serverTimestamp() }));
     await assertSucceeds(doc.update({ readAt: serverTimestamp() }));
-    await assertFails(doc.set({ readAt: new Date() }));
+    await assertFails(doc.set({ readAt: new Date(Date.now() - 60_000) }));
     await assertFails(doc.set({ readAt: serverTimestamp(), unread: 0 }));
     await assertFails(doc.set({}));
     await assertFails(doc.delete());
