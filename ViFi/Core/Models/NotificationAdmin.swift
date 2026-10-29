@@ -26,6 +26,7 @@ nonisolated struct NotificationDraft: Hashable, Sendable {
         case invalidLocation
         case invalidURL
         case emptyExam
+        case invalidImage
         case scheduleInPast
         case expiryBeforeDelivery
 
@@ -39,6 +40,7 @@ nonisolated struct NotificationDraft: Hashable, Sendable {
             case .invalidLocation: String(localized: "Haritadan geçerli bir konum seç.")
             case .invalidURL: String(localized: "Bağlantı https:// ile başlamalı.")
             case .emptyExam: String(localized: "Bağlanacak sınavı seç.")
+            case .invalidImage: String(localized: "Görsel bu bildirime ait değil; görseli yeniden seç.")
             case .scheduleInPast: String(localized: "Gönderim zamanı geçmişte olamaz.")
             case .expiryBeforeDelivery: String(localized: "Geçerlilik süresi gönderim zamanından sonra olmalı.")
             }
@@ -51,7 +53,8 @@ nonisolated struct NotificationDraft: Hashable, Sendable {
     var title: String = ""
     var body: String = ""
     var action: Action?
-    /// Storage path of an uploaded campaign image (`notificationImages/<id>.jpg`).
+    /// Storage path of the uploaded campaign image: always this draft's own `NotificationImage.storagePath(forNotificationId: id)`
+    /// (the server refuses any other), set once the upload has finished.
     var imagePath: String?
     var audience: NotificationAudience = .all
     /// `nil` sends now (subject to quiet hours for campaigns).
@@ -78,6 +81,7 @@ nonisolated struct NotificationDraft: Hashable, Sendable {
         if trimmedBody.count > Self.bodyLimit { return .bodyTooLong }
         if !Self.isSendable(audience) { return .invalidAudience }
         if let issue = Self.issue(with: action) { return issue }
+        if let imagePath, imagePath != NotificationImage.storagePath(forNotificationId: id) { return .invalidImage }
         // A minute of grace, so a time picked "now" is not rejected by the time the admin taps send.
         if let scheduledAt, scheduledAt < now.addingTimeInterval(-60) { return .scheduleInPast }
         if let expiresAt, expiresAt <= (scheduledAt ?? now) { return .expiryBeforeDelivery }

@@ -1,6 +1,7 @@
 // The admin composer's callables (NOTIFICATIONS.md §4): `getNotificationAudience`, `previewNotification` and
-// `sendNotification`. Handlers take their dependencies (`db`, `rtdb`, `messaging`, `now`) as the first argument, so
-// tests run them against the emulators with a fake messaging client; `index.js` wires the live ones.
+// `sendNotification`. Handlers take their dependencies (`db`, `rtdb`, `messaging`, `bucket`, `signImageUrl`, `now`)
+// as the first argument, so tests run them against the emulators with a fake messaging client and signer;
+// `index.js` wires the live ones.
 
 import { HttpsError } from 'firebase-functions/v2/https';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -13,6 +14,7 @@ import {
   quietHoursDeferral,
   respectsQuietHours,
   validateAdminAudience,
+  validateImageObject,
   validateSendRequest,
 } from './schema.js';
 import {
@@ -79,16 +81,13 @@ export async function sendNotificationHandler(deps, request) {
   const uid = requireAdmin(request);
   const now = deps.now();
   const input = withInputErrors(() => validateSendRequest(request.data, { now }));
-  if (input.imagePath) {
-    // Images arrive with phase 2 (upload, hosting and the notification service extension).
-    throw new HttpsError('failed-precondition', 'Görsel henüz desteklenmiyor.');
-  }
 
   const ref = deps.db.collection('notifications').doc(input.notificationId);
   const existing = await ref.get();
   if (existing.exists) return sendResult(existing);
 
   const action = input.action?.type === 'exam' ? await examAction(deps.db, input.action.examId) : input.action;
+  if (input.imagePath) await verifyImage(deps.bucket, input.imagePath);
   const label = audienceLabel(input.audience, await segmentNames(deps.rtdb, input.audience));
   const { scheduledAt, deferredByQuietHours } = schedule(input, now);
   const status = scheduledAt ? 'scheduled' : 'sending';
@@ -97,6 +96,8 @@ export async function sendNotificationHandler(deps, request) {
     kind: input.kind,
     title: input.title,
     body: input.body,
+    // The image is kept by its Storage path only; the push's signed URL is minted at delivery and never stored.
+    ...(input.imagePath ? { image: { storagePath: input.imagePath } } : {}),
     ...(action ? { action } : {}),
     audience: input.audience,
     audienceLabel: label,
@@ -175,6 +176,21 @@ export async function examAction(db, examId) {
   };
 }
 
+/**
+ * The notification's uploaded image (`notificationImages/<id>.jpg`, uploaded by the admin's app before sending)
+ * must exist, be a JPEG and be at most 1 MiB; otherwise `failed-precondition` with what to fix, before anything is
+ * recorded.
+ */
+export async function verifyImage(bucket, imagePath) {
+  let metadata = null;
+  try {
+    [metadata] = await bucket.file(imagePath).getMetadata();
+  } catch (error) {
+    if (error?.code !== 404) throw error;
+  }
+  withInputErrors(() => validateImageObject(metadata), 'failed-precondition');
+}
+
 /** university → course, walked up from the course's `catalogNodes` document; `null` if the chain is broken. */
 async function catalogAncestry(db, courseId) {
   const levels = [];
@@ -210,12 +226,12 @@ function sendResult(snapshot) {
   };
 }
 
-/** Runs a schema validation, turning its `NotificationInputError` into the callable's `invalid-argument`. */
-function withInputErrors(validate) {
+/** Runs a schema validation, turning its `NotificationInputError` into an `HttpsError` (`invalid-argument` by default). */
+function withInputErrors(validate, code = 'invalid-argument') {
   try {
     return validate();
   } catch (error) {
-    if (error instanceof NotificationInputError) throw new HttpsError('invalid-argument', error.message);
+    if (error instanceof NotificationInputError) throw new HttpsError(code, error.message);
     throw error;
   }
 }

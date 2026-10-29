@@ -27,7 +27,9 @@ nonisolated final class InboxUITests: XCTestCase {
 
         openInbox(in: app)
 
-        for id in ["a1", "p-exam", "p-paywall", "a2"] {
+        for id in ["a1", "p-exam", "p-paywall", "p-exam-locked", "a2"] {
+            // Rows below the fold are not rendered until scrolled to.
+            reveal("inbox.row.\(id)", in: app)
             XCTAssertTrue(app.element("inbox.row.\(id)").waitForExistence(timeout: Timeout.content), "\(id) is missing")
         }
         XCTAssertFalse(app.element("inbox.row.a-expired").exists, "An expired notification must not be shown")
@@ -73,6 +75,63 @@ nonisolated final class InboxUITests: XCTestCase {
 
         XCTAssertTrue(app.element("inbox.row.p-paywall").waitForExistence(timeout: Timeout.content))
         XCTAssertFalse(app.element("inbox.row.p-paywall.action").exists)
+    }
+
+    // MARK: - Exam lock and images
+
+    @MainActor
+    func testLockedExamFromANotificationGoesThroughTheUnlockSheet() {
+        let app = launchApp()
+        openInbox(in: app)
+
+        reveal("inbox.row.p-exam-locked.action", in: app)
+        tap("inbox.row.p-exam-locked.action", in: app)
+
+        XCTAssertTrue(app.element("exam.unlock.sheet").waitForExistence(timeout: Timeout.content),
+                      "A locked exam must offer the unlock sheet, as in the archive")
+        XCTAssertFalse(app.element("exam.images").exists, "A locked exam must not open before it is unlocked")
+
+        tap("exam.unlock.confirm", in: app)
+
+        XCTAssertTrue(app.element("exam.images").waitForExistence(timeout: Timeout.content), "Unlocking did not open the exam")
+        XCTAssertTrue(app.element("inbox.list").waitForNonExistence(timeout: Timeout.transition), "The inbox should have closed")
+    }
+
+    @MainActor
+    func testLockedExamWithoutCoinsLeadsToEarningThem() {
+        let app = launchApp(extra: ["-ViFiNoCoins"])
+        openInbox(in: app)
+
+        reveal("inbox.row.p-exam-locked.action", in: app)
+        tap("inbox.row.p-exam-locked.action", in: app)
+        XCTAssertTrue(app.element("exam.unlock.sheet").waitForExistence(timeout: Timeout.content))
+        tap("exam.unlock.earn", in: app)
+
+        XCTAssertTrue(app.element("addExam.university").waitForExistence(timeout: Timeout.content),
+                      "Earning coins did not open the add-exam form")
+    }
+
+    @MainActor
+    func testSubscriberOpensALockedExamFromANotificationDirectly() {
+        let app = launchApp(extra: ["-ViFiSubscribed"])
+        openInbox(in: app)
+
+        reveal("inbox.row.p-exam-locked.action", in: app)
+        tap("inbox.row.p-exam-locked.action", in: app)
+
+        XCTAssertTrue(app.element("exam.images").waitForExistence(timeout: Timeout.content), "A subscriber's exam did not open")
+        XCTAssertFalse(app.element("exam.unlock.sheet").exists, "A subscriber must not see the unlock sheet")
+    }
+
+    @MainActor
+    func testNotificationImageIsShownOnItsCard() {
+        let app = launchApp()
+        openInbox(in: app)
+
+        reveal("inbox.row.p-exam-locked.image", in: app)
+        XCTAssertTrue(app.element("inbox.row.p-exam-locked.image").waitForExistence(timeout: Timeout.content),
+                      "The notification image is missing")
+        XCTAssertFalse(app.element("inbox.row.p-paywall.image").exists, "A notification without an image shows none")
     }
 
     // MARK: - Tapped push
@@ -125,6 +184,13 @@ nonisolated final class InboxUITests: XCTestCase {
         XCTAssertTrue(app.element("home.list").waitForExistence(timeout: Timeout.content), "The home list did not appear")
         tap("toolbar.inbox", in: app)
         XCTAssertTrue(app.element("inbox.list").waitForExistence(timeout: Timeout.transition), "The inbox did not open")
+    }
+
+    /// Scrolls down until the element is rendered (list rows below the fold do not exist until scrolled to).
+    @MainActor
+    private func reveal(_ identifier: String, in app: XCUIApplication) {
+        let target = app.element(identifier)
+        for _ in 0..<5 where !target.waitForExistence(timeout: 1) { app.swipeUp() }
     }
 
     @MainActor

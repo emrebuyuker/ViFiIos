@@ -4,6 +4,7 @@
 
 included:
   - ViFi
+  - ViFiNotificationService
   - ViFiTests
   - ViFiUITests
 

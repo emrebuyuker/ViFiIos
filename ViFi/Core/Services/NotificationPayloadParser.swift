@@ -19,11 +19,19 @@ nonisolated enum NotificationPayloadParser {
             kind: kind(data["kind"]),
             title: title,
             body: string(data["body"]) ?? "",
-            imageURL: httpsURL((data["image"] as? [String: Any])?["url"]),
+            imageStoragePath: imageStoragePath(from: data["image"]),
             action: action(from: data["action"]),
             createdAt: date(data["createdAt"]),
             expiresAt: date(data["expiresAt"])
         )
+    }
+
+    /// The image's Storage path (`image: { storagePath }`); `nil` when absent or not a notification image path, so
+    /// a stray value can never make the app download something else with the user's credentials.
+    static func imageStoragePath(from value: Any?) -> String? {
+        guard let path = string((value as? [String: Any])?["storagePath"]),
+              NotificationImage.isValidStoragePath(path) else { return nil }
+        return path
     }
 
     /// A notification's action; `nil` when absent, unknown or malformed.

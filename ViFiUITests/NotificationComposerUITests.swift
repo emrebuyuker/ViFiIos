@@ -119,6 +119,33 @@ nonisolated final class NotificationComposerUITests: XCTestCase {
         XCTAssertTrue(canceled.waitForExistence(timeout: Timeout.content), "The notification was not canceled")
     }
 
+    @MainActor
+    func testAdminLinksAnExamPickedFromTheArchive() {
+        let app = launchApp(admin: true)
+        openComposer(in: app)
+        compose(title: "Sinav bildirimi", body: "Yeni sinav eklendi.", in: app)
+        // The image picker is offered (the photo library itself is a system UI the tests do not drive).
+        XCTAssertTrue(reveal("notificationComposer.imagePicker", in: app).exists)
+
+        choose("Sınav", from: "notificationComposer.action", in: app)
+        tap("notificationComposer.exam", in: app)
+        for name in ["BOZOK ÜNİVERSİTESİ", "MÜHENDİSLİK MİMARLIK FAKÜLTESİ", "BİLGİSAYAR MÜHENDİSLİĞİ", "MÜHENDİSLİK MATEMATİĞİ", "2019 FİNAL"] {
+            let row = element("notificationComposer.exam.row.\(name)", in: app)
+            XCTAssertTrue(row.waitForExistence(timeout: Timeout.content), "\(name) is not offered by the exam picker")
+            row.tap()
+        }
+
+        let path = reveal("notificationComposer.examPath", in: app)
+        XCTAssertTrue(path.label.contains("MÜHENDİSLİK MATEMATİĞİ"), "The picked exam's place is not shown: \(path.label)")
+        XCTAssertTrue(element("notificationComposer.exam", in: app).label.contains("2019 FİNAL"))
+
+        tap("notificationComposer.send", in: app)
+        let confirm = element("notificationComposer.confirm", in: app)
+        XCTAssertTrue(confirm.waitForExistence(timeout: Timeout.transition), "The confirmation did not appear")
+        confirm.tap()
+        expectSuccess(in: app)
+    }
+
     // MARK: - Helpers
 
     @MainActor

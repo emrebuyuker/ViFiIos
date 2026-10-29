@@ -1,9 +1,10 @@
 import SwiftUI
 
 /// The in-app notification box: the public announcements and the user's own notifications, newest first.
-/// Opening it marks what is there as read. A notification may carry one action (a button, and the card itself is
-/// tappable): open an exam, the premium screen, the add-exam flow, a link or a place in a maps app. A tapped push
-/// opens the inbox on its notification, which is scrolled to and highlighted (`NotificationRouter`).
+/// Opening it marks what is there as read. A notification may carry an image and one action (a button, and the card
+/// itself is tappable): open an exam (by the archive's lock rule, `InboxExamGate`), the premium screen, the add-exam
+/// flow, a link or a place in a maps app. A tapped push opens the inbox on its notification, which is scrolled to and
+/// highlighted (`NotificationRouter`).
 struct InboxView: View {
     @Environment(AppEnvironment.self) private var environment
     @Environment(Router.self) private var router
@@ -12,6 +13,7 @@ struct InboxView: View {
     @State private var isShowingPaywall = false
     @State private var isShowingAddExam = false
     @State private var locationToOpen: NotificationLocation?
+    @State private var examGate = InboxExamGate()
 
     var body: some View {
         NavigationStack {
@@ -42,6 +44,14 @@ struct InboxView: View {
                 .sheet(isPresented: $isShowingAddExam) {
                     AddExamView()
                         .presentationDragIndicator(.visible)
+                }
+                .sheet(item: $examGate.lockedExam, onDismiss: runExamFollowUp) { exam in
+                    examUnlockSheet(for: exam)
+                }
+                .alert("Sınav açılamadı", isPresented: examErrorBinding) {
+                    Button("Tamam", role: .cancel) {}
+                } message: {
+                    Text(examGate.errorMessage ?? "")
                 }
                 .offersMarketingConsentReask()
                 .locationChoiceSheet(for: $locationToOpen)
@@ -84,6 +94,7 @@ struct InboxView: View {
                         isUnread: environment.inbox.isUnread(item),
                         isHighlighted: item.id == highlightedId,
                         button: button(for: item.action),
+                        isWorking: isChecking(item.action),
                         onAction: { perform(item.action) }
                     )
                     .id(item.id)
@@ -129,9 +140,18 @@ struct InboxView: View {
         guard let action, button(for: action) != nil else { return }
         switch action {
         case let .exam(target):
-            // The exam opens on the archive's navigation stack, behind this sheet: close the sheet first.
-            dismiss()
-            router.openExam(at: target.path, kind: target.kind)
+            // Only by the archive's lock rule: a locked exam gets the unlock sheet first.
+            Task {
+                let mayOpen = await examGate.check(
+                    target,
+                    repository: environment.repository,
+                    isSubscribed: environment.subscription.isSubscribed,
+                    unlockedIds: environment.unlocks.unlockedIds
+                )
+                if mayOpen {
+                    open(target)
+                }
+            }
         case .paywall:
             isShowingPaywall = true
         case .addExam:
@@ -141,6 +161,54 @@ struct InboxView: View {
         case let .location(location):
             locationToOpen = location
         }
+    }
+
+    /// Whether `action` is an exam whose lock is being checked.
+    private func isChecking(_ action: NotificationAction?) -> Bool {
+        guard case let .exam(target) = action else { return false }
+        return examGate.checkingExamId == target.examId
+    }
+
+    /// Opens an exam that passed the lock rule.
+    private func open(_ target: NotificationExamTarget) {
+        // The exam opens on the archive's navigation stack, behind this sheet: close the sheet first.
+        dismiss()
+        router.openExam(at: target.path, kind: target.kind)
+    }
+
+    /// The archive's unlock sheet for a locked exam (coins, money, or Premium / earning coins instead).
+    private func examUnlockSheet(for exam: ArchiveItem) -> some View {
+        ExamUnlockSheet(
+            examName: exam.name,
+            balance: environment.wallet.balance,
+            unlock: { await environment.unlockExam(exam) },
+            purchaseWithMoney: { await environment.purchaseExamUnlock(exam) },
+            onUnlocked: { examGate.unlocked() },
+            onEarnCoins: {
+                environment.analytics.track(.earnCoinsTapped)
+                examGate.leaveForAddExam()
+            },
+            onGoPremium: { examGate.leaveForPaywall() }
+        )
+        .onAppear { environment.trackUnlockSheetShown() }
+    }
+
+    /// What the unlock sheet's outcome asked for, once the sheet is gone.
+    private func runExamFollowUp() {
+        switch examGate.takeFollowUp() {
+        case let .open(target)?:
+            open(target)
+        case .addExam?:
+            isShowingAddExam = true
+        case .paywall?:
+            isShowingPaywall = true
+        case nil:
+            break
+        }
+    }
+
+    private var examErrorBinding: Binding<Bool> {
+        Binding(get: { examGate.errorMessage != nil }, set: { if !$0 { examGate.errorMessage = nil } })
     }
 }
 
@@ -183,25 +251,51 @@ private struct InboxRow: View {
     let isUnread: Bool
     let isHighlighted: Bool
     let button: InboxActionButton?
+    /// The action is being prepared (an exam's lock is being checked).
+    let isWorking: Bool
     let onAction: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             card
+            if let storagePath = item.imageStoragePath {
+                image(at: storagePath)
+            }
             if let button {
                 Button(action: onAction) {
-                    // Black on the brand orange: white text would fall below 3:1 contrast.
-                    Label(button.title, systemImage: button.systemImage)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
+                    HStack(spacing: 8) {
+                        if isWorking {
+                            ProgressView()
+                                .tint(.black)
+                        }
+                        // Black on the brand orange: white text would fall below 3:1 contrast.
+                        Label(button.title, systemImage: button.systemImage)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.black)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .disabled(isWorking)
                 .accessibilityIdentifier("inbox.row.\(item.id).action")
             }
         }
         .padding(.vertical, 4)
         .listRowBackground(isHighlighted ? Color.accentColor.opacity(0.18) : nil)
+    }
+
+    /// The campaign image, under the text; like the card, tapping it does what the action says.
+    @ViewBuilder
+    private func image(at storagePath: String) -> some View {
+        let image = InboxImageView(storagePath: storagePath, notificationId: item.id)
+        if button != nil {
+            image
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onAction)
+                .accessibilityAddTraits(.isButton)
+        } else {
+            image
+        }
     }
 
     /// The text of the notification; tapping it does what the action says, like the button.

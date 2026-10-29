@@ -5,10 +5,15 @@
 //   subscribe to the topic but never register a token).
 // - fanout: a copy in each recipient's `users/{uid}/inbox/{id}` + a push to their registered device tokens, in
 //   batches of 500; tokens FCM reports as dead are pruned.
+//
+// A notification with an image keeps only its Storage path (`image.storagePath`) in Firestore. Its push carries a
+// V4 signed read URL (7 days) minted here, at delivery, through the injected `signImageUrl` — so the image is
+// never public and a scheduled notification gets a fresh URL when it actually goes out. A signing failure only
+// costs the push its image.
 
 import { FieldValue } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
-import { BROADCAST_TOPIC, buildPushMessage, toInboxItem } from './schema.js';
+import { BROADCAST_TOPIC, NOTIFICATION_IMAGE_PATTERN, buildPushMessage, toInboxItem } from './schema.js';
 import { countRegisteredDevices, loadAllProfiles, loadDeviceTargets, resolveRecipients, chunked } from './audience.js';
 
 /** FCM's limit for one `sendEachForMulticast` call. */
@@ -29,7 +34,8 @@ export const PRUNABLE_TOKEN_ERRORS = Object.freeze([
  * when nothing could be delivered.
  *
  * @param {{ db: import('firebase-admin/firestore').Firestore, rtdb: import('firebase-admin/database').Database,
- *   messaging: { send: Function, sendEachForMulticast: Function } }} deps
+ *   messaging: { send: Function, sendEachForMulticast: Function },
+ *   signImageUrl?: (storagePath: string) => Promise<string> }} deps
  * @param {string} notificationId
  * @returns {Promise<{ status: string, recipients: number, pushTargets: number, pushSent: number, pushFailed: number }>}
  */
@@ -45,9 +51,10 @@ export async function deliverNotification(deps, notificationId) {
 
   let result;
   try {
+    const message = pushMessage(notificationId, notification, await signedImageUrl(deps, notificationId, notification));
     result = notification.delivery === 'broadcast'
-      ? await broadcast(deps, notificationId, notification)
-      : await fanout(deps, notificationId, notification);
+      ? await broadcast(deps, notificationId, notification, message)
+      : await fanout(deps, notificationId, notification, message);
   } catch (error) {
     logger.error('Notification delivery failed', { notificationId, error: error?.message ?? String(error) });
     await ref.update({ status: 'failed', error: String(error?.message ?? error).slice(0, 500) });
@@ -65,7 +72,7 @@ export async function deliverNotification(deps, notificationId) {
   return { status: 'sent', ...result };
 }
 
-async function broadcast({ db, rtdb, messaging }, notificationId, notification) {
+async function broadcast({ db, rtdb, messaging }, notificationId, notification, message) {
   await db.collection('announcements').doc(notificationId)
     .set(toInboxItem(notification, { createdAt: FieldValue.serverTimestamp() }));
 
@@ -76,7 +83,7 @@ async function broadcast({ db, rtdb, messaging }, notificationId, notification) 
   let pushSent = pushTargets;
   let pushFailed = 0;
   try {
-    await messaging.send({ ...pushMessage(notificationId, notification), topic: BROADCAST_TOPIC });
+    await messaging.send({ ...message, topic: BROADCAST_TOPIC });
   } catch (error) {
     logger.error('Broadcast push failed', { notificationId, error: error?.message ?? String(error) });
     pushSent = 0;
@@ -85,7 +92,7 @@ async function broadcast({ db, rtdb, messaging }, notificationId, notification) 
   return { recipients: profiles.length, pushTargets, pushSent, pushFailed };
 }
 
-async function fanout(deps, notificationId, notification) {
+async function fanout(deps, notificationId, notification, message) {
   const { db, messaging } = deps;
   const uids = await resolveRecipients(deps, notification);
 
@@ -104,7 +111,6 @@ async function fanout(deps, notificationId, notification) {
 
   const targets = await loadDeviceTargets(db, delivered);
   const tokens = [...targets.keys()];
-  const message = pushMessage(notificationId, notification);
   const stale = [];
   let pushSent = 0;
   let pushFailed = 0;
@@ -144,13 +150,37 @@ async function pruneDevices(db, refs) {
   await Promise.all(deletes);
 }
 
-function pushMessage(notificationId, notification) {
+/**
+ * The push's image URL: a signed read URL for the notification's image, or `null` when it has none or signing
+ * fails (logged; the push then goes out without the image — the inbox still shows it).
+ */
+async function signedImageUrl({ signImageUrl }, notificationId, notification) {
+  const storagePath = notification.image?.storagePath;
+  if (typeof storagePath !== 'string' || !NOTIFICATION_IMAGE_PATTERN.test(storagePath)) return null;
+  if (typeof signImageUrl !== 'function') {
+    logger.warn('No image signer; pushing without the image', { notificationId });
+    return null;
+  }
+  try {
+    const url = await signImageUrl(storagePath);
+    if (typeof url === 'string' && url.startsWith('https://')) return url;
+    logger.warn('The image signer returned no https URL; pushing without the image', { notificationId });
+  } catch (error) {
+    logger.warn('Signing the notification image failed; pushing without it', {
+      notificationId,
+      error: error?.message ?? String(error),
+    });
+  }
+  return null;
+}
+
+function pushMessage(notificationId, notification, imageUrl) {
   return buildPushMessage({
     notificationId,
     kind: notification.kind,
     title: notification.title,
     body: notification.body,
-    imageUrl: notification.image?.url ?? null,
+    imageUrl,
   });
 }
 

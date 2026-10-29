@@ -9,6 +9,8 @@ final class StubNotificationAdminService: NotificationAdminServicing {
     var previewResult: Result<NotificationPreview, any Error> = .success(NotificationPreview(recipients: 0, pushTargets: 0))
     /// `nil` answers each send with a `sent` result for that draft.
     var sendResult: Result<NotificationSendResult, any Error>?
+    /// When set, every image upload fails with it.
+    var uploadError: (any Error)?
     var cancelError: (any Error)?
     var historyResult: Result<[SentNotification], any Error> = .success([])
     /// When set, every call waits at the gate before it is answered.
@@ -17,6 +19,23 @@ final class StubNotificationAdminService: NotificationAdminServicing {
     private(set) var previewRequests: [(kind: NotificationKind, audience: NotificationAudience)] = []
     private(set) var sentDrafts: [NotificationDraft] = []
     private(set) var canceledIDs: [String] = []
+    /// Every upload attempt, in order, by notification id.
+    private(set) var uploadRequests: [(notificationId: String, bytes: Int)] = []
+    /// What is "in Storage": the first upload per path wins (overwriting is denied, like the rules).
+    private(set) var storedImages: [String: Data] = [:]
+
+    func uploadImage(_ jpeg: Data, notificationId: String) async throws -> String {
+        uploadRequests.append((notificationId, jpeg.count))
+        await gate?.pass()
+        if let uploadError {
+            throw uploadError
+        }
+        let path = NotificationImage.storagePath(forNotificationId: notificationId)
+        if storedImages[path] == nil {
+            storedImages[path] = jpeg
+        }
+        return path
+    }
 
     func audience() async throws -> AudienceFacets {
         await gate?.pass()

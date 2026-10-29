@@ -189,7 +189,8 @@ struct NotificationComposerAudienceSection: View {
 
 // MARK: - Action
 
-/// The button on the notification's card: nothing, Premium, Sınav Ekle, an https link or a place on the map.
+/// The button on the notification's card: nothing, Premium, Sınav Ekle, an https link, an exam from the archive
+/// or a place on the map.
 struct NotificationComposerActionSection: View {
     @Bindable var viewModel: NotificationComposerViewModel
 
@@ -200,6 +201,7 @@ struct NotificationComposerActionSection: View {
                 Text("Premium").tag(NotificationComposerViewModel.ActionChoice.paywall)
                 Text("Sınav Ekle").tag(NotificationComposerViewModel.ActionChoice.addExam)
                 Text("Bağlantı").tag(NotificationComposerViewModel.ActionChoice.url)
+                Text("Sınav").tag(NotificationComposerViewModel.ActionChoice.exam)
                 Text("Konum").tag(NotificationComposerViewModel.ActionChoice.location)
             }
             .accessibilityIdentifier("notificationComposer.action")
@@ -211,6 +213,9 @@ struct NotificationComposerActionSection: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .accessibilityIdentifier("notificationComposer.url")
+            }
+            if viewModel.actionChoice == .exam {
+                NotificationComposerExamRow(viewModel: viewModel)
             }
 
             if viewModel.actionChoice == .location {

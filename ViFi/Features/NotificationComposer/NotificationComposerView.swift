@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The admin "Bildirim Gönder" form: kind, title and message, audience, action and timing, then a preview of the
+/// The admin "Bildirim Gönder" form: kind, title and message, audience, action, image and timing, then a preview of the
 /// exact reach and a confirmation before anything is sent. Reachable only from the account screen, and only by an
 /// admin; its history is one toolbar button away.
 struct NotificationComposerView: View {
@@ -25,6 +25,7 @@ private struct NotificationComposerScreen: View {
             NotificationComposerContentSection(viewModel: viewModel)
             NotificationComposerAudienceSection(viewModel: viewModel)
             NotificationComposerActionSection(viewModel: viewModel)
+            NotificationComposerImageSection(viewModel: viewModel)
             NotificationComposerTimingSection(viewModel: viewModel)
             NotificationComposerFeedbackSection(viewModel: viewModel)
             NotificationComposerSendSection(viewModel: viewModel)

@@ -176,6 +176,71 @@ describe('pending/{uid}/{submissionId}/', () => {
   });
 });
 
+describe('notificationImages/{notificationId}.jpg', () => {
+  const SENT_IMAGE = 'notificationImages/3f2b8c1e-0d7a-4b8e-9f3a-333333333333.jpg';
+  const fresh = (name = 'b7c9e2d4-1a2b-4c3d-8e9f-444444444444') => `notificationImages/${name}.jpg`;
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.storage().ref(SENT_IMAGE).put(bytes(), JPEG);
+    });
+  });
+
+  test('admin uploads a JPEG of at most 1 MiB under a notification id', async () => {
+    await assertSucceeds(upload(users.admin, fresh(), bytes(), JPEG));
+    await assertSucceeds(upload(users.admin, fresh('A_z-9'), bytes(MiB), JPEG));
+  });
+
+  test('empty, oversized and non-JPEG uploads are rejected', async () => {
+    await assertFails(upload(users.admin, fresh('empty'), bytes(0), JPEG));
+    await assertFails(upload(users.admin, fresh('huge'), bytes(MiB + 1), JPEG));
+    for (const contentType of ['image/png', 'image/heic', 'application/pdf', 'image/jpeg; charset=binary']) {
+      await assertFails(upload(users.admin, fresh('typed'), bytes(), { contentType }));
+    }
+  });
+
+  test('only <notificationId>.jpg names, directly in the folder', async () => {
+    for (const path of [
+      'notificationImages/x.jpeg',
+      'notificationImages/x.png',
+      'notificationImages/x.JPG',
+      'notificationImages/has space.jpg',
+      'notificationImages/nokta.ek.jpg',
+      'notificationImages/.jpg',
+      `notificationImages/${'a'.repeat(129)}.jpg`,
+      'notificationImages/nested/x.jpg',
+    ]) {
+      await assertFails(upload(users.admin, path, bytes(), JPEG));
+    }
+    await assertSucceeds(upload(users.admin, `notificationImages/${'a'.repeat(128)}.jpg`, bytes(), JPEG));
+  });
+
+  test('an uploaded image is never replaced, updated or deleted from a client — admins included', async () => {
+    await assertFails(upload(users.admin, SENT_IMAGE, bytes(32), JPEG));
+    await assertFails(storage(users.admin).ref(SENT_IMAGE).updateMetadata({ cacheControl: 'public, max-age=60' }));
+    await assertFails(storage(users.admin).ref(SENT_IMAGE).delete());
+    await assertFails(storage(users.alice).ref(SENT_IMAGE).delete());
+  });
+
+  test('non-admins cannot upload, a string "true" claim included', async () => {
+    for (const user of [null, users.alice, users.fakeAdmin, users.usPhone]) {
+      await assertFails(upload(user, fresh(), bytes(), JPEG));
+    }
+  });
+
+  test('+90 users and admins read single images; others cannot; nobody lists', async () => {
+    await assertSucceeds(storage(users.alice).ref(SENT_IMAGE).getMetadata());
+    await assertSucceeds(storage(users.alice).ref(SENT_IMAGE).getDownloadURL());
+    await assertSucceeds(storage(users.admin).ref(SENT_IMAGE).getMetadata());
+    for (const user of [null, users.usPhone, users.emailOnly, users.shortTrPhone]) {
+      await assertFails(storage(user).ref(SENT_IMAGE).getMetadata());
+    }
+    for (const user of [users.alice, users.admin]) {
+      await assertFails(storage(user).ref('notificationImages').listAll());
+    }
+  });
+});
+
 describe('any other path', () => {
   test('is denied for everyone, admins included', async () => {
     for (const user of [users.alice, users.admin]) {

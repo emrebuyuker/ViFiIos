@@ -70,8 +70,8 @@ struct RootView: View {
                 // push notification does not leave a stale count behind once the user is back in the app.
                 clearNotificationBadge()
             case .background:
-                // The icon badge shows what is waiting in the inbox while the app is away (pushes themselves
-                // do not carry a badge count).
+                // The icon badge shows what is waiting in the inbox while the app is away; each push that arrives
+                // meanwhile adds one (the Notification Service Extension, counting up from this number).
                 setNotificationBadge(environment.inbox.unreadCount)
                 // Trim the on-disk file cache back within budget while the app is idle.
                 Task { await environment.fileLoader.pruneDiskCache() }
@@ -169,9 +169,11 @@ struct RootView: View {
         setNotificationBadge(0)
     }
 
-    /// Sets the home-screen icon badge (a no-op until the user has allowed badges).
+    /// Sets the home-screen icon badge (a no-op until the user has allowed badges), and records it for the
+    /// Notification Service Extension, which adds one for each push that arrives while the app is away.
     private func setNotificationBadge(_ count: Int) {
         UNUserNotificationCenter.current().setBadgeCount(count)
+        NotificationBadgeCounter.shared()?.record(count)
     }
 
     // MARK: - App update

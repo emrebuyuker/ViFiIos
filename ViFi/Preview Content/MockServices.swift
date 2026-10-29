@@ -756,7 +756,7 @@ final class MockNotificationService: NotificationServicing {
 }
 
 /// Serves a fixed sample inbox for previews and UI tests: public announcements and the user's own notifications
-/// (one with an exam action, one with the premium action), plus an in-memory read marker that `markRead` moves
+/// (a free exam, the premium action, and a locked exam with an image), plus an in-memory read marker that `markRead` moves
 /// like the server would. The streams end after their first value, except the read marker, which stays open.
 final class StubInboxReader: InboxReading {
     private let broadcast: [InboxItem]
@@ -813,7 +813,7 @@ final class StubInboxReader: InboxReading {
             kind: .general,
             title: "Yeni sınavlar eklendi",
             body: "Bilgisayar Mühendisliği'ne 2024 vize ve finalleri eklendi.",
-            imageURL: nil,
+            imageStoragePath: nil,
             action: nil,
             createdAt: Date(timeIntervalSince1970: 1_763_000_000),
             expiresAt: nil
@@ -824,7 +824,7 @@ final class StubInboxReader: InboxReading {
             kind: .general,
             title: "ViFi'ye hoş geldin",
             body: "Geçmiş sınavlara tek yerden ulaş, sınav ekleyerek coin kazan.",
-            imageURL: nil,
+            imageStoragePath: nil,
             action: nil,
             createdAt: Date(timeIntervalSince1970: 1_759_000_000),
             expiresAt: nil
@@ -836,7 +836,7 @@ final class StubInboxReader: InboxReading {
             kind: .general,
             title: "Süresi dolmuş duyuru",
             body: "Bu bildirim listede görünmemeli.",
-            imageURL: nil,
+            imageStoragePath: nil,
             action: nil,
             createdAt: Date(timeIntervalSince1970: 1_760_000_000),
             expiresAt: Date(timeIntervalSince1970: 1_760_500_000)
@@ -851,7 +851,7 @@ final class StubInboxReader: InboxReading {
             kind: .system,
             title: "Sınavın onaylandı",
             body: "Gönderdiğin sınav arşive eklendi. Göz atmak ister misin?",
-            imageURL: nil,
+            imageStoragePath: nil,
             action: .exam(NotificationExamTarget(examId: "2018 VİZE", path: .mockPDFExam, kind: .pdf)),
             createdAt: Date(timeIntervalSince1970: 1_762_000_000),
             expiresAt: nil
@@ -862,9 +862,26 @@ final class StubInboxReader: InboxReading {
             kind: .promo,
             title: "Premium'da bahar fırsatı",
             body: "Tüm arşivin kilidini aç, kampanyalı fiyatı kaçırma.",
-            imageURL: nil,
+            imageStoragePath: nil,
             action: .paywall,
             createdAt: Date(timeIntervalSince1970: 1_761_000_000),
+            expiresAt: nil
+        ),
+        // A locked exam (the course's newest): opening it goes through the unlock sheet, like in the archive. It
+        // carries an image: on sample data the bundled sample page (no network).
+        InboxItem(
+            id: "p-exam-locked",
+            source: .personal,
+            kind: .general,
+            title: "Yeni vize sorusu eklendi",
+            body: "Mühendislik Matematiği 2023 vizesi arşivde.",
+            imageStoragePath: NotificationImage.storagePath(forNotificationId: "p-exam-locked"),
+            action: .exam(NotificationExamTarget(
+                examId: "2023 VİZE",
+                path: ArchivePath.mockLesson.appending("2023 VİZE"),
+                kind: .images
+            )),
+            createdAt: Date(timeIntervalSince1970: 1_760_800_000),
             expiresAt: nil
         ),
         // The oldest, so the entries above keep their place in the UI tests that read the top of the list.
@@ -874,7 +891,7 @@ final class StubInboxReader: InboxReading {
             kind: .promo,
             title: "Kampüse yakın kahve fırsatı",
             body: "ViFi'lilere özel %20 indirim, bu hafta sonuna kadar.",
-            imageURL: nil,
+            imageStoragePath: nil,
             action: .location(MockLocationPicker.sampleLocation),
             createdAt: Date(timeIntervalSince1970: 1_758_000_000),
             expiresAt: nil

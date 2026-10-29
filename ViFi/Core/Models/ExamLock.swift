@@ -23,4 +23,15 @@ nonisolated enum ExamLock {
         guard exam.level == .exam, let id = exam.path.components.last else { return true }
         return freeIds.contains(id) || unlockedIds.contains(id)
     }
+
+    /// Whether `item` is a locked exam for this user: it has files, and is neither free nor unlocked by them. An
+    /// active premium subscription unlocks the whole archive, so nothing is locked for a subscriber. The one rule
+    /// behind the archive's lock badges and an exam opened from a notification (`ExamAccessResolver`).
+    ///
+    /// - Parameter freeIds: The course's free exams (`freeExamIds(orderedExams:)` of its full, unfiltered list).
+    static func isLocked(_ item: ArchiveItem, freeIds: Set<String>, unlockedIds: Set<String>, isSubscribed: Bool) -> Bool {
+        guard item.level == .exam, item.exam != nil else { return false }
+        if isSubscribed { return false }
+        return !isAccessible(item, freeIds: freeIds, unlockedIds: unlockedIds)
+    }
 }

@@ -24,6 +24,20 @@ export const PROFILE_ID_PATTERN = /^[a-z0-9-]{1,140}$/;
 /** Client UUIDs (lowercase) and Firestore auto-ids; becomes a document id, so nothing else is accepted. */
 export const NOTIFICATION_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 
+/**
+ * Campaign images (NOTIFICATIONS.md §6): the admin's app uploads one JPEG per notification to
+ * `notificationImages/<notificationId>.jpg` (Storage rule: admin create-only, `image/jpeg`, ≤ 1 MiB). The image is
+ * never public: the inbox reads it by `storagePath` with the user's credentials, and the push carries a short-lived
+ * signed URL minted at delivery time (never stored in Firestore).
+ */
+export const IMAGE_FOLDER = 'notificationImages';
+export const IMAGE_CONTENT_TYPE = 'image/jpeg';
+export const IMAGE_MAX_BYTES = 1024 * 1024;
+/** The Storage path of a notification image; the file name is the notification id (`storage.rules` checks it). */
+export const NOTIFICATION_IMAGE_PATTERN = /^notificationImages\/[A-Za-z0-9_-]{1,128}\.jpg$/;
+/** How long the push's signed image URL stays valid: V4 signing's maximum, so a late-opened push still shows it. */
+export const SIGNED_IMAGE_URL_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 /** Every installed app subscribes to this topic (also the 4.0.0 clients that never register a token). */
 export const BROADCAST_TOPIC = 'all';
 
@@ -82,7 +96,8 @@ export function validateSendRequest(data, { now = new Date() } = {}) {
 
   let imagePath = null;
   if (data.imagePath != null) {
-    if (data.imagePath !== `notificationImages/${notificationId}.jpg`) {
+    // Only this notification's own upload: an admin cannot point a notification at another one's image.
+    if (data.imagePath !== notificationImagePath(notificationId) || !NOTIFICATION_IMAGE_PATTERN.test(data.imagePath)) {
       throw new NotificationInputError('Geçersiz görsel.');
     }
     imagePath = data.imagePath;
@@ -102,6 +117,29 @@ export function validateSendRequest(data, { now = new Date() } = {}) {
   }
 
   return { notificationId, kind, title, body, action, imagePath, audience, scheduledAt, expiresAt, isTest: data.isTest === true };
+}
+
+/** Where the image of notification `notificationId` is uploaded. */
+export function notificationImagePath(notificationId) {
+  return `${IMAGE_FOLDER}/${notificationId}.jpg`;
+}
+
+/**
+ * Checks an uploaded notification image's Storage metadata (`{ contentType, size }`, `size` as GCS reports it: a
+ * string or a number), or `null` when there is no such object. Throws `NotificationInputError` with what to fix.
+ * The Storage rule already enforces the same on upload; this guards objects written around it (Admin SDK, console).
+ */
+export function validateImageObject(metadata) {
+  if (!metadata) {
+    throw new NotificationInputError('Görsel bulunamadı. Görseli yeniden seçip tekrar dene.');
+  }
+  const size = Number(metadata.size);
+  if (metadata.contentType !== IMAGE_CONTENT_TYPE) {
+    throw new NotificationInputError('Görsel JPEG biçiminde olmalı.');
+  }
+  if (!Number.isFinite(size) || size <= 0 || size > IMAGE_MAX_BYTES) {
+    throw new NotificationInputError('Görsel en fazla 1 MB olabilir.');
+  }
 }
 
 /** The audiences an admin may target from the composer: everyone, or a profile segment. */
@@ -257,11 +295,13 @@ export function audienceLabel(audience, names = {}) {
 
 /**
  * The copy written to `announcements/{id}` or `users/{uid}/inbox/{id}` (NOTIFICATIONS.md §3.2). `createdAt` is
- * passed in (a server timestamp sentinel in production) so the shape stays testable.
+ * passed in (a server timestamp sentinel in production) so the shape stays testable. The image travels as its
+ * Storage path only (the app downloads it with the user's credentials); a signed URL never reaches Firestore.
  */
 export function toInboxItem(notification, { createdAt }) {
   const item = { kind: notification.kind, title: notification.title, body: notification.body, createdAt };
-  if (notification.image?.url) item.image = { url: notification.image.url };
+  const storagePath = notification.image?.storagePath;
+  if (typeof storagePath === 'string' && NOTIFICATION_IMAGE_PATTERN.test(storagePath)) item.image = { storagePath };
   if (notification.action) item.action = notification.action;
   if (notification.expiresAt) item.expiresAt = notification.expiresAt;
   return item;
@@ -269,19 +309,21 @@ export function toInboxItem(notification, { createdAt }) {
 
 /**
  * The platform-neutral FCM message for a notification (NOTIFICATIONS.md §5), without its target: the caller adds
- * `topic` or `tokens`. `data` values must be strings.
+ * `topic` or `tokens`. `data` values must be strings. `imageUrl` is the signed, short-lived URL of the image.
+ *
+ * `mutable-content` is always set: the iOS Notification Service Extension runs for every push to raise the app
+ * icon badge by one (and attaches the image when there is one).
  */
 export function buildPushMessage({ notificationId, kind, title, body, imageUrl = null }) {
   const message = {
     notification: { title, body },
     data: { notificationId, kind },
-    apns: { payload: { aps: { sound: 'default' } } },
+    apns: { payload: { aps: { sound: 'default', mutableContent: true } } },
     android: { priority: 'high', notification: { channelId: kind } },
   };
   if (imageUrl) {
     message.notification.imageUrl = imageUrl;
-    // Lets the iOS Notification Service Extension download and attach the image.
-    message.apns.payload.aps.mutableContent = true;
+    // The iOS Notification Service Extension downloads and attaches it (`fcm_options.image`).
     message.apns.fcmOptions = { imageUrl };
     message.android.notification.imageUrl = imageUrl;
   }

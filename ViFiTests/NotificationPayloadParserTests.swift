@@ -14,7 +14,7 @@ struct NotificationPayloadParserTests {
             "kind": "promo",
             "title": "  Kampüs kafede %20 indirim ",
             "body": "Öğrenci kartını göster.",
-            "image": ["url": "https://storage.googleapis.com/bucket/notificationImages/x.jpg"],
+            "image": ["storagePath": "notificationImages/n-1.jpg"],
             "action": ["type": "location", "latitude": 41.0848, "longitude": 29.0510, "name": "Kampüs Kafe"],
             "createdAt": created,
             "expiresAt": 1_761_800_000_000,
@@ -24,7 +24,7 @@ struct NotificationPayloadParserTests {
 
         #expect(item.kind == .promo)
         #expect(item.title == "Kampüs kafede %20 indirim")
-        #expect(item.imageURL?.host == "storage.googleapis.com")
+        #expect(item.imageStoragePath == "notificationImages/n-1.jpg")
         #expect(item.createdAt == created)
         #expect(item.expiresAt == Date(timeIntervalSince1970: 1_761_800_000))
         guard case let .location(location) = item.action else {
@@ -43,8 +43,31 @@ struct NotificationPayloadParserTests {
 
         #expect(item.kind == .general)
         #expect(item.action == nil)
-        #expect(item.imageURL == nil)
+        #expect(item.imageStoragePath == nil)
         #expect(item.expiresAt == nil)
+    }
+
+    @Test("An image is read only as a notification image path; URLs and other paths are ignored")
+    func imageStoragePath() {
+        let valid: [String: Any] = ["storagePath": " notificationImages/3f2b8c1e-0d7a-4b8e-9f3a-333333333333.jpg "]
+        #expect(NotificationPayloadParser.imageStoragePath(from: valid) == "notificationImages/3f2b8c1e-0d7a-4b8e-9f3a-333333333333.jpg")
+        let invalid: [Any?] = [
+            nil,
+            "notificationImages/x.jpg",
+            ["url": "https://storage.googleapis.com/b/notificationImages/x.jpg"],
+            ["storagePath": "imagess/x.jpg"],
+            ["storagePath": "notificationImages/x.png"],
+            ["storagePath": "notificationImages/../imagess/x.jpg"],
+            ["storagePath": "notificationImages/a/b.jpg"],
+            ["storagePath": "notificationImages/.jpg"],
+            ["storagePath": "notificationImages/\(String(repeating: "a", count: 129)).jpg"],
+            ["storagePath": 42],
+        ]
+        for value in invalid {
+            #expect(NotificationPayloadParser.imageStoragePath(from: value) == nil, "\(String(describing: value))")
+        }
+        #expect(NotificationImage.storagePath(forNotificationId: "abc") == "notificationImages/abc.jpg")
+        #expect(NotificationImage.isValidStoragePath("notificationImages/\(String(repeating: "a", count: 128)).jpg"))
     }
 
     @Test("A document without a title, or with an unsafe id, is dropped")

@@ -2,22 +2,24 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-/// Turns an arbitrary picked image into a JPEG small enough to upload.
+/// Turns an arbitrary picked image into a JPEG small enough to upload (exam submissions, notification images).
 ///
 /// The Storage rules accept only `image/jpeg` (and `application/pdf`) up to 15 MiB, and a photo-library image
 /// may be HEIC, PNG or a very large JPEG. This downsamples the longest side and steps the quality down until
 /// the encoded JPEG fits, all off the main actor (ImageIO, no `UIImage`).
 nonisolated enum SubmissionFileEncoder {
-    /// Longest-side pixel limit a page is downsampled to before encoding (keeps big camera photos well under
-    /// the size cap while staying readable).
-    private static let maxPixelSize = 3000
+    /// Longest-side pixel limit a page is downsampled to before encoding by default (keeps big camera photos well
+    /// under the size cap while staying readable).
+    static let defaultMaxPixelSize = 3000
     /// JPEG qualities tried in turn until the encoded size fits the limit.
     private static let qualitySteps: [CGFloat] = [0.8, 0.6, 0.45, 0.3]
 
     /// A JPEG rendering of `data` no larger than `maxBytes`, or `nil` when the data is not a decodable image or
     /// cannot be brought under the limit. Honors the source's EXIF orientation.
+    ///
+    /// - Parameter maxPixelSize: The longest side, in pixels, the image is downsampled to (never upscaled).
     @concurrent
-    static func jpeg(from data: Data, maxBytes: Int) async -> Data? {
+    static func jpeg(from data: Data, maxBytes: Int, maxPixelSize: Int = defaultMaxPixelSize) async -> Data? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,

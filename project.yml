@@ -136,6 +136,8 @@ targets:
         product: GoogleMaps
       - package: GooglePlaces
         product: GooglePlaces
+      # Embedded: attaches campaign images to pushes and raises the icon badge.
+      - target: ViFiNotificationService
     postCompileScripts:
       - name: SwiftLint
         basedOnDependencyAnalysis: false
@@ -146,6 +148,45 @@ targets:
           else
             echo "warning: SwiftLint is not installed (brew install swiftlint)"
           fi
+
+  # Notification Service Extension (NOTIFICATIONS.md §5): runs for every push (`mutable-content` is always set) to
+  # raise the icon badge by one (App Group defaults shared with the app) and attach the campaign image.
+  ViFiNotificationService:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ViFiNotificationService
+        excludes:
+          # Generated from `info:` below and wired up as INFOPLIST_FILE, not a resource.
+          - Info.plist
+      # The badge counter the app and the extension share; unit-tested through the app target.
+      - path: ViFi/Core/Utilities/NotificationBadgeCounter.swift
+    info:
+      path: ViFiNotificationService/Info.plist
+      properties:
+        CFBundleDisplayName: ViFi Bildirimleri
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: tr
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.BuyukerYazilim.ViFi2.NotificationService
+        TARGETED_DEVICE_FAMILY: "1,2"
+        APPLICATION_EXTENSION_API_ONLY: YES
+        # App Group shared with the app (the icon badge).
+        CODE_SIGN_ENTITLEMENTS: ViFiNotificationService/ViFiNotificationService.entitlements
+        # Like the app: simulator builds sign locally with no team or profile; device builds sign automatically
+        # (Xcode registers the extension's App ID and App Group under the team).
+        CODE_SIGN_STYLE: Manual
+        "CODE_SIGN_STYLE[sdk=iphoneos*]": Automatic
+        DEVELOPMENT_TEAM: ""
+        "DEVELOPMENT_TEAM[sdk=iphoneos*]": A9ZTFRX9B5
+    dependencies:
+      - package: Firebase
+        product: FirebaseMessaging
 
   ViFiTests:
     type: bundle.unit-test

@@ -9,11 +9,14 @@ nonisolated struct NotificationSendConfirmation: Equatable, Sendable {
 }
 
 /// Drives the admin "Bildirim Gönder" form: the draft's fields, the cascading audience pickers fed by
-/// `AudienceFacets`, live validation and the reach estimate, and the send flow (preview, confirm, send).
+/// `AudienceFacets`, live validation and the reach estimate, and the send flow (preview, confirm, upload the image,
+/// send).
 ///
 /// The server re-validates everything; this only keeps the admin from sending something it would refuse. The
 /// draft `id` stays the same across retries of one send (the server answers a repeat with the first result) and
-/// is replaced once a send has gone through.
+/// is replaced once a send has gone through. The image is uploaded under the id of the notification it belongs to
+/// (a test send under its own fresh id), right before that notification is sent; changing the image after an
+/// upload starts a new id, because an uploaded image can never be replaced.
 @Observable
 final class NotificationComposerViewModel {
     /// Who the notification is for, as the form offers it. The server-only audiences are not selectable.
@@ -22,13 +25,14 @@ final class NotificationComposerViewModel {
         case segment
     }
 
-    /// The attachment the form offers. Exam comes with a later phase.
+    /// The attachment the form offers.
     enum ActionChoice: Hashable {
         case noAction
         case paywall
         case addExam
         case url
         case location
+        case exam
     }
 
     /// The kinds an admin can pick; `system` is for automatic messages only.
@@ -49,6 +53,10 @@ final class NotificationComposerViewModel {
     var urlText = ""
     /// The place picked on the map for a location action; kept while the admin switches actions back and forth.
     var location: NotificationLocation?
+    /// The exam the `exam` action opens, picked from the archive.
+    var selectedExam: ArchiveItem?
+    /// The campaign image, uploaded when the notification is sent.
+    let image = NotificationComposerImage()
     /// `nil` sends right away. Changed through `setScheduling(_:)` so it always has a sensible value.
     var scheduledAt: Date?
     var expiresAt: Date?
@@ -75,6 +83,8 @@ final class NotificationComposerViewModel {
     @ObservationIgnored private let service: any NotificationAdminServicing
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private var hasLoadedFacets = false
+    /// Notification ids an image upload was attempted under.
+    @ObservationIgnored private var imageUploadIds: Set<String> = []
 
     init(service: any NotificationAdminServicing, now: @escaping () -> Date = { .now }) {
         self.service = service
@@ -171,12 +181,13 @@ final class NotificationComposerViewModel {
         }
     }
 
+    // A picked image still being encoded would otherwise be left out of the send.
     var canSend: Bool {
-        !isWorking && issue == nil
+        !isWorking && !image.isPreparing && issue == nil
     }
 
     var canSendTest: Bool {
-        !isWorking && issue(of: testDraft(id: draftId)) == nil
+        !isWorking && !image.isPreparing && issue(of: testDraft(id: draftId)) == nil
     }
 
     var titleLength: Int { draft.trimmedTitle.count }
@@ -224,7 +235,7 @@ final class NotificationComposerViewModel {
         beginWork()
         defer { isWorking = false }
         do {
-            let result = try await service.send(confirmation.draft)
+            let result = try await service.send(try await withUploadedImage(confirmation.draft))
             self.confirmation = nil
             handle(result)
         } catch is CancellationError {
@@ -242,13 +253,13 @@ final class NotificationComposerViewModel {
 
     /// Sends the notification to the admin only, under a fresh id so the real one is not used up.
     func sendTest() async {
-        guard !isWorking else { return }
+        guard canSendTest else { return }
         let draft = testDraft(id: Self.makeId())
         guard issue(of: draft) == nil else { return }
         beginWork()
         defer { isWorking = false }
         do {
-            _ = try await service.send(draft)
+            _ = try await service.send(try await withUploadedImage(draft))
             successMessage = String(localized: "Test bildirimi gönderildi. Birazdan cihazına ulaşır.")
         } catch is CancellationError {
             // The screen went away; nothing to report.
@@ -286,17 +297,20 @@ final class NotificationComposerViewModel {
         case .addExam: .addExam
         case .url: parsedURL.map(NotificationDraft.Action.url)
         case .location: location.map(NotificationDraft.Action.location)
+        case .exam: selectedExam?.path.components.last.map { .exam(examId: $0) }
         }
     }
 
     private func issue(of draft: NotificationDraft) -> NotificationDraft.Issue? {
         if let issue = draft.validationIssue(now: now()) { return issue }
-        // A link that did not parse, or a place not picked yet, left the draft without an action; do not send it
-        // as if none was chosen.
+        // A link that did not parse, no exam picked, or a place not picked yet, left the draft without an action;
+        // do not send it as if none was chosen.
+        guard draft.action == nil else { return nil }
         switch actionChoice {
-        case .url where draft.action == nil: return .invalidURL
-        case .location where draft.action == nil: return .invalidLocation
-        default: return nil
+        case .url: return .invalidURL
+        case .exam: return .emptyExam
+        case .location: return .invalidLocation
+        case .noAction, .paywall, .addExam: return nil
         }
     }
 
@@ -354,6 +368,8 @@ final class NotificationComposerViewModel {
         actionChoice = .noAction
         urlText = ""
         location = nil
+        selectedExam = nil
+        image.remove()
         scheduledAt = nil
         expiresAt = nil
     }
@@ -378,5 +394,37 @@ final class NotificationComposerViewModel {
     /// By name, Turkish collation (so İ, Ş, Ç sort where a Turkish reader expects them).
     private static func sorted(_ nodes: [AudienceNode]) -> [AudienceNode] {
         nodes.sorted { $0.name.compare($1.name, locale: turkish) == .orderedAscending }
+    }
+}
+
+// MARK: - Image
+
+extension NotificationComposerViewModel {
+    /// Replaces the image with a picked one (downsampled and encoded off the main actor).
+    func setImage(from data: Data) async {
+        if await image.prepare(from: data) {
+            imageDidChange()
+        }
+    }
+
+    func removeImage() {
+        image.remove()
+        imageDidChange()
+    }
+
+    /// An image already uploaded under the current id cannot be replaced, so a different image needs a new id.
+    private func imageDidChange() {
+        if imageUploadIds.contains(draftId) {
+            draftId = Self.makeId()
+        }
+    }
+
+    /// `draft` with its image uploaded under its own id (the server accepts no other path).
+    private func withUploadedImage(_ draft: NotificationDraft) async throws -> NotificationDraft {
+        guard let jpeg = image.jpeg else { return draft }
+        var draft = draft
+        imageUploadIds.insert(draft.id)
+        draft.imagePath = try await service.uploadImage(jpeg, notificationId: draft.id)
+        return draft
     }
 }

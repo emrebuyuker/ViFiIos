@@ -1,5 +1,6 @@
 import FirebaseFirestore
 import FirebaseFunctions
+import FirebaseStorage
 import Foundation
 import Testing
 @testable import ViFi
@@ -28,8 +29,28 @@ struct FirebaseNotificationAdminServiceTests {
         let error = functionsError(.invalidArgument, message: "Başlık en fazla 80 karakter olabilir.")
         #expect(FirebaseNotificationAdminService.adminError(from: error) == .invalidDraft(message: "Başlık en fazla 80 karakter olabilir."))
 
-        let precondition = functionsError(.failedPrecondition, message: "Görsel henüz desteklenmiyor.")
-        #expect(FirebaseNotificationAdminService.adminError(from: precondition) == .invalidDraft(message: "Görsel henüz desteklenmiyor."))
+        let missingImage = "Görsel bulunamadı. Görseli yeniden seçip tekrar dene."
+        let precondition = functionsError(.failedPrecondition, message: missingImage)
+        #expect(FirebaseNotificationAdminService.adminError(from: precondition) == .invalidDraft(message: missingImage))
+    }
+
+    @Test("A missing object is told apart from other Storage failures")
+    func storageNotFound() {
+        let notFound = NSError(domain: StorageErrorDomain, code: StorageErrorCode.objectNotFound.rawValue)
+        #expect(FirebaseNotificationAdminService.isObjectNotFound(notFound))
+        #expect(!FirebaseNotificationAdminService.isObjectNotFound(NSError(domain: StorageErrorDomain, code: StorageErrorCode.unauthorized.rawValue)))
+        #expect(!FirebaseNotificationAdminService.isObjectNotFound(firestoreError(.notFound)))
+    }
+
+    @Test("A failed image upload: permission, connectivity, or an upload failure")
+    func imageUploadErrors() {
+        let storageError = { (code: StorageErrorCode) in NSError(domain: StorageErrorDomain, code: code.rawValue) }
+        #expect(FirebaseNotificationAdminService.imageError(from: storageError(.unauthorized)) == .permissionDenied)
+        #expect(FirebaseNotificationAdminService.imageError(from: storageError(.unauthenticated)) == .permissionDenied)
+        #expect(FirebaseNotificationAdminService.imageError(from: storageError(.retryLimitExceeded)) == .offline)
+        let transport = NSError(domain: NSURLErrorDomain, code: NSURLErrorTimedOut)
+        #expect(FirebaseNotificationAdminService.imageError(from: transport) == .offline)
+        #expect(FirebaseNotificationAdminService.imageError(from: storageError(.unknown)) == .imageUploadFailed)
     }
 
     @Test("A failed precondition on cancel means it already went out")

@@ -92,7 +92,8 @@ enum InboxFixture {
         kind: NotificationKind = .general,
         createdAt: Date? = Date(timeIntervalSince1970: 1_700_000_000),
         expiresAt: Date? = nil,
-        action: NotificationAction? = nil
+        action: NotificationAction? = nil,
+        imageStoragePath: String? = nil
     ) -> InboxItem {
         InboxItem(
             id: id,
@@ -100,7 +101,7 @@ enum InboxFixture {
             kind: kind,
             title: "Başlık \(id)",
             body: "Metin",
-            imageURL: nil,
+            imageStoragePath: imageStoragePath,
             action: action,
             createdAt: createdAt,
             expiresAt: expiresAt

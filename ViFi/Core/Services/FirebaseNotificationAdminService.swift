@@ -1,11 +1,13 @@
 @preconcurrency import FirebaseFirestore
 @preconcurrency import FirebaseFunctions
+@preconcurrency import FirebaseStorage
 import Foundation
 import os
 
 /// Calls the admin notification Cloud Functions (`getNotificationAudience`, `previewNotification`,
-/// `sendNotification`, `cancelNotification`; `europe-west1`, admin claim required) and reads the `notifications`
-/// history from the named `vifi` Firestore database (NOTIFICATIONS.md §3.1, §4).
+/// `sendNotification`, `cancelNotification`; `europe-west1`, admin claim required), uploads campaign images to Cloud
+/// Storage (`notificationImages/<id>.jpg`, admin create-only) and reads the `notifications` history from the named
+/// `vifi` Firestore database (NOTIFICATIONS.md §3.1, §4, §6).
 ///
 /// Callable results and history documents are turned into models by the Firebase-free `NotificationPayloadParser`;
 /// a malformed answer is reported as an unknown error rather than guessed at.
@@ -17,9 +19,11 @@ final class FirebaseNotificationAdminService: NotificationAdminServicing {
     private nonisolated static let dateFields = ["createdAt", "sentAt", "scheduledAt", "expiresAt"]
 
     private let functions: Functions
+    private let storage: Storage
 
-    init(functions: Functions = Functions.functions(region: region)) {
+    init(functions: Functions = Functions.functions(region: region), storage: Storage = ViFiStorage.shared) {
         self.functions = functions
+        self.storage = storage
     }
 
     func audience() async throws -> AudienceFacets {
@@ -35,6 +39,31 @@ final class FirebaseNotificationAdminService: NotificationAdminServicing {
         let data = try await call("previewNotification", with: ["kind": kind.rawValue, "audience": draft.payload["audience"] ?? [:]])
         guard let preview = NotificationPayloadParser.preview(from: data) else { throw Self.unexpectedResponse }
         return preview
+    }
+
+    func uploadImage(_ jpeg: Data, notificationId: String) async throws -> String {
+        guard !jpeg.isEmpty, jpeg.count <= NotificationImage.maxBytes,
+              NotificationPayloadParser.isValidNotificationId(notificationId) else {
+            throw NotificationAdminError.imageUploadFailed
+        }
+        let path = NotificationImage.storagePath(forNotificationId: notificationId)
+        let reference = storage.reference(withPath: path)
+        // A retried send finds its image already there: the rules forbid overwriting it, so it is reused as is.
+        do {
+            _ = try await reference.getMetadata()
+            return path
+        } catch {
+            guard Self.isObjectNotFound(error) else { throw Self.imageError(from: error) }
+        }
+        // Only the content type: the server checks it (and the size) before sending.
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+        do {
+            _ = try await reference.putDataAsync(jpeg, metadata: metadata)
+            return path
+        } catch {
+            throw Self.imageError(from: error)
+        }
     }
 
     func send(_ draft: NotificationDraft) async throws -> NotificationSendResult {
@@ -111,6 +140,31 @@ final class FirebaseNotificationAdminService: NotificationAdminServicing {
         }
         Logger.app.error("Notification admin call failed: \(String(describing: error), privacy: .public)")
         return .unknown(message: error.localizedDescription)
+    }
+
+    /// Whether a Storage call failed because the object does not exist (yet).
+    nonisolated static func isObjectNotFound(_ error: any Error) -> Bool {
+        let nsError = error as NSError
+        return nsError.domain == StorageErrorDomain && nsError.code == StorageErrorCode.objectNotFound.rawValue
+    }
+
+    /// Maps a failed image upload: no permission and no connection as usual, anything else as an upload failure.
+    nonisolated static func imageError(from error: any Error) -> NotificationAdminError {
+        let nsError = error as NSError
+        if nsError.domain == StorageErrorDomain, let code = StorageErrorCode(rawValue: nsError.code) {
+            switch code {
+            case .unauthorized, .unauthenticated:
+                return .permissionDenied
+            case .retryLimitExceeded:
+                return .offline
+            default:
+                break
+            }
+        } else if nsError.domain == NSURLErrorDomain {
+            return .offline
+        }
+        Logger.app.error("Notification image upload failed: \(String(describing: error), privacy: .public)")
+        return .imageUploadFailed
     }
 
     /// Replaces the date fields' Firestore `Timestamp`s with `Date`s, which is what the parser reads. Private to

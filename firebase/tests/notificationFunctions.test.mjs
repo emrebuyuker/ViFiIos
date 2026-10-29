@@ -1,7 +1,8 @@
 // The targeted-notification Cloud Functions (`functions/notifications/`) against the Firestore and Realtime Database
 // emulators: the admin gate, input validation, idempotency, broadcast vs fan-out delivery, segment resolution,
-// campaign consent, test sends, the exam action, scheduling / quiet hours, token pruning, stats and the device-token
-// dedupe trigger. FCM is a fake that records what would have been pushed; nothing leaves this machine.
+// campaign consent, test sends, the exam action, campaign images (Storage emulator + a fake signer), scheduling /
+// quiet hours, token pruning, stats and the device-token dedupe trigger. FCM is a fake that records what would have
+// been pushed; nothing leaves this machine.
 
 import { test, before, after, beforeEach, describe, mock } from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,6 +15,10 @@ const requireFromFunctions = createRequire(new URL('../functions/package.json', 
 const { getFirestore, Timestamp } = requireFromFunctions('firebase-admin/firestore');
 const { getDatabaseWithUrl } = requireFromFunctions('firebase-admin/database');
 const { getApp, deleteApp } = requireFromFunctions('firebase-admin/app');
+const { getStorage } = requireFromFunctions('firebase-admin/storage');
+
+// The emulator's default bucket; campaign images are uploaded into it with the Admin SDK.
+const BUCKET = `${PROJECT_ID}.appspot.com`;
 
 const DAY = new Date('2026-10-29T09:00:00Z'); // 12:00 in Türkiye
 const NIGHT = new Date('2026-10-29T20:00:00Z'); // 23:00 in Türkiye
@@ -26,13 +31,14 @@ const BILGISAYAR = 'bilgisayar-muhendisligi';
 
 let db;
 let rtdb;
+let bucket;
 let fns;
 let admin;
 let deliver;
 let devices;
 
 before(async () => {
-  assertLocalEmulators('FIRESTORE_EMULATOR_HOST', 'FIREBASE_DATABASE_EMULATOR_HOST');
+  assertLocalEmulators('FIRESTORE_EMULATOR_HOST', 'FIREBASE_DATABASE_EMULATOR_HOST', 'FIREBASE_STORAGE_EMULATOR_HOST');
   // Expected failures are logged by the functions; keep the test output readable.
   mock.method(console, 'error', () => {});
   mock.method(console, 'warn', () => {});
@@ -42,6 +48,7 @@ before(async () => {
   devices = await import('../functions/notifications/devices.js');
   db = getFirestore('vifi');
   rtdb = getDatabaseWithUrl(`https://${PROJECT_ID}-default-rtdb.firebaseio.com`);
+  bucket = getStorage().bucket(BUCKET);
 });
 
 after(async () => {
@@ -126,8 +133,26 @@ function fakeMessaging({ failures = {}, topicError = null } = {}) {
   return fake;
 }
 
-function depsWith(messaging = fakeMessaging(), now = DAY) {
-  return { db, rtdb, messaging, now: () => now };
+/** A fake V4 signer: records the paths it signs; `fail` makes it throw like a missing signBlob permission would. */
+function fakeSigner({ fail = false } = {}) {
+  const signer = async (storagePath) => {
+    signer.calls.push(storagePath);
+    if (fail) throw new Error('Permission iam.serviceAccounts.signBlob denied');
+    return `https://storage.googleapis.com/${BUCKET}/${storagePath}?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Signature=fake`;
+  };
+  signer.calls = [];
+  return signer;
+}
+
+function depsWith(messaging = fakeMessaging(), now = DAY, signImageUrl = fakeSigner()) {
+  return { db, rtdb, bucket, signImageUrl, messaging, now: () => now };
+}
+
+/** Uploads a campaign image for notification `id` (as the admin's app does before sending). */
+async function uploadImage(id, { size = 2048, contentType = 'image/jpeg' } = {}) {
+  const storagePath = `notificationImages/${id}.jpg`;
+  await bucket.file(storagePath).save(Buffer.alloc(size, 0xff), { contentType, resumable: false });
+  return storagePath;
 }
 
 let sequence = 0;
@@ -201,11 +226,124 @@ describe('admin gate and validation', () => {
     );
   });
 
-  test('an image is refused until phase 2', async () => {
-    const request = draft();
-    request.imagePath = `notificationImages/${request.notificationId}.jpg`;
-    await assertHttpsError(admin.sendNotificationHandler(depsWith(), asAdmin(request)), 'failed-precondition', 'Görsel henüz desteklenmiyor.');
+  test('an image must be this notification\'s own upload', async () => {
+    const other = draft();
+    await uploadImage(other.notificationId);
+    const request = draft({ imagePath: `notificationImages/${other.notificationId}.jpg` });
+    await assertHttpsError(admin.sendNotificationHandler(depsWith(), asAdmin(request)), 'invalid-argument', 'Geçersiz görsel.');
     assert.equal((await notificationDoc(request.notificationId)).exists, false);
+  });
+});
+
+// --- Campaign images ----------------------------------------------------------------------------------------------
+
+describe('images', () => {
+  test('a broadcast keeps only the image path in Firestore and pushes a signed URL', async () => {
+    const messaging = fakeMessaging();
+    const signer = fakeSigner();
+    const request = draft();
+    const id = request.notificationId;
+    request.imagePath = await uploadImage(id);
+
+    const result = await admin.sendNotificationHandler(depsWith(messaging, DAY, signer), asAdmin(request));
+    assert.equal(result.status, 'sent');
+
+    const image = { storagePath: `notificationImages/${id}.jpg` };
+    const stored = (await notificationDoc(id)).data();
+    assert.deepEqual(stored.image, image);
+    const announcement = (await db.collection('announcements').doc(id).get()).data();
+    assert.deepEqual(Object.keys(announcement).sort(), ['body', 'createdAt', 'image', 'kind', 'title']);
+    assert.deepEqual(announcement.image, image);
+    // The signed URL lives only in the push.
+    assert.ok(!JSON.stringify([stored, announcement]).includes('X-Goog'));
+
+    assert.deepEqual(signer.calls, [image.storagePath]);
+    const push = messaging.topicMessages[0];
+    const signed = `https://storage.googleapis.com/${BUCKET}/${image.storagePath}?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Signature=fake`;
+    assert.equal(push.notification.imageUrl, signed);
+    assert.equal(push.apns.fcmOptions.imageUrl, signed);
+    assert.equal(push.apns.payload.aps.mutableContent, true);
+    assert.equal(push.android.notification.imageUrl, signed);
+  });
+
+  test('a fan-out copies the image path into every inbox and signs once for all devices', async () => {
+    const messaging = fakeMessaging();
+    const signer = fakeSigner();
+    const request = draft({ kind: 'promo', audience: segment({}) });
+    const id = request.notificationId;
+    request.imagePath = await uploadImage(id);
+
+    await admin.sendNotificationHandler(depsWith(messaging, DAY, signer), asAdmin(request));
+
+    assert.deepEqual(await inboxOwners(id), ['ayse']);
+    assert.deepEqual((await inboxDoc('ayse', id)).get('image'), { storagePath: request.imagePath });
+    assert.equal(signer.calls.length, 1);
+    assert.equal(messaging.multicasts.length, 1);
+    assert.match(messaging.multicasts[0].notification.imageUrl, /X-Goog-Signature/);
+    assert.match(messaging.multicasts[0].apns.fcmOptions.imageUrl, /X-Goog-Signature/);
+  });
+
+  test('a missing, non-JPEG or oversized image is refused before anything is recorded', async () => {
+    const cases = [
+      [{ upload: false }, 'Görsel bulunamadı. Görseli yeniden seçip tekrar dene.'],
+      [{ upload: true, contentType: 'image/png' }, 'Görsel JPEG biçiminde olmalı.'],
+      [{ upload: true, size: 1024 * 1024 + 1 }, 'Görsel en fazla 1 MB olabilir.'],
+    ];
+    for (const [{ upload, ...options }, message] of cases) {
+      const messaging = fakeMessaging();
+      const request = draft();
+      request.imagePath = `notificationImages/${request.notificationId}.jpg`;
+      if (upload) await uploadImage(request.notificationId, options);
+      await assertHttpsError(admin.sendNotificationHandler(depsWith(messaging), asAdmin(request)), 'failed-precondition', message);
+      assert.equal((await notificationDoc(request.notificationId)).exists, false);
+      assert.equal(messaging.topicMessages.length, 0);
+    }
+  });
+
+  test('exactly 1 MiB is accepted', async () => {
+    const request = draft();
+    request.imagePath = await uploadImage(request.notificationId, { size: 1024 * 1024 });
+    const result = await admin.sendNotificationHandler(depsWith(), asAdmin(request));
+    assert.equal(result.status, 'sent');
+  });
+
+  test('a signing failure sends the push without the image; the inbox copy keeps it', async () => {
+    const messaging = fakeMessaging();
+    const request = draft({ audience: segment({ facultyId: MUHENDISLIK }) });
+    const id = request.notificationId;
+    request.imagePath = await uploadImage(id);
+
+    const result = await admin.sendNotificationHandler(depsWith(messaging, DAY, fakeSigner({ fail: true })), asAdmin(request));
+
+    assert.equal(result.status, 'sent');
+    assert.deepEqual((await inboxDoc('ayse', id)).get('image'), { storagePath: request.imagePath });
+    const push = messaging.multicasts[0];
+    assert.equal(push.notification.imageUrl, undefined);
+    assert.equal(push.apns.fcmOptions, undefined);
+    assert.equal(push.android.notification.imageUrl, undefined);
+    // The extension still runs (badge).
+    assert.equal(push.apns.payload.aps.mutableContent, true);
+    assert.equal((await notificationDoc(id)).get('stats').pushSent, 3);
+  });
+
+  test('a delivery without a signer (or a non-https answer) also goes out without the image', async () => {
+    for (const signImageUrl of [undefined, async () => 'http://insecure.example/x.jpg']) {
+      const messaging = fakeMessaging();
+      const request = draft();
+      request.imagePath = await uploadImage(request.notificationId);
+      const deps = { ...depsWith(messaging), signImageUrl };
+      assert.equal((await admin.sendNotificationHandler(deps, asAdmin(request))).status, 'sent');
+      assert.equal(messaging.topicMessages[0].notification.imageUrl, undefined);
+    }
+  });
+
+  test('a test send carries its own image', async () => {
+    const messaging = fakeMessaging();
+    const request = draft({ isTest: true });
+    request.imagePath = await uploadImage(request.notificationId);
+    await admin.sendNotificationHandler(depsWith(messaging), asAdmin(request));
+    assert.deepEqual((await inboxDoc(ADMIN_UID, request.notificationId)).get('image'), { storagePath: request.imagePath });
+    assert.match(messaging.multicasts[0].notification.imageUrl, /X-Goog-Signature/);
   });
 });
 

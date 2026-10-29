@@ -6,6 +6,9 @@ rules_version = '2';
 //   Turkish phone users (+90) and admins. Nobody can list it from a client; only admins write it.
 // - pending/{uid}/{submissionId}/ holds files a user submitted for review. The owner may upload
 //   new JPEG/PDF files (max 15 MiB) and delete them; nobody overwrites them. Admins read and delete.
+// - notificationImages/{notificationId}.jpg holds campaign images (NOTIFICATIONS.md §6). Admins upload one JPEG
+//   (max 1 MiB) per notification, once: no client overwrites, updates or deletes it. Readable one file at a time
+//   like the archive (+90 users, admins); pushes carry a server-signed URL instead.
 // - Every other path is denied: there is intentionally no catch-all match.
 //
 // Admin tooling (approval, token revocation) runs with the Admin SDK / service credentials,
@@ -46,6 +49,19 @@ service firebase.storage {
     match /pdfs/{fileName} {
       allow get: if canReadArchive();
       allow create, update, delete: if isAdmin();
+    }
+
+    match /notificationImages/{fileName} {
+      allow get: if canReadArchive();
+      // Create-only: `update`/`delete` are never granted and `resource == null` also rejects an overwrite evaluated
+      // as `create`, so a sent notification's image can never be swapped. The name is the notification id
+      // (`sendNotification` only accepts `notificationImages/<its own id>.jpg`).
+      allow create: if isAdmin()
+        && resource == null
+        && fileName.matches('^[A-Za-z0-9_-]{1,128}[.]jpg$')
+        && request.resource.size > 0
+        && request.resource.size <= 1024 * 1024
+        && request.resource.contentType == 'image/jpeg';
     }
 
     match /pending/{uid}/{submissionId}/{fileName} {

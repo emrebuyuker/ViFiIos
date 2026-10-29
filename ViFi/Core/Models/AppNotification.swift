@@ -79,7 +79,9 @@ nonisolated struct InboxItem: Identifiable, Hashable, Sendable {
     let kind: NotificationKind
     let title: String
     let body: String
-    let imageURL: URL?
+    /// The campaign image's Storage path (`notificationImages/<id>.jpg`), downloaded with the user's credentials
+    /// (`StorageURL` + `RemoteFileLoader`); `nil` without an image. Images are never public (NOTIFICATIONS.md §6).
+    let imageStoragePath: String?
     let action: NotificationAction?
     let createdAt: Date?
     let expiresAt: Date?
@@ -88,6 +90,30 @@ nonisolated struct InboxItem: Identifiable, Hashable, Sendable {
     func isExpired(at now: Date) -> Bool {
         guard let expiresAt else { return false }
         return expiresAt <= now
+    }
+}
+
+/// A notification's campaign image (NOTIFICATIONS.md §6): one JPEG per notification, uploaded by the admin's app to
+/// `notificationImages/<notificationId>.jpg` before sending. Keep in step with `schema.js` and `storage.rules`.
+nonisolated enum NotificationImage {
+    static let folder = "notificationImages"
+    /// The Storage rule's (and the server's) size cap.
+    static let maxBytes = 1024 * 1024
+    /// The composer downsamples the longest side to this before encoding.
+    static let maxPixelSize = 1600
+
+    /// Where the image of notification `notificationId` is uploaded.
+    static func storagePath(forNotificationId notificationId: String) -> String {
+        "\(folder)/\(notificationId).jpg"
+    }
+
+    /// Whether `path` is a notification image path: `notificationImages/<notification id>.jpg`.
+    static func isValidStoragePath(_ path: String) -> Bool {
+        let prefix = "\(folder)/"
+        let suffix = ".jpg"
+        guard path.hasPrefix(prefix), path.hasSuffix(suffix), path.count > prefix.count + suffix.count else { return false }
+        let name = String(path.dropFirst(prefix.count).dropLast(suffix.count))
+        return NotificationPayloadParser.isValidNotificationId(name)
     }
 }
 

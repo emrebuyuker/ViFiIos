@@ -7,9 +7,20 @@ import Foundation
 /// succeed and land in the history.
 final class MockNotificationAdminService: NotificationAdminServicing {
     private(set) var sent: [SentNotification]
+    /// Uploaded campaign images by storage path (kept in memory; nothing leaves the device).
+    private(set) var uploadedImages: [String: Data] = [:]
 
     init(history: [SentNotification] = MockNotificationAdminService.sampleHistory) {
         sent = history
+    }
+
+    func uploadImage(_ jpeg: Data, notificationId: String) async throws -> String {
+        let path = NotificationImage.storagePath(forNotificationId: notificationId)
+        // Like the Storage rules: an image already uploaded for this id is kept, never replaced.
+        if uploadedImages[path] == nil {
+            uploadedImages[path] = jpeg
+        }
+        return path
     }
 
     func audience() async throws -> AudienceFacets {

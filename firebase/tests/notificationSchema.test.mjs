@@ -4,15 +4,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  IMAGE_MAX_BYTES,
   NotificationInputError,
   audienceLabel,
   buildAudienceFacets,
   buildPushMessage,
   deliveryMode,
   matchesSegment,
+  notificationImagePath,
   quietHoursDeferral,
   respectsQuietHours,
   toInboxItem,
+  validateImageObject,
   validateSendRequest,
 } from '../functions/notifications/schema.js';
 
@@ -102,6 +105,26 @@ test('the image path must be this notification\'s own upload', () => {
     'notificationImages/abc-123.jpg');
   rejects(request({ imagePath: 'notificationImages/other.jpg' }), /görsel/);
   rejects(request({ imagePath: 'imagess/abc-123.jpg' }), /görsel/);
+  rejects(request({ imagePath: 'notificationImages/abc-123.png' }), /görsel/);
+  rejects(request({ imagePath: { storagePath: 'notificationImages/abc-123.jpg' } }), /görsel/);
+  assert.equal(notificationImagePath('abc-123'), 'notificationImages/abc-123.jpg');
+});
+
+test('an uploaded image must exist, be a JPEG and be at most 1 MiB', () => {
+  const invalid = (metadata, pattern) => assert.throws(() => validateImageObject(metadata), (error) => {
+    assert.ok(error instanceof NotificationInputError);
+    assert.match(error.message, pattern);
+    return true;
+  });
+  // GCS reports `size` as a string.
+  validateImageObject({ contentType: 'image/jpeg', size: String(IMAGE_MAX_BYTES) });
+  validateImageObject({ contentType: 'image/jpeg', size: 1 });
+  invalid(null, /bulunamadı/);
+  invalid({ contentType: 'image/png', size: '10' }, /JPEG/);
+  invalid({ contentType: 'image/jpeg; charset=binary', size: '10' }, /JPEG/);
+  invalid({ contentType: 'image/jpeg', size: String(IMAGE_MAX_BYTES + 1) }, /1 MB/);
+  invalid({ contentType: 'image/jpeg', size: '0' }, /1 MB/);
+  invalid({ contentType: 'image/jpeg' }, /1 MB/);
 });
 
 test('schedule and expiry: epoch milliseconds, not in the past, expiry after delivery', () => {
@@ -199,17 +222,25 @@ test('inbox copies and push messages carry exactly the contract fields', () => {
 
   const action = { type: 'paywall' };
   const expiresAt = new Date('2026-11-01T00:00:00Z');
-  assert.deepEqual(toInboxItem({ kind: 'promo', title: 'T', body: 'B', action, expiresAt, image: { storagePath: 'p', url: 'https://x/y.jpg' } }, { createdAt }),
-    { kind: 'promo', title: 'T', body: 'B', createdAt, image: { url: 'https://x/y.jpg' }, action, expiresAt });
+  const image = { storagePath: 'notificationImages/n1.jpg' };
+  // Only the storage path is copied: a URL (signed or not) never reaches the inbox documents.
+  assert.deepEqual(toInboxItem({ kind: 'promo', title: 'T', body: 'B', action, expiresAt, image: { ...image, url: 'https://x/y.jpg' } }, { createdAt }),
+    { kind: 'promo', title: 'T', body: 'B', createdAt, image, action, expiresAt });
+  assert.deepEqual(toInboxItem({ kind: 'general', title: 'T', body: 'B', image: { storagePath: 'imagess/x.jpg' } }, { createdAt }),
+    { kind: 'general', title: 'T', body: 'B', createdAt });
 
+  // `mutable-content` on every push: the iOS service extension raises the icon badge even without an image.
   assert.deepEqual(buildPushMessage({ notificationId: 'n1', kind: 'general', title: 'T', body: 'B' }), {
     notification: { title: 'T', body: 'B' },
     data: { notificationId: 'n1', kind: 'general' },
-    apns: { payload: { aps: { sound: 'default' } } },
+    apns: { payload: { aps: { sound: 'default', mutableContent: true } } },
     android: { priority: 'high', notification: { channelId: 'general' } },
   });
   const withImage = buildPushMessage({ notificationId: 'n1', kind: 'promo', title: 'T', body: 'B', imageUrl: 'https://x/y.jpg' });
-  assert.equal(withImage.apns.payload.aps.mutableContent, true);
-  assert.equal(withImage.apns.fcmOptions.imageUrl, 'https://x/y.jpg');
-  assert.equal(withImage.android.notification.imageUrl, 'https://x/y.jpg');
+  assert.deepEqual(withImage, {
+    notification: { title: 'T', body: 'B', imageUrl: 'https://x/y.jpg' },
+    data: { notificationId: 'n1', kind: 'promo' },
+    apns: { payload: { aps: { sound: 'default', mutableContent: true } }, fcmOptions: { imageUrl: 'https://x/y.jpg' } },
+    android: { priority: 'high', notification: { channelId: 'promo', imageUrl: 'https://x/y.jpg' } },
+  });
 });

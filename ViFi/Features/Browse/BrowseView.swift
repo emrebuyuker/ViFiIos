@@ -109,8 +109,8 @@ private struct BrowseScreen: View {
             ExamUnlockSheet(
                 examName: exam.name,
                 balance: environment.wallet.balance,
-                unlock: { await unlock(exam) },
-                purchaseWithMoney: { await purchaseWithMoney(exam) },
+                unlock: { await environment.unlockExam(exam) },
+                purchaseWithMoney: { await environment.purchaseExamUnlock(exam) },
                 onUnlocked: { open(exam) },
                 onEarnCoins: {
                     environment.analytics.track(.earnCoinsTapped)
@@ -143,57 +143,20 @@ private struct BrowseScreen: View {
         return ExamLock.freeExamIds(orderedExams: exams)
     }
 
-    /// Whether `item` is a locked exam (has files, and is neither free nor unlocked by the user). An active
-    /// premium subscription unlocks the whole archive, so nothing is locked for a subscriber.
+    /// Whether `item` is a locked exam, by the archive's lock rule (`ExamLock.isLocked`, shared with the inbox).
     private func isLocked(_ item: ArchiveItem) -> Bool {
-        guard item.level == .exam, item.exam != nil else { return false }
-        if environment.subscription.isSubscribed { return false }
-        return !ExamLock.isAccessible(item, freeIds: freeExamIds, unlockedIds: environment.unlocks.unlockedIds)
+        ExamLock.isLocked(
+            item,
+            freeIds: freeExamIds,
+            unlockedIds: environment.unlocks.unlockedIds,
+            isSubscribed: environment.subscription.isSubscribed
+        )
     }
 
     /// Shows the unlock sheet for a locked exam, recording whether the user can currently afford it.
     private func presentUnlockSheet(for item: ArchiveItem) {
         examToUnlock = item
-        let canAfford = environment.wallet.balance >= ExamLock.unlockCost
-        environment.analytics.track(.examUnlockSheetShown(canAfford: canAfford))
-    }
-
-    /// Spends coins to unlock `exam` (server-side); returns an error message on failure, `nil` on success.
-    private func unlock(_ exam: ArchiveItem) async -> String? {
-        guard let examId = exam.path.components.last else { return nil }
-        do {
-            let result = try await environment.unlockService.unlock(examId: examId)
-            environment.unlocks.markUnlocked(examId)
-            if let kind = exam.exam?.kind {
-                environment.analytics.track(
-                    .examUnlocked(kind: kind, coinsSpent: ExamLock.unlockCost, alreadyUnlocked: result.alreadyUnlocked)
-                )
-            }
-            return nil
-        } catch {
-            let reason = (error as? ExamUnlockError)?.analyticsReason ?? "unknown"
-            environment.analytics.track(.examUnlockFailed(reason: reason))
-            return error.userMessage
-        }
-    }
-
-    /// Buys just `exam` with money (StoreKit + server verification).
-    private func purchaseWithMoney(_ exam: ArchiveItem) async -> ExamPurchaseOutcome {
-        guard let examId = exam.path.components.last else { return .cancelled }
-        do {
-            let result = try await environment.examPurchaseService.purchaseUnlock(examId: examId)
-            switch result {
-            case .success:
-                environment.unlocks.markUnlocked(examId)
-                return .unlocked
-            case .cancelled:
-                return .cancelled
-            case .pending:
-                return .failed(String(localized: "Satın alma onay bekliyor; onaylanınca sınav açılır."))
-            }
-        } catch {
-            return .failed(error.userMessage)
-        }
+        environment.trackUnlockSheetShown()
     }
 
     /// Opens an exam's viewer (used after a successful unlock).

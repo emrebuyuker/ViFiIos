@@ -19,6 +19,7 @@ import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getDatabase } from 'firebase-admin/database';
 import { getMessaging } from 'firebase-admin/messaging';
+import { getStorage } from 'firebase-admin/storage';
 import { createHash } from 'node:crypto';
 import { verifyExamUnlockTransaction } from './appStore.js';
 import { verifyExamUnlockPurchase } from './googlePlay.js';
@@ -29,6 +30,7 @@ import {
   sendNotificationHandler,
 } from './notifications/admin.js';
 import { onDeviceWrittenHandler } from './notifications/devices.js';
+import { SIGNED_IMAGE_URL_TTL_MS } from './notifications/schema.js';
 
 initializeApp();
 
@@ -246,8 +248,9 @@ async function verifyGooglePlayPurchase(data, examId) {
 
 // --- Targeted notifications (NOTIFICATIONS.md §4) ---------------------------------------------------------------
 
-// Live dependencies of the notification handlers. The Realtime Database (profiles) and FCM handles are created on
-// first use: the RTDB URL comes from the deployed function's FIREBASE_CONFIG, which a plain import (tests) lacks.
+// Live dependencies of the notification handlers. The Realtime Database (profiles), FCM and Storage handles are
+// created on first use: the RTDB URL and the default bucket come from the deployed function's FIREBASE_CONFIG,
+// which a plain import (tests) lacks.
 const notificationDeps = {
   db,
   get rtdb() {
@@ -255,6 +258,21 @@ const notificationDeps = {
   },
   get messaging() {
     return getMessaging();
+  },
+  // The default bucket, where the admin's app uploads campaign images (`notificationImages/`).
+  get bucket() {
+    return getStorage().bucket();
+  },
+  // A V4 signed read URL for a campaign image, valid for 7 days, put only in the FCM payload (never stored). Without
+  // a key file the Admin SDK signs through IAM `signBlob`: the functions' service account needs the "Service Account
+  // Token Creator" role on itself (NOTIFICATIONS.md §6). Expiry counts from now, so it never exceeds V4's 7-day cap.
+  signImageUrl: async (storagePath) => {
+    const [url] = await getStorage().bucket().file(storagePath).getSignedUrl({
+      version: 'v4',
+      action: 'read',
+      expires: Date.now() + SIGNED_IMAGE_URL_TTL_MS,
+    });
+    return url;
   },
   now: () => new Date(),
 };
