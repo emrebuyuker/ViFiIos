@@ -27,9 +27,11 @@ struct NotificationComposerImageSection: View {
                     .accessibilityLabel("Seçilen görsel")
                     .accessibilityIdentifier("notificationComposer.imagePreview")
             }
+            // Read on the main actor: the picker's label closure is `Sendable`.
+            let hasImage = image.hasImage
             HStack(spacing: 12) {
                 PhotosPicker(selection: $selection, matching: .images, photoLibrary: .shared()) {
-                    Label(image.hasImage ? "Görseli Değiştir" : "Görsel Seç", systemImage: "photo.on.rectangle")
+                    Label(hasImage ? "Görseli Değiştir" : "Görsel Seç", systemImage: "photo.on.rectangle")
                 }
                 .accessibilityIdentifier("notificationComposer.imagePicker")
                 if image.isPreparing {
