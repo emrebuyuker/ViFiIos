@@ -499,6 +499,27 @@ describe('onSubmissionCreated', () => {
     assert.equal(messaging.multicasts.length, 1);
   });
 
+  test('one uploader reaches the admins at most 3 times an hour; other uploaders are not held back', async () => {
+    const messaging = fakeMessaging();
+    const auth = fakeAuth(ADMIN_PAGES);
+    const minute = 60 * 1000;
+    const created = async (id, ownerId, minutesAfter) => {
+      const snapshot = await (await createSubmission(id, { ownerId })).get();
+      const now = new Date(DAY.getTime() + minutesAfter * minute);
+      return automatic.onSubmissionCreatedHandler(depsWith({ messaging, auth, now }), { params: { id }, data: snapshot });
+    };
+
+    for (let index = 0; index < automatic.ADMIN_NOTICE_LIMIT; index += 1) {
+      assert.deepEqual(await created(`flood-${index}`, 'ayse', index), { admins: 'sent' });
+    }
+    assert.deepEqual(await created('flood-3', 'ayse', 3), { admins: 'throttled' });
+    assert.equal((await notificationDoc('auto-submission-flood-3')).exists, false);
+    assert.deepEqual(await created('other-0', 'mehmet', 4), { admins: 'sent' });
+    // An hour after the first notice, one more fits the rolling window.
+    assert.deepEqual(await created('flood-4', 'ayse', 61), { admins: 'sent' });
+    assert.equal(messaging.multicasts.length, 5);
+  });
+
   test('a submission that is not pending is ignored', async () => {
     const snapshot = await (await createSubmission('sub-odd', { status: 'approved' })).get();
     const result = await automatic.onSubmissionCreatedHandler(depsWith(), { params: { id: 'sub-odd' }, data: snapshot });

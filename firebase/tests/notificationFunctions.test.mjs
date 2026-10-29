@@ -679,6 +679,23 @@ describe('deliverNotification', () => {
     assert.deepEqual(await inboxOwners(request.notificationId), ['ayse', 'mehmet', 'zeynep']);
   });
 
+  test('a device refreshed while its old token is being pushed keeps the new token', async () => {
+    const base = fakeMessaging({ failures: { 'tok-ayse': 'messaging/registration-token-not-registered' } });
+    const messaging = {
+      ...base,
+      async sendEachForMulticast(message) {
+        // The app stores a fresh token in the same document while the push is in flight.
+        await deviceRef('ayse', 'd-ayse').set({ token: 'tok-ayse-new', platform: 'ios', appVersion: '4.1.0', updatedAt: new Date() });
+        return base.sendEachForMulticast(message);
+      },
+    };
+    const request = draft({ audience: segment({}) });
+    await admin.sendNotificationHandler(depsWith(messaging), asAdmin(request));
+
+    // The dead token was reported, but the document changed after it was read: the conditional prune skips it.
+    assert.equal((await deviceRef('ayse', 'd-ayse').get()).get('token'), 'tok-ayse-new');
+  });
+
   test('pushes in batches of at most 500 tokens, and a token registered twice once', async () => {
     await rtdb.ref('users/crowd/profile').set(profile('Kalabalık Üniversitesi', 'kalabalik-universitesi', 'Fen', 'fen', 'Fizik', 'fizik', 'male', 'Can'));
     const writer = db.bulkWriter();

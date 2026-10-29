@@ -95,6 +95,11 @@ async function broadcast({ db, rtdb, messaging }, notificationId, notification, 
 async function fanout(deps, notificationId, notification, message) {
   const { db, messaging } = deps;
   const uids = await resolveRecipients(deps, notification);
+  if (uids.length === 0 && notification.trigger === 'newExam') {
+    // A department notice for nobody usually means the archive path's slugs and the profiles' slugs disagree for this
+    // department (e.g. an archive node migrated from a legacy name); log it so it is visible.
+    logger.warn('Department notice reached no one', { notificationId, audience: notification.audience });
+  }
 
   // Inbox copies first: a push is only sent to users whose copy exists, so tapping it always finds the item.
   const item = toInboxItem(notification, { createdAt: FieldValue.serverTimestamp() });
@@ -139,12 +144,17 @@ async function fanout(deps, notificationId, notification, message) {
   return { recipients: delivered.length, pushTargets: tokens.length, pushSent, pushFailed };
 }
 
-/** Deletes the device documents of dead tokens; a failure is logged and never fails the delivery. */
-async function pruneDevices(db, refs) {
-  if (refs.length === 0) return;
+/**
+ * Deletes the device documents of dead tokens; a failure is logged and never fails the delivery. Each delete is
+ * conditional on the document being unchanged since it was read: the app may have stored a fresh token in the same
+ * document while this delivery ran, and that registration must survive.
+ */
+async function pruneDevices(db, entries) {
+  if (entries.length === 0) return;
   const writer = db.bulkWriter();
-  const deletes = refs.map((ref) => writer.delete(ref).catch((error) => {
-    logger.warn('Pruning a dead device token failed', { path: ref.path, error: error?.message });
+  const deletes = entries.map(({ ref, updateTime }) => writer.delete(ref, { lastUpdateTime: updateTime }).catch((error) => {
+    // FAILED_PRECONDITION: refreshed meanwhile (kept on purpose); anything else: a real failure.
+    logger.warn('Pruning a dead device token skipped or failed', { path: ref.path, error: error?.message });
   }));
   await writer.close();
   await Promise.all(deletes);

@@ -124,9 +124,11 @@ export async function filterMarketingConsent(db, uids) {
 
 /**
  * The recipients' registered devices, keyed by FCM token (a token registered twice — e.g. under an old and a new
- * installation id — is pushed once; every document holding it is listed so a dead token is pruned everywhere).
+ * installation id — is pushed once; every document holding it is listed so a dead token is pruned everywhere). Each
+ * entry keeps the document's `updateTime`, so pruning can skip a document the app refreshed meanwhile.
  *
- * @returns {Promise<Map<string, import('firebase-admin/firestore').DocumentReference[]>>}
+ * @returns {Promise<Map<string, { ref: import('firebase-admin/firestore').DocumentReference,
+ *   updateTime: import('firebase-admin/firestore').Timestamp }[]>>}
  */
 export async function loadDeviceTargets(db, uids) {
   const targets = new Map();
@@ -135,9 +137,9 @@ export async function loadDeviceTargets(db, uids) {
     for (const doc of snapshot.docs) {
       const token = doc.get('token');
       if (typeof token !== 'string' || !token) continue;
-      const refs = targets.get(token) ?? [];
-      refs.push(doc.ref);
-      targets.set(token, refs);
+      const entries = targets.get(token) ?? [];
+      entries.push({ ref: doc.ref, updateTime: doc.updateTime });
+      targets.set(token, entries);
     }
   });
   return targets;

@@ -43,9 +43,20 @@ export const TRIGGERS = Object.freeze({
 /** Server-only "new exam" daily limit per department (NOTIFICATIONS.md §3.6): `{ lastSentAt, notificationId }`. */
 export const THROTTLE_COLLECTION = 'notificationThrottle';
 
+/**
+ * "New submission" notices to the admins, per uploader: at most `ADMIN_NOTICE_LIMIT` in any rolling
+ * `ADMIN_NOTICE_WINDOW_MS` (user decision 2026-10-30). Submissions are client-created, so without this one scripted
+ * account could push every admin a thousand times; the submissions themselves still all reach the moderation list.
+ * Throttle doc: `notificationThrottle/submissions__{ownerId}` = `{ sentAt: Timestamp[] }`.
+ */
+export const ADMIN_NOTICE_LIMIT = 3;
+export const ADMIN_NOTICE_WINDOW_MS = 60 * 60 * 1000;
+
 // Türkiye stays on UTC+3 all year (as in schema.js), so its calendar day is the UTC day of the shifted instant.
 const ISTANBUL_OFFSET_MS = 3 * 60 * 60 * 1000;
 const ALREADY_EXISTS = 6;
+/** A Firebase uid usable as a document-id segment (as in accountCleanup.js). */
+const PROFILE_UID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 
 /** The deterministic notification ids (each must fit `NOTIFICATION_ID_PATTERN`). */
 export const automaticNotificationIds = (submissionId) => ({
@@ -123,15 +134,39 @@ export async function onSubmissionCreatedHandler(deps, event) {
     ? `${examLabel(submission)} (${place}) incelemeni bekliyor.`
     : `${examLabel(submission)} incelemeni bekliyor.`;
   const audience = { scope: 'admins' };
-  const status = await recordAndDeliver(deps, ids.newSubmission, automaticRecord({
+  const record = automaticRecord({
     trigger: TRIGGERS.newSubmission,
     title: 'Yeni sınav gönderimi',
     body,
     audience,
     label: audienceLabel(audience),
     status: 'sending',
-  }));
-  return { admins: status };
+  });
+
+  const ownerId = text(submission.ownerId);
+  if (!PROFILE_UID_PATTERN.test(ownerId)) {
+    logger.warn('Submission has no usable owner; skipping the admin notice', { submissionId: event.params?.id });
+    return { admins: 'no-owner' };
+  }
+  const { db } = deps;
+  const now = deps.now?.() ?? new Date();
+  const throttleRef = db.collection(THROTTLE_COLLECTION).doc(`submissions__${ownerId}`);
+  const ref = db.collection('notifications').doc(ids.newSubmission);
+  const outcome = await db.runTransaction(async (transaction) => {
+    const [throttle, existing] = await transaction.getAll(throttleRef, ref);
+    if (existing.exists) return 'duplicate';
+    const recent = (throttle.exists ? throttle.get('sentAt') ?? [] : [])
+      .filter((sentAt) => sentAt instanceof Timestamp && now.getTime() - sentAt.toMillis() < ADMIN_NOTICE_WINDOW_MS);
+    if (recent.length >= ADMIN_NOTICE_LIMIT) return 'throttled';
+    transaction.set(throttleRef, { sentAt: [...recent, Timestamp.fromDate(now)] });
+    transaction.create(ref, record);
+    return 'sending';
+  });
+  if (outcome === 'throttled') {
+    logger.info('Admin notice throttled for this uploader', { submissionId: event.params?.id });
+  }
+  if (outcome !== 'sending') return { admins: outcome };
+  return { admins: (await deliverNotification(deps, ids.newSubmission)).status };
 }
 
 // MARK: - Personal notices
