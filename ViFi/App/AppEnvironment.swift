@@ -48,6 +48,10 @@ final class AppEnvironment {
     @ObservationIgnored let loginDiagnostics: any LoginDiagnosticsReporting
     /// The in-app notification inbox (public announcements + per-device read state).
     let announcements: AnnouncementsStore
+    /// Admin-only targeted notification sending ("Bildirim Gönder"; NOTIFICATIONS.md).
+    @ObservationIgnored let notificationAdmin: any NotificationAdminServicing
+    /// Keeps this device's push token under the signed-in user, for targeted and personal notifications.
+    @ObservationIgnored let deviceRegistrar: any DeviceRegistering
 
     init(
         repository: any ArchiveRepository,
@@ -72,6 +76,8 @@ final class AppEnvironment {
         notifications: any NotificationServicing,
         announcementsReader: any AnnouncementsReading,
         announcementsDefaults: UserDefaults = .standard,
+        notificationAdmin: any NotificationAdminServicing,
+        deviceRegistrar: any DeviceRegistering,
         loginDiagnostics: any LoginDiagnosticsReporting = NoopLoginDiagnosticsReporter()
     ) {
         self.repository = repository
@@ -98,6 +104,8 @@ final class AppEnvironment {
         onboarding = OnboardingStore(defaults: onboardingDefaults)
         self.notifications = notifications
         announcements = AnnouncementsStore(reader: announcementsReader, defaults: announcementsDefaults)
+        self.notificationAdmin = notificationAdmin
+        self.deviceRegistrar = deviceRegistrar
         self.loginDiagnostics = loginDiagnostics
     }
 
@@ -143,6 +151,8 @@ final class AppEnvironment {
             recents: RecentExamsStore(),
             notifications: SystemNotificationService(),
             announcementsReader: FirebaseAnnouncementsReader(),
+            notificationAdmin: FirebaseNotificationAdminService(),
+            deviceRegistrar: FirebaseDeviceRegistrar(),
             loginDiagnostics: FirebaseLoginDiagnosticsService()
         )
     }

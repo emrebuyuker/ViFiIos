@@ -44,7 +44,9 @@ extension AppEnvironment {
             // `-ViFiNotificationsPrompt` argument reports it not-determined to exercise priming.
             notifications: MockNotificationService(granted: !arguments.contains(LaunchArgument.notificationsPrompt)),
             announcementsReader: StubAnnouncementsReader(),
-            announcementsDefaults: .mockSuite
+            announcementsDefaults: .mockSuite,
+            notificationAdmin: MockNotificationAdminService(),
+            deviceRegistrar: MockDeviceRegistrar()
         )
     }
 

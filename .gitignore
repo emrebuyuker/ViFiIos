@@ -40,3 +40,4 @@ fastlane/test_output/
 # Internal roadmap / planning docs — kept local, not published to the public repo.
 ROADMAP.md
 FIRESTORE-MIGRATION.md
+NOTIFICATIONS.md
