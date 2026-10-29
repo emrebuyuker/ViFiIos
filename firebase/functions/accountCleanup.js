@@ -11,6 +11,8 @@
 //   `pending/{uid}/` in Storage — the archive never points there: an approval copies the files to `imagess/`/`pdfs/`.
 // - The Realtime Database profile `users/{uid}` ("Profil … Hemen silinir"). The app deletes it before deleting the
 //   account; this also covers an account deleted from the console (the e-mail request path) or a failed client delete.
+// - The legacy Realtime Database queue `pendingExams/{uid}` (submissions made before the Firestore move; no longer
+//   written, but old entries may still hold this user's uploads' metadata). User decision 2026-10-30.
 //
 // Kept:
 // - Published archive content (exams, catalog nodes, their files): "Arşive eklenmiş sınavlar … arşivde kalır".
@@ -56,6 +58,7 @@ export async function deleteAccountData(deps, uid) {
     // Pending submissions' uploads (and leftovers of rejected / failed ones); a missing prefix is a no-op.
     pendingFiles: () => bucket.deleteFiles({ prefix: `pending/${uid}/` }),
     profile: () => rtdb.ref('users').child(uid).remove(),
+    legacyPendingExams: () => rtdb.ref('pendingExams').child(uid).remove(),
     unlinkedPurchases: () => unlinkPurchases(db, uid),
   };
 

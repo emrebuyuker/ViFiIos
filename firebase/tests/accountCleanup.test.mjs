@@ -79,11 +79,14 @@ async function seedUser(uid) {
   writer.set(db.collection('subscriptions').doc(uid), { active: true });
   await writer.close();
   await rtdb.ref('users').child(uid).set({ profile: { name: 'Ad', surname: 'Soyad', universityId: 'ege-universitesi' } });
+  // A legacy (pre-Firestore) RTDB submission queue entry.
+  await rtdb.ref('pendingExams').child(uid).child('old-1').set({ status: 'pending', lesson: 'Ders' });
 }
 
 beforeEach(async () => {
   await clearFirestore();
   await rtdb.ref('users').remove();
+  await rtdb.ref('pendingExams').remove();
   await bucket.deleteFiles({ prefix: 'pending/' });
   await bucket.deleteFiles({ prefix: 'imagess/' });
 
@@ -123,6 +126,7 @@ async function assertCleanedUp() {
   assert.equal(await exists(db.collection('subscriptions').doc(GONE)), false);
   assert.equal(await exists(db.collection('submissions').doc('s-pending')), false);
   assert.equal((await rtdb.ref('users').child(GONE).once('value')).exists(), false);
+  assert.equal((await rtdb.ref('pendingExams').child(GONE).once('value')).exists(), false);
   assert.deepEqual(await filesUnder(`pending/${GONE}/`), []);
 
   // Unlinked, not deleted: the purchase still cannot be replayed.
@@ -143,6 +147,7 @@ async function assertCleanedUp() {
   assert.equal(await exists(db.collection('subscriptions').doc(STAY)), true);
   assert.equal((await db.collection('purchasedTransactions').doc('tx-stay').get()).get('uid'), STAY);
   assert.equal((await rtdb.ref('users').child(STAY).child('profile/name').once('value')).val(), 'Ad');
+  assert.equal((await rtdb.ref('pendingExams').child(STAY).child('old-1/lesson').once('value')).val(), 'Ders');
   for (const path of KEPT_FILES) assert.deepEqual(await filesUnder(path), [path]);
 }
 
