@@ -770,7 +770,7 @@ final class StubInboxReader: InboxReading {
     init(
         broadcast: [InboxItem] = StubInboxReader.broadcastSamples,
         personal: [InboxItem] = StubInboxReader.personalSamples,
-        readAt: Date? = nil
+        readAt: Date? = StubInboxReader.sampleReadAt
     ) {
         self.broadcast = broadcast
         self.personal = personal
@@ -807,6 +807,10 @@ final class StubInboxReader: InboxReading {
             continuation.yield(.success(marker))
         }
     }
+
+    /// The sample user opened the inbox before every sample entry arrived, so they show as unread (a `nil` marker would
+    /// be written as "now" by the store, like a new account's, leaving nothing unread).
+    static let sampleReadAt = Date(timeIntervalSince1970: 1_757_000_000)
 
     /// The public announcements.
     static let broadcastSamples: [InboxItem] = [

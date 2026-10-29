@@ -50,6 +50,9 @@ final class NotificationSettingsStore {
         }
         userId = uid
         for await feed in service.consentChanges(uid: uid) {
+            // A value buffered for a user who has since signed out (`reset()`) or been replaced must not land on
+            // the next one's consent.
+            guard userId == uid else { return }
             switch feed {
             case let .success(consent):
                 self.consent = consent

@@ -363,11 +363,12 @@ final class NotificationComposerViewModel {
             successMessage = String(localized: "Bildirim gönderildi. Alıcı sayısı: \(result.recipients).")
             resetDraft()
         case .scheduled:
+            // No recipient count: the server resolves the audience when the notification goes out, so it reports 0 now.
             if let date = result.scheduledAt {
                 let time = date.formatted(date: .abbreviated, time: .shortened)
-                successMessage = String(localized: "Bildirim \(time) için zamanlandı. Alıcı sayısı: \(result.recipients).")
+                successMessage = String(localized: "Bildirim \(time) için zamanlandı.")
             } else {
-                successMessage = String(localized: "Bildirim zamanlandı. Alıcı sayısı: \(result.recipients).")
+                successMessage = String(localized: "Bildirim zamanlandı.")
             }
             resetDraft()
         case .failed, .canceled:

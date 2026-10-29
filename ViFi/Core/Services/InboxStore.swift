@@ -10,6 +10,10 @@ import os
 /// is the same on every device and opening the inbox costs a single write. A source that fails is not shown as
 /// empty: when both fail the inbox reports `.failed` (with a retry), when only one does the other's entries stay
 /// visible and `hasPartialFailure` says some are missing. Entries past their `expiresAt` are hidden.
+///
+/// A user who has no read marker yet (a new account) starts with everything that is already there counted as
+/// read: the first confirmed-empty marker is written once, so the existing announcements are listed without
+/// lighting the bell, and only what arrives later is unread.
 @Observable
 final class InboxStore {
     /// What a source delivered so far.
@@ -44,8 +48,9 @@ final class InboxStore {
         case unknown
         /// Could not be read: nothing counts as unread, rather than a badge that never clears.
         case unavailable
-        /// `nil`: the inbox was never opened.
-        case known(Date?)
+        /// The user last opened the inbox then. A user with no marker at all gets "now" (see
+        /// `initializeReadMarker(uid:)`), so there is no "never opened" state.
+        case known(Date)
     }
 
     // The per-device set of read announcement ids the app used before the shared read marker. Bump the suffix on
@@ -65,10 +70,11 @@ final class InboxStore {
     @ObservationIgnored private var userId: String?
     /// The newest entry the last `readAt` write covered, so the same entries are not written for twice.
     @ObservationIgnored private var markedThrough: Date?
-    @ObservationIgnored private var didMigrateLegacyState = false
+    @ObservationIgnored private var didInitializeReadMarker = false
 
     /// - Parameters:
-    ///   - defaults: Where the pre-`readAt` read state lives (migrated on first use, see `observe(uid:)`).
+    ///   - defaults: Where the pre-`readAt` read state lives (dropped once the marker is first written, see
+    ///     `observe(uid:)`).
     ///   - now: The clock expiry is measured with (injected by tests).
     init(reader: any InboxReading, defaults: UserDefaults = .standard, now: @escaping () -> Date = Date.init) {
         self.reader = reader
@@ -110,7 +116,6 @@ final class InboxStore {
     /// Whether `item` arrived after the user last opened the inbox.
     func isUnread(_ item: InboxItem) -> Bool {
         guard case let .known(readAt) = readMarker, let createdAt = item.createdAt else { return false }
-        guard let readAt else { return true }
         return createdAt > readAt
     }
 
@@ -122,14 +127,15 @@ final class InboxStore {
     // MARK: - Observing
 
     /// Keeps the inbox in step with the server for `uid` until the calling task is cancelled (sign-out, or a
-    /// `retry()`). The first read marker without a `readAt` also migrates the legacy per-device read state.
+    /// `retry()`). The first read marker that is confirmed to have no `readAt` is written once, which also
+    /// retires the legacy per-device read state.
     func observe(uid: String) async {
         userId = uid
         broadcast = .pending
         personal = .pending
         readMarker = .unknown
         markedThrough = nil
-        didMigrateLegacyState = false
+        didInitializeReadMarker = false
 
         async let broadcastFollowed: Void = followBroadcast(uid: uid)
         async let personalFollowed: Void = followPersonal(uid: uid)
@@ -172,7 +178,7 @@ final class InboxStore {
         personal = .pending
         readMarker = .unknown
         markedThrough = nil
-        didMigrateLegacyState = false
+        didInitializeReadMarker = false
     }
 
     // MARK: - Private
@@ -195,24 +201,28 @@ final class InboxStore {
         for await result in reader.readMarkerChanges(uid: uid) {
             guard userId == uid else { return }
             switch result {
-            case let .success(readAt):
+            case let .success(readAt?):
                 readMarker = .known(readAt)
-                if readAt == nil {
-                    migrateLegacyReadState(uid: uid)
-                }
+            case .success(nil):
+                // The server has no marker (a new account, or the pre-`readAt` state). Never a read error: that
+                // is the `.failure` case below, which writes nothing.
+                initializeReadMarker(uid: uid)
             case .failure:
                 readMarker = .unavailable
             }
         }
     }
 
-    /// First run with the shared read marker (NOTIFICATIONS.md §3.5): a device that tracked read announcements
-    /// locally sets `readAt` to now, so the old ones do not all show up unread at once. Without any, everything
-    /// really is unread. The local ids are dropped once the marker is written.
-    private func migrateLegacyReadState(uid: String) {
-        guard !didMigrateLegacyState else { return }
-        didMigrateLegacyState = true
-        guard !(defaults.stringArray(forKey: Self.legacyReadIdsKey) ?? []).isEmpty else { return }
+    /// First run with the shared read marker (NOTIFICATIONS.md §3.5): the server confirmed there is none, so it is
+    /// set to now. For a new account that means the announcements already out are listed but not unread, and only
+    /// later ones light the bell; for a device that tracked read announcements locally (the pre-`readAt` state)
+    /// it keeps the old ones from bursting back as unread. The local ids are dropped once the marker is written.
+    /// Only called for a marker that was read successfully: a read error never writes. It runs once per
+    /// observation: while its write is on its way a repeated "no marker" keeps the local value instead of flashing
+    /// everything unread.
+    private func initializeReadMarker(uid: String) {
+        guard !didInitializeReadMarker else { return }
+        didInitializeReadMarker = true
         // Until the write is reflected back, count as read from now on instead of flashing everything unread.
         readMarker = .known(now())
         Task {
@@ -221,7 +231,7 @@ final class InboxStore {
                 defaults.removeObject(forKey: Self.legacyReadIdsKey)
             } catch {
                 let reason = String(describing: error)
-                Logger.app.error("Migrating the legacy read state failed: \(reason, privacy: .public)")
+                Logger.app.error("Initializing the inbox read marker failed: \(reason, privacy: .public)")
             }
         }
     }

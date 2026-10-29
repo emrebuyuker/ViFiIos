@@ -42,7 +42,10 @@ struct RootView: View {
         // Clear the icon badge at launch as well: `scenePhase` does not deliver its initial `.active` through
         // `onChange`, so a cold start opened from a notification would otherwise keep the badge.
         .task { clearNotificationBadge() }
-        .onChange(of: environment.session.state) { _, state in
+        .onChange(of: environment.session.state) { oldState, state in
+            // A tapped push belongs to the account that received it: it is dropped on sign-out, and a tap made
+            // while signed out never opens the next account's inbox. (A cold start's tap survives `unknown`.)
+            environment.notificationRouter.sessionDidChange(from: oldState, to: state)
             // The next user starts on the home screen, not deep in the previous user's stack, with a clean
             // profile read and without the previous user's recently-viewed list. Downloaded files are kept
             // (re-login needs no re-download); account deletion wipes them separately, in `AccountViewModel`.
@@ -53,8 +56,6 @@ struct RootView: View {
                 environment.unlocks.reset()
                 environment.recents.clear()
                 environment.inbox.reset()
-                // A tapped push belongs to the account that received it; the next one must not open its inbox.
-                environment.notificationRouter.reset()
                 environment.deviceRegistration.userDidSignOut()
                 // The next user starts without the previous one's campaign consent or a queued permission offer.
                 environment.notificationSettings.reset()

@@ -152,8 +152,8 @@ final class InboxStoreTests {
         #expect(store.unreadCount == 0)
     }
 
-    @Test("Without a readAt everything dated is unread")
-    func neverOpened() async {
+    @Test("An existing marker older than the entries leaves them unread, and nothing is written")
+    func entriesNewerThanMarkerAreUnread() async {
         reader.broadcast = .success([
             InboxFixture.item("a1"),
             InboxFixture.item("a2", createdAt: InboxFixture.date(5)),
@@ -165,6 +165,7 @@ final class InboxStoreTests {
         #expect(store.unreadCount == 2)
         #expect(store.isUnread(InboxFixture.item("a1")))
         #expect(!store.isUnread(InboxFixture.item("undated", createdAt: nil)))
+        #expect(reader.markReadCalls.isEmpty)
     }
 
     @Test("Unread means newer than readAt: the same instant counts as read")
@@ -276,72 +277,6 @@ final class InboxStoreTests {
         #expect(await eventually { store.unreadCount == 0 })
     }
 
-    // MARK: - Legacy read state
-
-    @Test("A device that tracked read announcements locally writes readAt once and drops the old ids")
-    func migratesLegacyState() async {
-        storage.defaults.set(["a1"], forKey: Self.legacyKey)
-        reader.broadcast = .success([InboxFixture.item("a1", createdAt: InboxFixture.date(10))])
-        reader.serverNow = { InboxFixture.date(100) }
-
-        await startObservingUntilLoaded()
-
-        #expect(await eventually { reader.markReadCalls == [Self.uid] })
-        #expect(await eventually { storage.defaults.stringArray(forKey: Self.legacyKey) == nil })
-        #expect(store.unreadCount == 0, "The old announcements must not burst back as unread")
-    }
-
-    @Test("Without legacy state and without a readAt, everything is unread and nothing is written")
-    func noMigrationWithoutLegacyState() async {
-        reader.broadcast = .success([InboxFixture.item("a1", createdAt: InboxFixture.date(10))])
-
-        await startObservingUntilMarkerKnown()
-
-        #expect(store.unreadCount == 1)
-        #expect(reader.markReadCalls.isEmpty)
-    }
-
-    @Test("An existing readAt wins over legacy state: no migration write")
-    func existingMarkerSkipsMigration() async {
-        storage.defaults.set(["a1"], forKey: Self.legacyKey)
-        reader.broadcast = .success([InboxFixture.item("a1", createdAt: InboxFixture.date(10))])
-        reader.readMarker = .success(InboxFixture.date(5))
-
-        await startObservingUntilMarkerKnown()
-
-        #expect(reader.markReadCalls.isEmpty)
-        #expect(store.unreadCount == 1)
-    }
-
-    @Test("A failed migration write keeps the legacy ids for the next launch")
-    func failedMigrationKeepsLegacyState() async {
-        storage.defaults.set(["a1"], forKey: Self.legacyKey)
-        reader.markReadError = InboxError.unavailable
-
-        await startObservingUntilMarkerKnown()
-
-        #expect(await eventually { reader.markReadCalls.count == 1 })
-        try? await Task.sleep(for: .milliseconds(50))
-        #expect(storage.defaults.stringArray(forKey: Self.legacyKey) == ["a1"])
-    }
-
-    // MARK: - Reset
-
-    @Test("Reset forgets everything, and a stale delivery for the old user is ignored")
-    func resetForgets() async {
-        reader.broadcast = .success([InboxFixture.item("a1")])
-        await startObservingUntilMarkerKnown()
-        #expect(store.unreadCount == 1)
-
-        store.reset()
-        reader.emitBroadcast(.success([InboxFixture.item("late")]))
-        try? await Task.sleep(for: .milliseconds(30))
-
-        #expect(store.items.isEmpty)
-        #expect(store.unreadCount == 0)
-        #expect(store.state == .loading)
-    }
-
     // MARK: - Helpers
 
     private func startObserving() async {
@@ -368,5 +303,157 @@ final class InboxStoreTests {
     /// as read before one arrives.
     private var markerIsKnown: Bool {
         store.isUnread(InboxFixture.item("probe", createdAt: InboxFixture.date(1_000_000)))
+    }
+}
+
+// The read-marker scenarios live in an extension (same file, so the suite's private state stays reachable), which
+// keeps the suite's own body within the lint limit.
+extension InboxStoreTests {
+    // MARK: - New account
+
+    @Test("A new account's existing announcements are listed but not unread, and the marker is written once")
+    func newAccountStartsRead() async {
+        reader.broadcast = .success([
+            InboxFixture.item("old1", createdAt: InboxFixture.date(10)),
+            InboxFixture.item("old2", createdAt: InboxFixture.date(500)),
+        ])
+        reader.readMarker = .success(nil)
+        reader.serverNow = { InboxFixture.date(1_000) }
+
+        await startObservingUntilMarkerKnown()
+
+        #expect(await eventually { reader.markReadCalls == [Self.uid] })
+        #expect(store.items.map(\.id) == ["old2", "old1"], "They still show in the list")
+        #expect(store.unreadCount == 0, "...but do not light the bell")
+        #expect(store.items.allSatisfy { !store.isUnread($0) })
+        // The server's echo of the marker does not write again.
+        #expect(await eventually { store.unreadCount == 0 })
+        #expect(reader.markReadCalls == [Self.uid])
+    }
+
+    @Test("After a new account's marker is set, only later entries count as unread")
+    func newAccountLaterEntriesAreUnread() async {
+        reader.broadcast = .success([InboxFixture.item("old", createdAt: InboxFixture.date(10))])
+        reader.readMarker = .success(nil)
+        reader.serverNow = { InboxFixture.date(1_000) }
+        await startObservingUntilMarkerKnown()
+        #expect(await eventually { reader.markReadCalls == [Self.uid] })
+
+        reader.emitPersonal(.success([InboxFixture.item("fresh", source: .personal, createdAt: InboxFixture.date(1_500))]))
+
+        #expect(await eventually { store.unreadCount == 1 })
+        #expect(store.items.filter(store.isUnread).map(\.id) == ["fresh"])
+    }
+
+    @Test("A repeated empty marker while the first write is on its way writes nothing more and does not flash unread")
+    func newAccountWritesOnce() async {
+        reader.broadcast = .success([InboxFixture.item("old", createdAt: InboxFixture.date(10))])
+        reader.readMarker = .success(nil)
+        reader.markReadError = InboxError.unavailable
+        await startObservingUntilMarkerKnown()
+        #expect(await eventually { reader.markReadCalls.count == 1 })
+
+        reader.emitReadMarker(.success(nil))
+        try? await Task.sleep(for: .milliseconds(50))
+
+        #expect(reader.markReadCalls.count == 1)
+        #expect(store.unreadCount == 0)
+    }
+
+    @Test("A marker that cannot be read is not an empty one: nothing is written")
+    func readErrorNeverWrites() async {
+        reader.broadcast = .success([InboxFixture.item("a1", createdAt: InboxFixture.date(10))])
+        reader.readMarker = .failure(.unavailable)
+
+        await startObservingUntilLoaded()
+        try? await Task.sleep(for: .milliseconds(50))
+
+        #expect(reader.markReadCalls.isEmpty)
+        #expect(store.unreadCount == 0)
+    }
+
+    @Test("A marker that has not arrived yet is not an empty one: nothing is written")
+    func pendingMarkerNeverWrites() async {
+        reader.broadcast = .success([InboxFixture.item("a1", createdAt: InboxFixture.date(10))])
+        reader.readMarker = nil
+
+        await startObservingUntilLoaded()
+        try? await Task.sleep(for: .milliseconds(50))
+
+        #expect(reader.markReadCalls.isEmpty)
+    }
+
+    @Test("Signing in as another new account writes that account's marker too")
+    func nextNewAccountWritesItsOwn() async {
+        reader.readMarker = .success(nil)
+        reader.serverNow = { InboxFixture.date(1_000) }
+        await startObservingUntilMarkerKnown()
+        #expect(await eventually { reader.markReadCalls == [Self.uid] })
+
+        stopObserving()
+        store.reset()
+        // The first write moved the scripted server's marker; the next account has none.
+        reader.emitReadMarker(.success(nil))
+        observation = Task { await store.observe(uid: "user-2") }
+
+        #expect(await eventually { reader.markReadCalls == [Self.uid, "user-2"] })
+    }
+
+    // MARK: - Legacy read state
+
+    @Test("A device that tracked read announcements locally writes readAt once and drops the old ids")
+    func migratesLegacyState() async {
+        storage.defaults.set(["a1"], forKey: Self.legacyKey)
+        reader.readMarker = .success(nil)
+        reader.broadcast = .success([InboxFixture.item("a1", createdAt: InboxFixture.date(10))])
+        reader.serverNow = { InboxFixture.date(100) }
+
+        await startObservingUntilLoaded()
+
+        #expect(await eventually { reader.markReadCalls == [Self.uid] })
+        #expect(await eventually { storage.defaults.stringArray(forKey: Self.legacyKey) == nil })
+        #expect(store.unreadCount == 0, "The old announcements must not burst back as unread")
+    }
+
+    @Test("An existing readAt wins over legacy state: no migration write")
+    func existingMarkerSkipsMigration() async {
+        storage.defaults.set(["a1"], forKey: Self.legacyKey)
+        reader.broadcast = .success([InboxFixture.item("a1", createdAt: InboxFixture.date(10))])
+        reader.readMarker = .success(InboxFixture.date(5))
+
+        await startObservingUntilMarkerKnown()
+
+        #expect(reader.markReadCalls.isEmpty)
+        #expect(store.unreadCount == 1)
+    }
+
+    @Test("A failed migration write keeps the legacy ids for the next launch")
+    func failedMigrationKeepsLegacyState() async {
+        storage.defaults.set(["a1"], forKey: Self.legacyKey)
+        reader.readMarker = .success(nil)
+        reader.markReadError = InboxError.unavailable
+
+        await startObservingUntilMarkerKnown()
+
+        #expect(await eventually { reader.markReadCalls.count == 1 })
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(storage.defaults.stringArray(forKey: Self.legacyKey) == ["a1"])
+    }
+
+    // MARK: - Reset
+
+    @Test("Reset forgets everything, and a stale delivery for the old user is ignored")
+    func resetForgets() async {
+        reader.broadcast = .success([InboxFixture.item("a1")])
+        await startObservingUntilMarkerKnown()
+        #expect(store.unreadCount == 1)
+
+        store.reset()
+        reader.emitBroadcast(.success([InboxFixture.item("late")]))
+        try? await Task.sleep(for: .milliseconds(30))
+
+        #expect(store.items.isEmpty)
+        #expect(store.unreadCount == 0)
+        #expect(store.state == .loading)
     }
 }

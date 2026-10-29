@@ -41,7 +41,7 @@ struct NotificationComposerSendFlowTests {
         #expect(sent.title == "Başlık")
         #expect(sent.kind == .promo)
         #expect(!sent.isTest)
-        #expect(viewModel.successMessage != nil)
+        #expect(viewModel.successMessage?.contains("Alıcı sayısı") == true, "An immediate send reports its recipients")
         #expect(viewModel.errorMessage == nil)
         #expect(viewModel.confirmation == nil)
         #expect(!viewModel.isWorking)
@@ -99,7 +99,8 @@ struct NotificationComposerSendFlowTests {
     func scheduledSend() async throws {
         let service = StubNotificationAdminService()
         let when = clock.date.addingTimeInterval(7200)
-        service.sendResult = .success(NotificationSendResult(notificationId: "n", status: .scheduled, scheduledAt: when, recipients: 4))
+        // Like the server: a scheduled send reports 0 recipients, as the audience is only resolved at delivery.
+        service.sendResult = .success(NotificationSendResult(notificationId: "n", status: .scheduled, scheduledAt: when, recipients: 0))
         let (viewModel, _) = fixture.readyViewModel(service: service)
         viewModel.setScheduling(true)
 
@@ -109,6 +110,10 @@ struct NotificationComposerSendFlowTests {
         let draft = try #require(service.sentDrafts.first)
         #expect(draft.scheduledAt == clock.date.addingTimeInterval(3600))
         #expect(viewModel.successMessage?.contains(when.formatted(date: .abbreviated, time: .shortened)) == true)
+        #expect(
+            viewModel.successMessage?.contains("Alıcı") == false,
+            "The audience is resolved at delivery, so a scheduled send has no recipient count to report"
+        )
         #expect(viewModel.scheduledAt == nil, "The form is reset")
     }
 

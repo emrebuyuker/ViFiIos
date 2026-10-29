@@ -5,7 +5,8 @@ import Observation
 /// A tap on a push (`AppDelegate`) cannot open anything by itself: on a cold start the app is still behind its
 /// gates (required update, sign-in, profile completion), and on a warm start a sheet may be in the way. It only
 /// leaves a request — `receive(notificationId:)` — which stays pending until a screen that is past the gates
-/// calls `deliverPending()` (`HomeView`). Signing out drops it: a push belongs to the account that received it.
+/// calls `deliverPending()` (`HomeView`). A push belongs to the account that received it, so signing out drops the
+/// request, and so does a tap made while signed out when someone then signs in (`sessionDidChange(from:to:)`).
 @Observable
 final class NotificationRouter {
     /// A tapped push waiting to be shown.
@@ -44,6 +45,22 @@ final class NotificationRouter {
     /// The inbox went away: nothing is highlighted any more.
     func inboxDidDismiss() {
         highlightedId = nil
+    }
+
+    /// Keeps the pending tap in step with the session (`RootView`, on every change of `SessionStore.state`).
+    ///
+    /// Signing out drops everything. A tap that arrives while already signed out belongs to no account, so it is
+    /// dropped when the state goes signed out → signed in. A cold start is different: the tap that launched the
+    /// app waits through `unknown` and must survive into `signedIn`.
+    func sessionDidChange(from old: SessionStore.State, to new: SessionStore.State) {
+        switch (old, new) {
+        case (_, .signedOut):
+            reset()
+        case (.signedOut, .signedIn):
+            pending = nil
+        default:
+            break
+        }
     }
 
     /// Forgets the pending tap and closes the inbox (sign-out).

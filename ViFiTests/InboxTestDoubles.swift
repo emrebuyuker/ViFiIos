@@ -9,7 +9,9 @@ final class ScriptedInboxReader: InboxReading {
     /// What each source answers with when it is opened; `nil` stays silent until the test emits.
     var broadcast: InboxFeed? = .success([])
     var personal: InboxFeed? = .success([])
-    var readMarker: Result<Date?, InboxError>? = .success(nil)
+    /// By default an existing marker from before every fixture entry (the user opened the inbox long ago); a new
+    /// account is `.success(nil)`, which the store answers with a write.
+    var readMarker: Result<Date?, InboxError>? = .success(InboxFixture.date(-1))
     /// Fails `markRead` when set.
     var markReadError: (any Error)?
     /// The marker a successful `markRead` moves to (the server's clock).

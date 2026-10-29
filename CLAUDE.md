@@ -168,7 +168,8 @@ ViFi-iOS/
   gösterir (SDK çökerdi). **Örnek veri modunda Google SDK'sı hiç başlatılmaz:** `LocationPicking` protokolü +
   `MockLocationPicker`. Konum seçiciye yeni bir yol eklersen aynı korumayı koru; kullanıcı konumu/CoreLocation kullanılmaz.
 - **Push dokunuşu doğrudan gezinmez.** `AppDelegate` yalnızca `NotificationRouter.receive(notificationId:)` çağırır;
-  `HomeView` (tüm kapılardan sonra var olan ekran) engelleyen modal kalmayınca inbox'ı açar. Çıkışta bekleyen dokunuş silinir.
+  `HomeView` (tüm kapılardan sonra var olan ekran) engelleyen modal kalmayınca inbox'ı açar. Çıkışta bekleyen dokunuş silinir; oturum kapalıyken yapılan dokunuş da
+  sonraki girişte atılır (`NotificationRouter.sessionDidChange`; soğuk başlatmadaki dokunuş korunur).
 - **Cihaz kaydı:** `users/<uid>/devices/<kurulum-UUID'si>` = `{token, platform, appVersion, updatedAt}`
   (`DeviceRegistrationStore`; token + oturum birlikte olunca yazar). Çıkış ve hesap silmeden **önce** kayıt silinir
   (en çok 3 sn bekler, başarısızlık çıkışı engellemez). Aynı token başka hesapta görülürse sunucu eskisini siler.
@@ -177,6 +178,8 @@ ViFi-iOS/
   Extension kodu `nonisolated`'dır ve yalnızca sistem framework'leri + FirebaseMessaging kullanır; uygulama kodunu
   extension'a ancak `project.yml`'de açıkça listelenen, yalnızca Foundation kullanan dosya (`NotificationBadgeCounter`) kadar paylaş.
 - **Okunmamış** = `createdAt > users/<uid>/settings/inbox.readAt` (cihazlar arası senkron; sayfa açılınca tek yazım).
+  İşaret sunucuda **yoksa** (yeni hesap) bir kez "şimdi" yazılır: eski duyurular listelenir ama rozeti yakmaz
+  (kullanıcı kararı); okuma hatasında asla yazılmaz, yalnız önbellekten gelen "yok" beklenir (`includeMetadataChanges`).
   Bir kaynak okunamazsa boş liste gibi gösterilmez (`Loadable.failed` / `hasPartialFailure`).
 - **Bildirimden açılan sınav arşivin kilit kuralından geçer** (`ExamAccessResolver`): kilitliyse kilit sayfası çıkar.
 - **Analytics:** `notification_priming_*` ve `marketing_consent_*` (shown/accepted/declined, `source` parametresiyle);
@@ -330,7 +333,7 @@ cd firebase && firebase deploy --only firestore,storage,functions --project vifi
 | `trackNotificationEvent` | callable, +90 | `opened` / `actionTapped` sayacı, kullanıcı başı tek; yalnız teslim kopyası olan alıcı sayılır |
 | `onDeviceWritten` | Firestore `onDocumentWritten` `users/{uid}/devices/{id}` (`vifi`) | Aynı token başka hesapta kayıtlıysa eski cihaz dokümanını siler |
 | `onSubmissionModerated` | Firestore `onDocumentUpdated` `submissions/{id}` (`vifi`) | `pending→approved`: sahibine "Sınavın onaylandı" (+coin, ledger'dan) ve yeni sınav yayınlandıysa bölümüne "yeni sınav" (`system`, onay süzgecine tabi değil; yükleyen hariç; bölüm başına İstanbul gününde en fazla 1, `notificationThrottle`). `pending→rejected`: sahibine sebepli bildirim |
-| `onSubmissionCreated` | Firestore `onDocumentCreated` `submissions/{id}` (`vifi`) | Tüm admin'lere "Yeni sınav gönderimi" (`admins`: Auth `listUsers` + `admin` claim, örnek-içi 5 dk önbellek) |
+| `onSubmissionCreated` | Firestore `onDocumentCreated` `submissions/{id}` (`vifi`) | Tüm admin'lere "Yeni sınav gönderimi" (`admins`: Auth `listUsers` + `admin` claim, örnek-içi 5 dk önbellek); **gönderen başına kayan 1 saatte en çok 3** (`notificationThrottle/submissions__<ownerId>`, kötüye kullanım koruması; gönderimler moderasyon listesine yine düşer) |
 | `onAccountDeleted` | **v1** `auth.user().onDelete` | Hesap silme temizliği (aşağıda); v2'de Auth silme tetikleyicisi olmadığı için 1. nesil, hata olursa yeniden denenir |
 
 Otomatik bildirimler `source: 'automatic'`, `createdBy: 'system'` ve deterministik id'lerle (`auto-approved-<gönderimId>`, `auto-rejected-…`, `auto-newexam-…`, `auto-submission-…`) `create()` edilir; olay tekrar gelse bile iki kez gitmez. Tetikleyiciler `exams` yazımına değil **gönderim moderasyonuna** bağlıdır (migrasyon script'i yüzlerce bildirim atmasın). Moderasyon kararı hâlâ istemcide verilir (serverless, bkz. *Gönderimler*); Function'lar yalnızca sonucuna tepki verir.

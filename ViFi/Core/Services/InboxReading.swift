@@ -25,7 +25,8 @@ protocol InboxReading: AnyObject {
     /// `users/{uid}/inbox`: sent to this user — a segment, a campaign, or an automatic message (newest 100).
     func personalChanges(uid: String) -> AsyncStream<InboxFeed>
 
-    /// `users/{uid}/settings/inbox.readAt`: when the user last opened the inbox; `nil` when they never did.
+    /// `users/{uid}/settings/inbox.readAt`: when the user last opened the inbox; `nil` when the server has no
+    /// marker (a new account). A `.success(nil)` must be confirmed by the server — the store writes a marker for it.
     func readMarkerChanges(uid: String) -> AsyncStream<Result<Date?, InboxError>>
 
     /// Records "the inbox was opened now" (a server timestamp), so every device's unread count follows.

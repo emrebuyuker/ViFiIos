@@ -94,6 +94,35 @@ final class NotificationSettingsStoreTests {
         #expect(store.availability == .loading)
     }
 
+    @Test("A value delivered for a user who has since signed out never lands on the next one")
+    func staleValueAfterResetIsIgnored() async {
+        service.feed = nil
+        observation = Task { await store.observe(uid: Self.uid) }
+        #expect(await eventually { service.openedUsers == [Self.uid] })
+
+        store.reset()
+        service.emit(.success(NotificationConsent(marketing: true)))
+        // Let the stream deliver; a missing guard would apply the value here.
+        try? await Task.sleep(for: .milliseconds(50))
+
+        #expect(!store.marketingEnabled)
+        #expect(!store.hasAnswered)
+        #expect(store.availability == .loading)
+    }
+
+    @Test("A failure delivered for a user who has since signed out does not mark the next one unavailable")
+    func staleFailureAfterResetIsIgnored() async {
+        service.feed = nil
+        observation = Task { await store.observe(uid: Self.uid) }
+        #expect(await eventually { service.openedUsers == [Self.uid] })
+
+        store.reset()
+        service.emit(.failure(.unavailable))
+        try? await Task.sleep(for: .milliseconds(50))
+
+        #expect(store.availability == .loading)
+    }
+
     // MARK: - Waiting
 
     @Test("Waiting returns as soon as the record is loaded")

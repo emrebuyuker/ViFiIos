@@ -38,11 +38,19 @@ final class FirebaseInboxReader: InboxReading {
     func readMarkerChanges(uid: String) -> AsyncStream<Result<Date?, InboxError>> {
         let document = readMarkerDocument(uid: uid)
         return AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
-            let registration = document.addSnapshotListener { @Sendable snapshot, error in
+            // Metadata changes too: when a cache-only "missing" is skipped below, the server's confirmation of the same
+            // "missing" changes only `isFromCache`, which a plain listener never reports.
+            let registration = document.addSnapshotListener(includeMetadataChanges: true) { @Sendable snapshot, error in
                 if let error {
                     Logger.app.error("Inbox read marker listener failed: \(String(describing: error), privacy: .public)")
                     continuation.yield(.failure(.unavailable))
                     continuation.finish()
+                    return
+                }
+                // A marker missing only from the local cache (offline, nothing cached yet) is not "never opened":
+                // the store writes a marker for a missing one, which could overwrite the one on the server. Wait
+                // for the server's answer instead; nothing counts as unread until it comes.
+                if let snapshot, snapshot.metadata.isFromCache, !snapshot.exists {
                     return
                 }
                 // `.estimate`: while the write of the marker is still pending its timestamp reads as the local
