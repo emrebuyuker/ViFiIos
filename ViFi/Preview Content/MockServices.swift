@@ -54,7 +54,10 @@ extension AppEnvironment {
                 consent: arguments.contains(LaunchArgument.consentReask) ? NotificationConsent(marketing: false) : nil
             ),
             notificationPromptDefaults: promptDefaults,
-            locationPicker: MockLocationPicker()
+            locationPicker: MockLocationPicker(),
+            // Reports are only logged in mock mode, and what was "sent" stays out of the real defaults.
+            notificationEventReporter: MockNotificationEventReporter(),
+            notificationEventDefaults: .mockSuite
         )
         // `-ViFiOpenNotification <id>` starts as if the push of that notification had been tapped.
         if let tapped = openedNotificationId(arguments: arguments) {

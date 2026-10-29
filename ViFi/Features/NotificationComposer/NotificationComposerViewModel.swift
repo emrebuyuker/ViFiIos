@@ -150,13 +150,36 @@ final class NotificationComposerViewModel {
         }
     }
 
+    // MARK: - Kind
+
+    /// Whether the chosen action fixes the kind: a location notification is always a campaign, so the "Tür" control
+    /// shows Kampanya and cannot be changed while Konum is the action.
+    var isKindLocked: Bool {
+        actionChoice == .location
+    }
+
+    /// The kind the form shows and sends: Kampanya while it is locked, otherwise the admin's own choice. `kind`
+    /// itself is left untouched meanwhile, so choosing another action brings the previous choice back.
+    var effectiveKind: NotificationKind {
+        isKindLocked ? .promo : kind
+    }
+
+    /// What the "Tür" control is bound to. A change while the kind is locked is ignored.
+    var kindSelection: NotificationKind {
+        get { effectiveKind }
+        set {
+            guard !isKindLocked else { return }
+            kind = newValue
+        }
+    }
+
     // MARK: - Draft
 
     /// The draft as the form currently stands (a link that does not parse is left out; `issue` reports it).
     var draft: NotificationDraft {
         var draft = NotificationDraft()
         draft.id = draftId
-        draft.kind = kind
+        draft.kind = effectiveKind
         draft.title = title
         draft.body = body
         draft.audience = audience

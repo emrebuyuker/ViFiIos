@@ -429,6 +429,23 @@ describe('Firestore rules — notification devices, settings and history', () =>
     }
     await assertFails(notification(db(users.admin), 'n1').collection('events').doc('alice_opened').get());
   });
+
+  test('notification statistics: the events subcollection and the counters are server-only', async () => {
+    // `trackNotificationEvent` (Admin SDK) writes `events/{uid}_{event}` and `stats.opened` / `stats.actionTapped`; no
+    // client may read the markers, forge one, or bump a counter itself — not even the admin or the user concerned.
+    for (const user of [users.alice, users.admin, users.fakeAdmin, null]) {
+      const events = notification(db(user), 'n1').collection('events');
+      await assertFails(events.doc('alice_opened').set({ uid: 'alice', event: 'opened', createdAt: new Date() }));
+      await assertFails(events.doc('alice_opened').get());
+      await assertFails(events.get());
+      await assertFails(notification(db(user), 'n1').update({ 'stats.opened': 999 }));
+    }
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().collection('notifications').doc('n1').collection('events').doc('alice_opened').set({ uid: 'alice' });
+    });
+    await assertFails(notification(db(users.alice), 'n1').collection('events').doc('alice_opened').delete());
+    await assertFails(notification(db(users.admin), 'n1').collection('events').doc('alice_opened').delete());
+  });
 });
 
 describe('Firestore rules — login diagnostics (admin-read, server-write only)', () => {

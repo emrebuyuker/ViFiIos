@@ -95,7 +95,7 @@ struct InboxView: View {
                         isHighlighted: item.id == highlightedId,
                         button: button(for: item.action),
                         isWorking: isChecking(item.action),
-                        onAction: { perform(item.action) }
+                        onAction: { perform(item) }
                     )
                     .id(item.id)
                 }
@@ -104,6 +104,8 @@ struct InboxView: View {
             .onChange(of: highlightedId, initial: true) { _, id in
                 if let id {
                     withAnimation { proxy.scrollTo(id, anchor: .center) }
+                    // The entry a tapped push is about is on screen: the push was opened.
+                    report(.opened, for: id)
                 }
             }
         }
@@ -135,9 +137,11 @@ struct InboxView: View {
         return action.inboxButton
     }
 
-    /// Does what the notification's action says (the button and a tap on the card both end up here).
-    private func perform(_ action: NotificationAction?) {
-        guard let action, button(for: action) != nil else { return }
+    /// Does what the notification's action says (the button, the image and a tap on the card all end up here).
+    private func perform(_ item: InboxItem) {
+        guard let action = item.action, button(for: action) != nil else { return }
+        // Counted when the user acts, whatever the action then does (an exam may still turn out to be locked).
+        report(.actionTapped, for: item.id)
         switch action {
         case let .exam(target):
             // Only by the archive's lock rule: a locked exam gets the unlock sheet first.
@@ -161,6 +165,13 @@ struct InboxView: View {
         case let .location(location):
             locationToOpen = location
         }
+    }
+
+    /// Tells the server the signed-in user opened or acted on a notification (for the admin history's statistics).
+    /// Fire-and-forget and once per user and device; a failure is only logged.
+    private func report(_ event: NotificationEvent, for notificationId: String) {
+        guard let uid = environment.session.user?.id else { return }
+        environment.notificationEvents.report(event, notificationId: notificationId, uid: uid)
     }
 
     /// Whether `action` is an exam whose lock is being checked.

@@ -356,3 +356,12 @@ export const onAccountDeleted = functionsV1
   .runWith({ failurePolicy: true, timeoutSeconds: 300 })
   .auth.user()
   .onDelete((user) => deleteAccountData(notificationDeps, user.uid));
+
+// --- Notification statistics (NOTIFICATIONS.md §4, phase 3 / track I) -------------------------------------------
+
+import { trackNotificationEventHandler } from './notifications/stats.js';
+
+// Signed-in +90 users: counts one `opened` / `actionTapped` per user and notification toward the admin history.
+export const trackNotificationEvent = onCall({ region: 'europe-west1' }, (request) =>
+  trackNotificationEventHandler(notificationDeps, request)
+);

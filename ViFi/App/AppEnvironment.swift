@@ -50,6 +50,8 @@ final class AppEnvironment {
     let inbox: InboxStore
     /// Opens the inbox from a tapped push (once the app is past its gates) and from the bell.
     let notificationRouter: NotificationRouter
+    /// Reports opened / acted-on notifications for the admin history's statistics (fire-and-forget, once per user).
+    let notificationEvents: NotificationEventTracker
     /// Registers this device's push token under the signed-in user (targeted and personal notifications).
     let deviceRegistration: DeviceRegistrationStore
     /// Admin-only targeted notification sending ("Bildirim Gönder"; NOTIFICATIONS.md).
@@ -89,7 +91,9 @@ final class AppEnvironment {
         notificationSettingsService: any NotificationSettingsServicing,
         notificationPromptDefaults: UserDefaults = .standard,
         loginDiagnostics: any LoginDiagnosticsReporting = NoopLoginDiagnosticsReporter(),
-        locationPicker: any LocationPicking = GoogleLocationPicker()
+        locationPicker: any LocationPicking = GoogleLocationPicker(),
+        notificationEventReporter: any NotificationEventReporting = NoopNotificationEventReporter(),
+        notificationEventDefaults: UserDefaults = .standard
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -116,6 +120,7 @@ final class AppEnvironment {
         self.notifications = notifications
         inbox = InboxStore(reader: inboxReader, defaults: inboxDefaults)
         notificationRouter = NotificationRouter()
+        notificationEvents = NotificationEventTracker(reporter: notificationEventReporter, defaults: notificationEventDefaults)
         deviceRegistration = DeviceRegistrationStore(registrar: deviceRegistrar)
         self.notificationAdmin = notificationAdmin
         let settings = NotificationSettingsStore(service: notificationSettingsService)
@@ -175,7 +180,8 @@ final class AppEnvironment {
             notificationAdmin: FirebaseNotificationAdminService(),
             deviceRegistrar: FirebaseDeviceRegistrar(),
             notificationSettingsService: FirebaseNotificationSettingsService(),
-            loginDiagnostics: FirebaseLoginDiagnosticsService()
+            loginDiagnostics: FirebaseLoginDiagnosticsService(),
+            notificationEventReporter: FirebaseNotificationEventReporter()
         )
     }
 

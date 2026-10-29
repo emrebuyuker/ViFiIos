@@ -1,5 +1,6 @@
 #if DEBUG
 import Foundation
+import os
 
 // MARK: - Admin notifications
 
@@ -191,6 +192,16 @@ final class MockDeviceRegistrar: DeviceRegistering {
 
     func unregister(uid: String) async throws {
         tokens[uid] = nil
+    }
+}
+
+// MARK: - Notification events
+
+/// Stands in for the `trackNotificationEvent` callable in mock mode: nothing leaves the device, the report is only
+/// logged (so a demo or a UI-test run can see that the app reported it).
+final class MockNotificationEventReporter: NotificationEventReporting {
+    func report(_ event: NotificationEvent, notificationId: String) async throws {
+        Logger.app.debug("Mock notification event: \(event.rawValue, privacy: .public) \(notificationId, privacy: .public)")
     }
 }
 #endif

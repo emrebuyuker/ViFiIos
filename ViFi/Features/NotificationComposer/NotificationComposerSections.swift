@@ -4,22 +4,28 @@ import SwiftUI
 
 // MARK: - Kind
 
-/// Duyuru / Kampanya, with the one thing an admin must know about campaigns.
+/// Duyuru / Kampanya, with the one thing an admin must know about campaigns. While the action is Konum the control
+/// is locked on Kampanya (a place is always advertising) and says why; the admin's own choice returns afterwards.
 struct NotificationComposerKindSection: View {
     @Bindable var viewModel: NotificationComposerViewModel
 
     var body: some View {
         Section {
-            Picker("Tür", selection: $viewModel.kind) {
+            Picker("Tür", selection: $viewModel.kindSelection) {
                 ForEach(NotificationComposerViewModel.selectableKinds, id: \.self) { kind in
                     Text(kind.adminLabel).tag(kind)
                 }
             }
             .pickerStyle(.segmented)
-            .disabled(viewModel.isWorking)
+            .disabled(viewModel.isWorking || viewModel.isKindLocked)
             .accessibilityIdentifier("notificationComposer.kind")
         } footer: {
-            Text("Kampanyalar yalnızca kampanya bildirimlerini açmış kullanıcılara gider.")
+            if viewModel.isKindLocked {
+                Label("Tür Kampanya'ya kilitli: konumlu bildirimler her zaman kampanya olarak gider.", systemImage: "lock.fill")
+                    .accessibilityIdentifier("notificationComposer.kind.lockNote")
+            } else {
+                Text("Kampanyalar yalnızca kampanya bildirimlerini açmış kullanıcılara gider.")
+            }
         }
     }
 }

@@ -49,6 +49,35 @@ nonisolated final class LocationCampaignUITests: XCTestCase {
     }
 
     @MainActor
+    func testKonumLocksTheKindToKampanyaAndAnotherActionRestoresIt() {
+        let app = launchApp(extra: ["-ViFiAdmin"])
+        openComposer(in: app)
+
+        // Unlocked: Duyuru is chosen and the control can be used.
+        let kind = reveal("notificationComposer.kind", in: app)
+        XCTAssertTrue(kind.isEnabled, "The kind control should start unlocked")
+        XCTAssertTrue(kind.buttons["Duyuru"].isSelected, "Duyuru should be the default kind")
+        XCTAssertFalse(element("notificationComposer.kind.lockNote", in: app).exists, "No lock note before Konum is chosen")
+
+        // Konum: Kampanya is shown and the control is locked, with the reason beneath it.
+        choose("Konum", from: "notificationComposer.action", in: app)
+        let locked = reveal("notificationComposer.kind", in: app)
+        XCTAssertFalse(locked.isEnabled, "The kind control must be locked while the action is Konum")
+        XCTAssertTrue(locked.buttons["Kampanya"].isSelected, "Kampanya should be shown while locked")
+        XCTAssertFalse(locked.buttons["Duyuru"].isSelected, "Duyuru must not be shown while locked")
+        XCTAssertTrue(element("notificationComposer.kind.lockNote", in: app).exists, "The lock was not explained")
+        // The existing explanation under the action stays too.
+        XCTAssertTrue(reveal("notificationComposer.location.note", in: app).exists, "The campaign-only note is missing")
+
+        // Another action: the control is free again and the admin's own choice (Duyuru) is back.
+        choose("Yok", from: "notificationComposer.action", in: app)
+        let restored = reveal("notificationComposer.kind", in: app)
+        XCTAssertTrue(restored.isEnabled, "The kind control should unlock again")
+        XCTAssertTrue(restored.buttons["Duyuru"].isSelected, "The previous choice was not restored")
+        XCTAssertFalse(element("notificationComposer.kind.lockNote", in: app).exists, "The lock note should be gone")
+    }
+
+    @MainActor
     func testCancelingThePickerLeavesNoPlace() {
         let app = launchApp(extra: ["-ViFiAdmin"])
         openComposer(in: app)
