@@ -303,3 +303,20 @@ export const onDeviceWritten = onDocumentWritten(
   { document: 'users/{uid}/devices/{deviceId}', database: 'vifi', region: 'europe-west1' },
   (event) => onDeviceWrittenHandler(notificationDeps, event)
 );
+
+// --- Scheduled notifications (phase 3/G, `notifications/schedule.js`) --------------------------------------------
+// Imports are hoisted, so they sit with the block they serve (keeps the parallel tracks' additions apart).
+import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { cancelNotificationHandler, dispatchScheduledNotificationsHandler } from './notifications/schedule.js';
+
+// Admin-only: cancels a notification that is still `scheduled`; anything else is `failed-precondition`.
+export const cancelNotification = onCall({ region: 'europe-west1' }, (request) =>
+  cancelNotificationHandler(notificationDeps, request)
+);
+
+// Every 5 minutes on the clock in Türkiye (09:00 sharp ends quiet hours): delivers the due scheduled notifications
+// and retries deliveries stuck in `sending`. No Cloud Scheduler retries — the next run picks up whatever is left.
+export const dispatchScheduledNotifications = onSchedule(
+  { schedule: '*/5 * * * *', timeZone: 'Europe/Istanbul', region: 'europe-west1', timeoutSeconds: 540, retryCount: 0 },
+  () => dispatchScheduledNotificationsHandler(notificationDeps)
+);
