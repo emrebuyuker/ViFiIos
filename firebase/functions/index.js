@@ -320,3 +320,39 @@ export const dispatchScheduledNotifications = onSchedule(
   { schedule: '*/5 * * * *', timeZone: 'Europe/Istanbul', region: 'europe-west1', timeoutSeconds: 540, retryCount: 0 },
   () => dispatchScheduledNotificationsHandler(notificationDeps)
 );
+
+// --- Automatic notifications and account cleanup (NOTIFICATIONS.md §4, phase 3/H) -------------------------------
+// Imports are hoisted, so this block's own imports work here; keeping them with the block keeps it self-contained.
+
+import * as functionsV1 from 'firebase-functions/v1';
+import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { getAuth } from 'firebase-admin/auth';
+import { onSubmissionCreatedHandler, onSubmissionModeratedHandler } from './notifications/automatic.js';
+import { deleteAccountData } from './accountCleanup.js';
+
+// The `admins` audience lists the Auth users with the admin claim; every delivery path (the scheduled dispatcher's
+// recovery included) can meet it, so the Auth client joins the shared notification dependencies.
+Object.defineProperty(notificationDeps, 'auth', { get: () => getAuth(), enumerable: true });
+
+// ⚠️ Same deploy-time check as `onDeviceWritten`: Firestore triggers on the NAMED `vifi` database (eur3).
+
+// `pending → approved`: the uploader's "approved (+coins)" notice and the department's "new exam" notice (one per
+// department per day, held over quiet hours). `pending → rejected`: the uploader's notice with the reason.
+export const onSubmissionModerated = onDocumentUpdated(
+  { document: 'submissions/{id}', database: 'vifi', region: 'europe-west1', timeoutSeconds: 300 },
+  (event) => onSubmissionModeratedHandler(notificationDeps, event)
+);
+
+// A new pending submission: a notice to every admin.
+export const onSubmissionCreated = onDocumentCreated(
+  { document: 'submissions/{id}', database: 'vifi', region: 'europe-west1' },
+  (event) => onSubmissionCreatedHandler(notificationDeps, event)
+);
+
+// Deletes the data of a deleted account (see accountCleanup.js for what is deleted and what is kept). Gen 2 has no
+// Auth deletion trigger, so this is a 1st-gen function; retried on failure — every step is idempotent.
+export const onAccountDeleted = functionsV1
+  .region('europe-west1')
+  .runWith({ failurePolicy: true, timeoutSeconds: 300 })
+  .auth.user()
+  .onDelete((user) => deleteAccountData(notificationDeps, user.uid));

@@ -12,6 +12,12 @@ import { matchesSegment } from './schema.js';
 const READ_CONCURRENCY = 20;
 /** Documents per `getAll` call when reading consent. */
 const GET_ALL_CHUNK = 300;
+/** Users per `listUsers` page (the Auth API's maximum). */
+const LIST_USERS_PAGE = 1000;
+/** How long one function instance reuses the admin list before listing the Auth users again. */
+export const ADMIN_CACHE_TTL_MS = 5 * 60 * 1000;
+/** The admin list per Auth client (one per app in production; tests pass a fresh fake each time). */
+const adminCache = new WeakMap();
 
 /** Every stored profile as `{ uid, profile }`. */
 export async function loadAllProfiles(rtdb) {
@@ -32,14 +38,17 @@ export async function loadSegmentUids(rtdb, segment) {
 
 /**
  * The recipients of a fan-out notification: a test goes to its author only (no consent check — the admin asked for
- * the copy), a personal notice to its user, a segment to its members, "everyone" to every profile. Campaigns
- * (`promo`) then keep only users who opted in (`users/{uid}/settings/notifications.marketing == true`).
+ * the copy), a personal notice to its user, a segment to its members, "everyone" to every profile, `admins` to every
+ * Auth user with the `admin: true` claim. `excludeUids` (an automatic notification's uploader) are then dropped, and
+ * campaigns (`promo`) keep only users who opted in (`users/{uid}/settings/notifications.marketing == true`).
  *
- * @param {{ db: import('firebase-admin/firestore').Firestore, rtdb: import('firebase-admin/database').Database }} deps
- * @param {{ kind: string, audience: object, isTest?: boolean, createdBy?: string }} notification
+ * @param {{ db: import('firebase-admin/firestore').Firestore, rtdb: import('firebase-admin/database').Database,
+ *   auth?: { listUsers: Function }, now?: () => Date }} deps `auth` is needed only for the `admins` scope.
+ * @param {{ kind: string, audience: object, isTest?: boolean, createdBy?: string, excludeUids?: string[] }} notification
  * @returns {Promise<string[]>} Distinct uids.
  */
-export async function resolveRecipients({ db, rtdb }, { kind, audience, isTest = false, createdBy }) {
+export async function resolveRecipients(deps, { kind, audience, isTest = false, createdBy, excludeUids = [] }) {
+  const { db, rtdb } = deps;
   if (isTest) {
     if (typeof createdBy !== 'string' || !createdBy) throw new Error('A test notification needs its author.');
     return [createdBy];
@@ -57,13 +66,46 @@ export async function resolveRecipients({ db, rtdb }, { kind, audience, isTest =
     case 'all':
       uids = (await loadAllProfiles(rtdb)).map(({ uid }) => uid);
       break;
+    case 'admins':
+      uids = await loadAdminUids(deps.auth, { now: deps.now?.().getTime() ?? Date.now() });
+      break;
     default:
-      // `admins` is resolved by the automatic notifications (phase 3).
       throw new Error(`Unsupported audience scope: ${audience?.scope}`);
   }
 
-  uids = [...new Set(uids)];
+  const excluded = new Set(Array.isArray(excludeUids) ? excludeUids : []);
+  uids = [...new Set(uids)].filter((uid) => !excluded.has(uid));
   return kind === 'promo' ? filterMarketingConsent(db, uids) : uids;
+}
+
+/**
+ * The uids of the enabled Firebase Auth users carrying the `admin: true` custom claim (strict boolean, as the rules
+ * check it), paging through `listUsers`. The list is reused by the same function instance for
+ * `ADMIN_CACHE_TTL_MS`, so a burst of submissions lists the users once; a newly made admin is picked up within a few
+ * minutes. Listing every user is fine for the current user base; past ~10⁵ users keep the admins in a document
+ * instead.
+ *
+ * @param {{ listUsers: (maxResults?: number, pageToken?: string) => Promise<{ users: object[], pageToken?: string }> }} auth
+ * @param {{ now?: number }} [options] The current time in epoch milliseconds (for the cache).
+ * @returns {Promise<string[]>}
+ */
+export async function loadAdminUids(auth, { now = Date.now() } = {}) {
+  if (typeof auth?.listUsers !== 'function') throw new Error('Resolving the admins needs the Auth client.');
+  const cached = adminCache.get(auth);
+  if (cached && now >= cached.fetchedAt && now - cached.fetchedAt < ADMIN_CACHE_TTL_MS) return [...cached.uids];
+
+  const uids = [];
+  let pageToken;
+  do {
+    const page = await auth.listUsers(LIST_USERS_PAGE, pageToken);
+    for (const user of page.users ?? []) {
+      if (user?.customClaims?.admin === true && user.disabled !== true) uids.push(user.uid);
+    }
+    pageToken = page.pageToken;
+  } while (pageToken);
+
+  adminCache.set(auth, { uids, fetchedAt: now });
+  return [...uids];
 }
 
 /** The uids that opted in to campaigns (`settings/notifications.marketing === true`); everyone else is dropped. */
