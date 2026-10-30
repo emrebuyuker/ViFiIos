@@ -299,7 +299,8 @@ modelleri (`AppNotification.swift`, `NotificationAdmin.swift`) ve `NotificationP
 
 ### Yayın önkoşulları
 
-Hepsi proje sahibinin onayı/eylemiyle yapılır; hiçbiri henüz yapılmadı:
+Hepsi proje sahibinin onayı/eylemiyle yapılır. **Durum (30 Ekim 2026):** 1–4 tamam (kurallar, 13 Function, IAM, App Group,
+Google Cloud anahtarı); kalan gerçek cihaz testi, gizlilik etiketi ve sürüm gönderimi:
 
 1. **Yeni istemciden önce** (4.0.0 ile geriye uyumlu; gerçek cihaz/TestFlight testi buna bağlı) Firestore kuralları +
    indeksleri ve Storage kuralları
@@ -413,7 +414,7 @@ open ViFi.xcodeproj
     debug belirteçleri eklendikten sonra açın. **Firestore** için zorunlu kılmayı da Firestore-okuyan sürüm
     yayınlanıp App Check panelinde trafiğin "verified" olduğu görüldükten sonra açın (bkz. `FIRESTORE-MIGRATION.md`).
 - **Bildirim backend'i (proje sahibi yapar).** Hedefli bildirimlerin Firestore/Storage kuralları, Cloud Functions'ı ve IAM
-  / Cloud Scheduler önkoşulları **henüz yayınlanmadı**; sırası ve adımları için bkz. [Yayın önkoşulları](#yayın-önkoşulları).
+  / Cloud Scheduler önkoşulları **30 Ekim 2026'da yayınlandı**; sırası ve adımları için bkz. [Yayın önkoşulları](#yayın-önkoşulları).
   Yerelde `cd firebase && npm test` hepsini emulator'de doğrular (Functions emulator'ü başlatılmaz; handler'lar doğrudan çağrılır).
 - **Apple Developer.** `com.BuyukerYazilim.ViFi2` kimliğinde **Push Notifications**, **App Attest** ve **App Groups**
   yeteneklerini etkinleştirip provisioning profillerini yenileyin (`ViFi.entitlements` bunları gerektirir). Bildirim
@@ -500,7 +501,7 @@ Varsayılan her şey kapalıdır; aşağıdaki izinler dışında kimse hiçbir 
 |---|---|
 | Firestore `catalogNodes`, `exams` | +90 telefonla girişli kullanıcılar ve yöneticiler okur; yalnızca yönetici yazar. |
 | Firestore `submissions`, `wallets`, `subscriptions`, `users/<uid>/unlocks` | Coin/gönderim iskeleti: sahibi/yönetici okur; cüzdan + kilit yazımı yalnız sunucuda (istemci yazamaz). Ayrıntı: `firebase/firestore.rules`. |
-| Firestore `announcements` | +90 telefonla girişli kullanıcılar ve yöneticiler okur; kimse yazamaz (yalnız Cloud Functions, Admin SDK). *(Yeni bildirim kuralları henüz yayınlanmadı.)* |
+| Firestore `announcements` | +90 telefonla girişli kullanıcılar ve yöneticiler okur; kimse yazamaz (yalnız Cloud Functions, Admin SDK). *(Yeni bildirim kuralları 30 Ekim 2026'da yayınlandı.)* |
 | Firestore `notifications` | Yalnızca yönetici okur (geçmiş ekranı); kimse yazamaz. `events` alt koleksiyonu ve `notificationThrottle` istemciye tamamen kapalıdır. |
 | Firestore `users/<uid>/inbox/<id>` | Sahibi okur; teslim kopyasını yalnız sunucu yazar. |
 | Firestore `users/<uid>/devices/<kurulumId>` | Sahibi (+90) okur, oluşturur / günceller ve siler; yalnızca `{token, platform, appVersion, updatedAt}` (`updatedAt` sunucu zamanı), kimlik `^[A-Za-z0-9_-]{1,128}$`. |
@@ -512,7 +513,7 @@ Varsayılan her şey kapalıdır; aşağıdaki izinler dışında kimse hiçbir 
 | Realtime DB diğer tüm düğümler | Kimseye açık değil (yönetici dahil). |
 | Storage `imagess/`, `pdfs/` | Tek dosya okuma: +90 kullanıcı ve yönetici. Listeleme kimseye açık değil; yalnızca yönetici yazar. |
 | Storage `pending/<uid>/<gönderim>/` | Yalnızca sahibi yeni JPEG/PDF (1 bayt – 15 MiB) yükler, üzerine yazamaz; sahibi ve yönetici okur ve siler. |
-| Storage `notificationImages/<bildirimId>.jpg` | Tek dosya okuma: +90 kullanıcı ve yönetici. Yalnızca yönetici **oluşturur** (JPEG, 1 bayt – 1 MiB); güncelleme, silme ve üzerine yazma yönetici dahil hiçbir istemciye açık değil. *(Henüz yayınlanmadı.)* |
+| Storage `notificationImages/<bildirimId>.jpg` | Tek dosya okuma: +90 kullanıcı ve yönetici. Yalnızca yönetici **oluşturur** (JPEG, 1 bayt – 1 MiB); güncelleme, silme ve üzerine yazma yönetici dahil hiçbir istemciye açık değil. *(30 Ekim 2026'da yayınlandı.)* |
 
 Yönetici, `admin: true` özel talebi (custom claim) taşıyan hesaptır: `setCustomUserClaims(uid, { admin: true })`.
 Uygulama içi yönetici araçları (Moderasyon, Bildirim Gönder) Hesap ekranında yalnızca bu hesaplara görünür.
