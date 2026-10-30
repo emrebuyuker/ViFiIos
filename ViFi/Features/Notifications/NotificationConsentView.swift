@@ -56,7 +56,6 @@ struct NotificationConsentView: View {
     Color(.systemBackground)
         .sheet(isPresented: .constant(true)) {
             NotificationConsentView(isWorking: false, saveFailed: false, onAccept: {}, onDecline: {})
-                .presentationDetents([.medium, .large])
         }
 }
 
@@ -64,7 +63,6 @@ struct NotificationConsentView: View {
     Color(.systemBackground)
         .sheet(isPresented: .constant(true)) {
             NotificationConsentView(isWorking: false, saveFailed: true, onAccept: {}, onDecline: {})
-                .presentationDetents([.medium, .large])
         }
 }
 #endif

@@ -45,7 +45,7 @@ private struct NotificationPermissionFlowScreen: View {
             }
         }
         .animation(.smooth, value: model.page)
-        .presentationDetents([.medium, .large])
+        // The sheet's height follows each page's content (`NotificationPromptLayout`).
         // The consent is answered, not swiped away; after a failed save the sheet may be closed.
         .interactiveDismissDisabled(model.page == .consent && !model.saveFailed)
         .presentationDragIndicator(model.page == .consent && !model.saveFailed ? .hidden : .visible)

@@ -61,7 +61,11 @@ struct NotificationPrimingView: View {
 // MARK: - Shared pieces
 
 /// The layout both permission steps share: an icon and title over a scrolling message, with the buttons pinned
-/// at the bottom (so they stay in reach at large text sizes and in a half-height sheet).
+/// at the bottom (so they stay in reach at large text sizes).
+///
+/// The sheet is sized to its content — message, buttons and the home indicator — so every line of the message
+/// (the consent's terms included) is on screen without scrolling. When that is taller than the screen (the largest
+/// text sizes) the system caps the sheet at full height and the message scrolls.
 struct NotificationPromptLayout<Message: View, Actions: View>: View {
     let systemImage: String
     let title: LocalizedStringKey
@@ -70,6 +74,17 @@ struct NotificationPromptLayout<Message: View, Actions: View>: View {
     @ViewBuilder let actions: () -> Actions
 
     @ScaledMetric(relativeTo: .largeTitle) private var iconSize: CGFloat = 64
+    @State private var messageHeight: CGFloat = 0
+    @State private var actionsHeight: CGFloat = 0
+
+    /// Room for the home indicator below the pinned buttons.
+    private static var homeIndicatorAllowance: CGFloat { 34 }
+
+    private var detents: Set<PresentationDetent> {
+        // Until both parts are measured, a half-height sheet (the previous fixed size).
+        guard messageHeight > 0, actionsHeight > 0 else { return [.medium] }
+        return [.height(messageHeight + actionsHeight + Self.homeIndicatorAllowance)]
+    }
 
     var body: some View {
         ScrollView {
@@ -87,7 +102,9 @@ struct NotificationPromptLayout<Message: View, Actions: View>: View {
             .padding(.top, 32)
             .padding(.bottom, 16)
             .frame(maxWidth: .infinity)
+            .background(PromptHeightReader<PromptMessageHeightKey>())
         }
+        .onPreferenceChange(PromptMessageHeightKey.self) { messageHeight = $0 }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 12) {
                 actions()
@@ -97,10 +114,36 @@ struct NotificationPromptLayout<Message: View, Actions: View>: View {
             .padding(.vertical, 16)
             .frame(maxWidth: .infinity)
             .background(.bar)
+            .background(PromptHeightReader<PromptActionsHeightKey>())
         }
+        .onPreferenceChange(PromptActionsHeightKey.self) { actionsHeight = $0 }
         .background(Color(.systemGroupedBackground))
+        .presentationDetents(detents)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(identifier)
+    }
+}
+
+private struct PromptMessageHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct PromptActionsHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+/// Reports the height of the view it is the background of through `Key`.
+private struct PromptHeightReader<Key: PreferenceKey>: View where Key.Value == CGFloat {
+    var body: some View {
+        GeometryReader { proxy in
+            Color.clear.preference(key: Key.self, value: proxy.size.height)
+        }
     }
 }
 
@@ -164,7 +207,6 @@ struct NotificationPrimaryButton: View {
                 onOpenSettings: {},
                 onDismiss: {}
             )
-            .presentationDetents([.medium, .large])
         }
 }
 
@@ -179,7 +221,6 @@ struct NotificationPrimaryButton: View {
                 onOpenSettings: {},
                 onDismiss: {}
             )
-            .presentationDetents([.medium, .large])
         }
 }
 #endif
