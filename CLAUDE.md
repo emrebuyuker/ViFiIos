@@ -237,8 +237,8 @@ cd firebase && JAVA_HOME=/opt/homebrew/opt/openjdk@21 npm test
 # Kural yayını — YALNIZCA kullanıcı onayıyla. Global CLI hesabı farklı olabilir: proje sahibi hesabı sor.
 cd firebase && firebase deploy --only database,storage --project vifi-831a8 --account <proje-sahibi-hesabı>
 
-# Bildirim epiği: Firestore kuralı + indeks, Storage kuralı ve Function yayını — YALNIZCA kullanıcı onayıyla, yeni istemci
-# yayınlandıktan sonra ve "Yayın durumu"ndaki önkoşullar tamamlanınca (ayrıntı: Firebase › Bildirim sistemi). Henüz yayınlanmadı.
+# Bildirim epiği: Firestore kuralı + indeks, Storage kuralı ve Function yayını — YALNIZCA kullanıcı onayıyla. Yeni istemciden
+# ÖNCE yayınlanır (4.0.0 ile geriye uyumlu; gerçek cihaz/TestFlight testi buna bağlı). Ayrıntı: Firebase › Bildirim sistemi.
 cd firebase && firebase deploy --only firestore,storage,functions --project vifi-831a8 --account <proje-sahibi-hesabı>
 ```
 
@@ -286,7 +286,9 @@ cd firebase && firebase deploy --only firestore,storage,functions --project vifi
 > testleri `v-4.1.0` dalında hazır; canlı `vifi-831a8` hâlâ eski kural/Function setinde (4.0.0 istemcisi `all` topic'ine
 > abone olur ve `announcements`'ı okur — bu yol korunur). Yayın sırası ve önkoşulları, **hepsi kullanıcı onayı/eylemiyle**:
 >
-> 1. Yeni istemci App Store'da yayınlandıktan sonra: `firestore.rules` + `firestore.indexes.json` (yeni `notifications`
+> 1. **Yeni istemciden önce** (gerçek cihaz/TestFlight testi backend'e bağlı; 4.0.0 `devices`/`settings` kaydı yazmadığı ve
+>    `all` topic + `announcements` yolu korunduğu için geriye uyumlu — 4.0.0 kodunda doğrulandı 30 Ekim 2026):
+>    `firestore.rules` + `firestore.indexes.json` (yeni `notifications`
 >    kuralları, `devices`/`settings/*` şekil kuralları, `notifications (status, scheduledAt)` indeksi, `devices.token`
 >    collection-group alan istisnası) ve `storage.rules` (`notificationImages/`).
 > 2. Function'lar (aşağıdaki tablo). Önkoşullar: Functions çalışma servis hesabına kendi üzerinde *Service Account Token

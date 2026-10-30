@@ -301,7 +301,8 @@ modelleri (`AppNotification.swift`, `NotificationAdmin.swift`) ve `NotificationP
 
 Hepsi proje sahibinin onayı/eylemiyle yapılır; hiçbiri henüz yapılmadı:
 
-1. Yeni istemci App Store'da yayınlandıktan sonra Firestore kuralları + indeksleri ve Storage kuralları
+1. **Yeni istemciden önce** (4.0.0 ile geriye uyumlu; gerçek cihaz/TestFlight testi buna bağlı) Firestore kuralları +
+   indeksleri ve Storage kuralları
    (`firebase deploy --only firestore,storage`).
 2. Cloud Functions (`firebase deploy --only functions`). Öncesinde: Functions servis hesabına kendi üzerinde *Service
    Account Token Creator* rolü ve IAM Service Account Credentials API (imzalı push görsel URL'i; yoksa push görselsiz
@@ -662,7 +663,7 @@ Sözleşme üç yerde aynı olmalıdır: `firebase/functions/notifications/schem
   App ID'leri aynı `group.com.BuyukerYazilim.ViFi2` grubunda), provisioning profilleri yenilendi.
 - [ ] Sürüm derlemesi `Config/Secrets.xcconfig` ile (Google Maps anahtarıyla) alındı; anahtar dosyası commit'lenmedi.
 - [ ] Bildirim backend'i yayınlandı: Firestore + Storage kuralları, Cloud Functions, IAM rolü, Cloud Scheduler — yeni istemci
-  yayınlandıktan **sonra** ([Yayın önkoşulları](#yayın-önkoşulları)).
+  App Store'a gönderilmeden **önce**, cihaz testinden de önce ([Yayın önkoşulları](#yayın-önkoşulları)).
 - [ ] Gerçek cihazda bildirim testi: provisional → tam izin, görselli push, rozet, push'a dokunuşla bildirim sayfası.
 - [ ] Firebase'de APNs anahtarı yüklü, App Attest kayıtlı, App Check zorunlu.
 - [ ] App Store Connect gizlilik etiketinde *Telefon Numarası* ve *Kullanıcı Kimliği* (Uygulama İşlevselliği) var; bildirim
