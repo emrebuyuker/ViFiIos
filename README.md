@@ -688,6 +688,45 @@ commit'lenmez; depo herkese açıktır.
 
 ## Sürüm Notları
 
+### 4.1.0
+
+Hedefli bildirim sistemi. Backend (kurallar + 13 Cloud Function) bu sürümden önce yayınlandı ve 4.0.0 ile geriye
+uyumludur.
+
+**Yeni**
+
+- Bildirimleri sunucu gönderir (Cloud Functions): herkese ya da üniversite › fakülte › bölüm segmentine, isteğe bağlı
+  cinsiyetle. Admin seçicilerinde yalnızca kayıtlı kullanıcısı olan değerler, kişi sayılarıyla listelenir.
+- Bildirim sayfası: genel duyurular ve kişisel bildirimler tek listede; okunmamış sayısı cihazlar arası senkron, ikon
+  rozeti okunmamış sayısını gösterir.
+- Push'a dokununca (uygulama açık, arka planda ya da kapalı) bildirim sayfası açılır ve bildirim vurgulanır.
+- Görselli bildirimler ve aksiyon düğmeleri: *Konuma Git* (Google / Apple Haritalar), *Sınava Git* (arşivin kilit
+  kuralıyla), *Premium'a Göz At*, *Sınav Ekle*, *Bağlantıyı Aç*.
+- Bildirim izni akışı: ilk açılışta sessiz (provisional) izin, tanıtım turundan sonra iki adım (tam izin, ardından
+  kampanya onayı); ret sonrası en erken 30 gün sonra bir kez bağlamsal tekrar; *Hesap › Bildirim Ayarları*.
+- Kampanya bildirimleri yalnızca onay verenlere gider (Apple 4.5.4); 22:00–09:00 arası sessiz saatlerde 09:00'a ertelenir.
+- Otomatik bildirimler: sınavın onaylandı (+coin), reddedildi (sebebiyle), bölümüne yeni sınav (bölüm başına günde en
+  fazla 1), admin'e yeni gönderim (gönderen başına saatte en fazla 3).
+- Admin *Bildirim Gönder*: kitle önizlemesi + onay, *Bana test gönder*, zamanlama ve geçerlilik süresi, geçmiş,
+  istatistik (açılma / aksiyon) ve iptal; Google Maps + Places konum seçici (cihaz konumuna odak, haritadaki yere
+  dokunarak seçim).
+- Notification Service Extension (`ViFiNotificationService`): push görselini ekler, rozeti artırır.
+- Hesap silindiğinde kişisel veriler sunucuda temizlenir (`onAccountDeleted`).
+
+**Değişen**
+
+- FCM token'ı hesap başına `users/<uid>/devices` altında tutulur; çıkış ve hesap silmeden önce silinir.
+- Gizlilik: kampanya hedeflemesi için *Developer's Advertising or Marketing* amacı, App Group gerekçesi (`1C8F.1`);
+  bildirim eklentisinin kendi gizlilik manifesti var. App Store etiketine Google Maps SDK'nın Crash + Performance Data'sı
+  eklendi.
+- Yeni bağımlılık: Google Maps / Places SDK 11.2.0 (yalnızca admin konum seçicisi; anahtar git-dışı
+  `Config/Secrets.xcconfig`'te).
+
+**Düzeltilen**
+
+- Push ile gönderilen bildirimlerin bildirim sayfasında görünmemesi: push ve sayfa artık aynı kayıttan beslenir.
+- İzin ve kampanya onayı pencerelerinde metnin düğmelerin arkasında kalması.
+
 ### 3.0.0
 
 2.x sürümüne göre uygulama baştan yazıldı.
@@ -734,9 +773,9 @@ commit'lenmez; depo herkese açıktır.
 > yayınlandıktan sonra devreye alın.
 
 > [!NOTE]
-> **Bildirim sistemi henüz canlıda değil.** İstemci ve backend kodu hazır; yeni Firestore/Storage kuralları, Cloud
-> Functions, IAM rolü, Cloud Scheduler işi ve Apple App Group yayınlanmadı. Yeni istemci yayınlanmadan kural
-> yayınlamayın. Önkoşullar ve sıra: [Bildirimler › Yayın önkoşulları](#yayın-önkoşulları).
+> **Bildirim backend'i yeni istemciden önce yayınlandı (30 Ekim 2026).** Firestore/Storage kuralları ve 13 Cloud
+> Function canlıda; 4.0.0 istemcisi `all` topic'i ve `announcements` ile çalışmaya devam eder. Önkoşullar ve sıra:
+> [Bildirimler › Yayın önkoşulları](#yayın-önkoşulları).
 
 > [!NOTE]
 > **Firebase Storage — HTTP 402 (çözüldü).** Proje ücretsiz **Spark** planındayken `appspot.com` uzantılı Storage
