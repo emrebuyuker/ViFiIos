@@ -40,7 +40,7 @@
 | **DI** | `AppEnvironment` → `.environment(_:)`; `live()` (Firebase) / `mock()` (örnek veri, yalnızca Debug) |
 | **Gezinme** | `Router` + `NavigationStack` (`Route.browse`, `Route.exam`) |
 | **Veri** | **Arşiv:** Cloud Firestore (isimli `vifi` DB → `FirestoreArchiveRepository` + kalıcı önbellek; giriş sonrası `ArchivePrefetcher` ile çevrimdışı ısıtma). **Bildirimler ve kullanıcı başı durum (inbox, cihaz, ayarlar, kilitler, cüzdan):** Firestore `vifi` DB. **Profil ve force-update config:** Realtime Database (RTDB; bildirim kitlesi de profillerden okunur). RTDB arşiv repo'su (`FirebaseArchiveRepository`) + `Universitiess` ağacı rollback için duruyor (bkz. `FIRESTORE-MIGRATION.md`) |
-| **Bildirimler** | Hedefli bildirim sistemi, **sunucu gönderir** (Cloud Functions, `firebase/functions/notifications/`): veri **Cloud Firestore** (`notifications`, `announcements`, `users/<uid>/{inbox,devices,settings}`; ayrıntı: *Firebase › Bildirim sistemi*). İstemci: `InboxStore` (iki kaynak + `readAt`), `NotificationRouter` (push dokunuşu), `DeviceRegistrationStore` (FCM token), `NotificationSettingsStore` + `NotificationPromptCoordinator` (izin/onay akışı), admin `NotificationComposer`. Push görseli + rozet: `ViFiNotificationService` extension. **Backend canlıda (30 Ekim 2026)**; yeni istemci henüz App Store'da değil — bkz. *Firebase › Bildirim sistemi › Yayın durumu* |
+| **Bildirimler** | Hedefli bildirim sistemi, **sunucu gönderir** (Cloud Functions, `firebase/functions/notifications/`): veri **Cloud Firestore** (`notifications`, `announcements`, `users/<uid>/{inbox,devices,settings}`; ayrıntı: *Firebase › Bildirim sistemi*). İstemci: `InboxStore` (iki kaynak + `readAt`), `NotificationRouter` (push dokunuşu), `DeviceRegistrationStore` (FCM token), `NotificationSettingsStore` + `NotificationPromptCoordinator` (izin/onay akışı), admin `NotificationComposer`. Push görseli + rozet: `ViFiNotificationService` extension. **Backend canlıda (30 Ekim 2026)**; 4.1.0 istemcisi App Store incelemesinde — bkz. *Firebase › Bildirim sistemi › Yayın durumu* |
 | **Dosyalar** | `RemoteFileLoader`: URLSession + URLCache + disk; ID token ve App Check başlıklarıyla indirir |
 | **Giriş** | Firebase Phone Auth, yalnızca +90 → `AuthServicing`, `SessionStore` |
 | **Güvenlik** | App Check (Release'te App Attest, desteklemeyen cihazda DeviceCheck; Debug ve simülatörde debug provider), `firebase/` altındaki kurallar |
@@ -296,7 +296,8 @@ cd firebase && firebase deploy --only firestore,storage,functions --project vifi
 > Apple App Group iki App ID'de etkin; Google Cloud anahtarı hazır, yerel `Secrets.xcconfig` dolu. 4.0.0 istemcisi `all`
 > topic'i + `announcements` ile çalışmaya devam eder. Canlı `announcements` boştu (createdAt'siz eski kayıt yok). Gerçek cihaz
 > testi geçti (izin akışı, görselli push, rozet, dokunuşla bildirim sayfası, Konuma Git, admin harita seçicisi); gizlilik
-> manifestleri güncellendi, App Store Connect gizlilik etiketi yayınlandı (30 Ekim 2026). **Kalan:** 4.1.0 gönderimi. Aşağıdaki liste tarihsel kayıt olarak duruyor:
+> manifestleri güncellendi, App Store Connect gizlilik etiketi yayınlandı; 4.1.0 (10) App Store incelemesine gönderildi (30 Ekim 2026, onaylanınca
+> otomatik yayın). **Yayın sonrası:** `config/appUpdate/ios.latestVersion` → 4.1.0 (onayla) ve Firestore App Check enforce. Aşağıdaki liste tarihsel kayıt olarak duruyor:
 >
 > 1. **Yeni istemciden önce** (gerçek cihaz/TestFlight testi backend'e bağlı; 4.0.0 `devices`/`settings` kaydı yazmadığı ve
 >    `all` topic + `announcements` yolu korunduğu için geriye uyumlu — 4.0.0 kodunda doğrulandı 30 Ekim 2026):
