@@ -296,7 +296,7 @@ cd firebase && firebase deploy --only firestore,storage,functions --project vifi
 > Apple App Group iki App ID'de etkin; Google Cloud anahtarı hazır, yerel `Secrets.xcconfig` dolu. 4.0.0 istemcisi `all`
 > topic'i + `announcements` ile çalışmaya devam eder. Canlı `announcements` boştu (createdAt'siz eski kayıt yok). Gerçek cihaz
 > testi geçti (izin akışı, görselli push, rozet, dokunuşla bildirim sayfası, Konuma Git, admin harita seçicisi); gizlilik
-> manifestleri güncellendi. **Kalan:** App Store Connect gizlilik etiketi, 4.1.0 gönderimi. Aşağıdaki liste tarihsel kayıt olarak duruyor:
+> manifestleri güncellendi, App Store Connect gizlilik etiketi yayınlandı (30 Ekim 2026). **Kalan:** 4.1.0 gönderimi. Aşağıdaki liste tarihsel kayıt olarak duruyor:
 >
 > 1. **Yeni istemciden önce** (gerçek cihaz/TestFlight testi backend'e bağlı; 4.0.0 `devices`/`settings` kaydı yazmadığı ve
 >    `all` topic + `announcements` yolu korunduğu için geriye uyumlu — 4.0.0 kodunda doğrulandı 30 Ekim 2026):

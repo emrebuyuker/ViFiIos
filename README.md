@@ -303,8 +303,8 @@ modelleri (`AppNotification.swift`, `NotificationAdmin.swift`) ve `NotificationP
 ### Yayın önkoşulları
 
 Hepsi proje sahibinin onayı/eylemiyle yapılır. **Durum (30 Ekim 2026):** 1–4 tamam (kurallar, 13 Function, IAM, App Group,
-Google Cloud anahtarı), gerçek cihaz testi geçti, gizlilik manifestleri güncellendi; kalan App Store Connect gizlilik etiketi
-ve sürüm gönderimi:
+Google Cloud anahtarı), gerçek cihaz testi geçti, gizlilik manifestleri ve App Store Connect gizlilik etiketi güncellendi; kalan sürüm
+gönderimi:
 
 1. **Yeni istemciden önce** (4.0.0 ile geriye uyumlu; gerçek cihaz/TestFlight testi buna bağlı) Firestore kuralları +
    indeksleri ve Storage kuralları
