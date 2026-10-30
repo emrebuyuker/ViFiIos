@@ -8,6 +8,17 @@ nonisolated struct PlaceSuggestion: Identifiable, Hashable, Sendable {
     let subtitle: String?
 }
 
+/// A circle place searches favor: results inside it rank higher, places elsewhere still come back.
+nonisolated struct SearchArea: Equatable, Sendable {
+    /// The largest radius, in meters, the Places service accepts for a circle.
+    static let maximumRadius: Double = 50_000
+
+    let latitude: Double
+    let longitude: Double
+    /// In meters, more than 0 and at most `maximumRadius`.
+    let radius: Double
+}
+
 /// A place resolved from a suggestion.
 nonisolated struct PlaceDetails: Hashable, Sendable {
     let placeId: String
@@ -37,10 +48,13 @@ nonisolated enum PlaceSearchError: LocalizedError, Equatable {
 /// Searches for places by name (Google Places autocomplete in the app, a stub in tests).
 ///
 /// A search session is what the Places service bills by: the suggestions fetched while typing and the one place
-/// fetch that follows belong to one session, which `place(for:)` ends.
+/// fetch that follows belong to one session, which `place(for:)` (or `address(ofPlace:)`) ends.
 protocol PlaceSearching: AnyObject {
-    /// Suggestions for what the admin has typed so far.
-    func suggestions(for query: String) async throws -> [PlaceSuggestion]
+    /// Suggestions for what the admin has typed so far, favoring `area` when there is one.
+    func suggestions(for query: String, near area: SearchArea?) async throws -> [PlaceSuggestion]
     /// The place behind a suggestion; ends the current search session.
     func place(for suggestion: PlaceSuggestion) async throws -> PlaceDetails
+    /// The formatted address of a place tapped on the map (its name and coordinate come with the tap), or `nil`
+    /// when it has none; ends the current search session.
+    func address(ofPlace placeId: String) async throws -> String?
 }

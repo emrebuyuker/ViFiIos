@@ -122,7 +122,8 @@ struct LocationPickerSearchPanel: View {
 
 // MARK: - Details
 
-/// The pin's coordinates, the editable name (required) and address (optional), and "Bu konumu seç".
+/// The pin's coordinates, the editable name (required) and address (optional), and "Bu konumu seç". A quiet note
+/// says when the location permission is off.
 struct LocationPickerDetailsCard: View {
     @Bindable var viewModel: LocationPickerViewModel
     let onConfirm: () -> Void
@@ -134,6 +135,14 @@ struct LocationPickerDetailsCard: View {
                 .foregroundStyle(.secondary)
                 .accessibilityLabel("Koordinat: \(viewModel.coordinateText)")
                 .accessibilityIdentifier("locationPicker.coordinates")
+
+            if viewModel.isLocationDenied {
+                // A quiet note, not a prompt: the admin chose this, and the picker works without it.
+                Label("Konum izni kapalı; harita bulunduğun yere odaklanmaz.", systemImage: "location.slash")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("locationPicker.locationDenied")
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 TextField("Yer adı (zorunlu)", text: $viewModel.name)
@@ -154,6 +163,16 @@ struct LocationPickerDetailsCard: View {
                     .textInputAutocapitalization(.words)
                     .autocorrectionDisabled()
                     .accessibilityIdentifier("locationPicker.address")
+                    .overlay(alignment: .trailing) {
+                        if viewModel.isLoadingAddress {
+                            // The address of a place tapped on the map is on its way.
+                            ProgressView()
+                                .controlSize(.small)
+                                .padding(.trailing, 8)
+                                .accessibilityLabel("Adres alınıyor")
+                                .accessibilityIdentifier("locationPicker.addressLoading")
+                        }
+                    }
                 if viewModel.isAddressTooLong {
                     limitNote(String(localized: "Adres en fazla \(NotificationLocation.addressLimit) karakter olabilir."))
                 }
@@ -196,12 +215,16 @@ struct LocationPickerDetailsCard: View {
 
 /// Canned results for previews, which cannot start the Google SDKs.
 private final class PreviewPlaceSearcher: PlaceSearching {
-    func suggestions(for query: String) async throws -> [PlaceSuggestion] {
+    func suggestions(for query: String, near area: SearchArea?) async throws -> [PlaceSuggestion] {
         [PlaceSuggestion(id: "preview", title: "Kadıköy", subtitle: "İstanbul")]
     }
 
     func place(for suggestion: PlaceSuggestion) async throws -> PlaceDetails {
         PlaceDetails(placeId: "preview", name: "Kadıköy", address: "Kadıköy, İstanbul", latitude: 40.99, longitude: 29.03)
+    }
+
+    func address(ofPlace placeId: String) async throws -> String? {
+        "Kadıköy, İstanbul"
     }
 }
 #endif

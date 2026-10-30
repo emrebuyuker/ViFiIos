@@ -166,7 +166,11 @@ ViFi-iOS/
 - **Google Maps anahtarı asla commit'lenmez** (`Config/Secrets.xcconfig`, git-dışı). SDK'lar uygulama açılışında değil,
   admin ilk konum seçiciyi açarken `GoogleMapsSDK.startIfPossible()` ile başlatılır; anahtar yoksa seçici "kullanılamıyor"
   gösterir (SDK çökerdi). **Örnek veri modunda Google SDK'sı hiç başlatılmaz:** `LocationPicking` protokolü +
-  `MockLocationPicker`. Konum seçiciye yeni bir yol eklersen aynı korumayı koru; kullanıcı konumu/CoreLocation kullanılmaz.
+  `MockLocationPicker`. Konum seçiciye yeni bir yol eklersen aynı korumayı koru. **CoreLocation yalnızca admin konum seçicisinde** (kullanıcı
+  isteği, 30 Ekim 2026): açılışta "Uygulamayı Kullanırken" izni bir kez istenir, harita cihaz konumuna odaklanır
+  (düzenlenen bir konum ya da admin'in kaydırması/araması varsa odaklanmaz), haritadaki yer etiketine dokunmak o yeri
+  seçer. Konum yalnızca haritada gösterilir; saklanmaz, log'lanmaz, sunucuya gitmez (`DeviceLocating` / `CoreLocationProvider`).
+  Örnek veri ve anahtarsız modda CoreLocation'a dokunulmaz; uygulamanın başka hiçbir yerinde kullanıcı konumu kullanılmaz.
 - **Push dokunuşu doğrudan gezinmez.** `AppDelegate` yalnızca `NotificationRouter.receive(notificationId:)` çağırır;
   `HomeView` (tüm kapılardan sonra var olan ekran) engelleyen modal kalmayınca inbox'ı açar. Çıkışta bekleyen dokunuş silinir; oturum kapalıyken yapılan dokunuş da
   sonraki girişte atılır (`NotificationRouter.sessionDidChange`; soğuk başlatmadaki dokunuş korunur).

@@ -15,8 +15,9 @@ protocol LocationPicking {
     ) -> AnyView
 }
 
-/// The production picker: a Google map with a Places search. Without a configured API key it shows an
-/// explanation instead of a map (the Maps SDK would throw).
+/// The production picker: a Google map with a Places search that opens on the device's location (When-In-Use
+/// permission, asked when it opens). Without a configured API key it shows an explanation instead of a map (the
+/// Maps SDK would throw) and touches neither the Google SDKs nor CoreLocation.
 struct GoogleLocationPicker: LocationPicking {
     func makePicker(
         initial: NotificationLocation?,
@@ -26,7 +27,14 @@ struct GoogleLocationPicker: LocationPicking {
         guard GoogleMapsSDK.startIfPossible() else {
             return AnyView(LocationPickerUnavailableView(onClose: onCancel))
         }
-        return AnyView(LocationPickerView(initial: initial, searcher: GooglePlacesService(), onPick: onPick, onCancel: onCancel))
+        // The only place CoreLocation is used: past the key check, so mock mode and keyless builds never reach it.
+        return AnyView(LocationPickerView(
+            initial: initial,
+            searcher: GooglePlacesService(),
+            locator: CoreLocationProvider(),
+            onPick: onPick,
+            onCancel: onCancel
+        ))
     }
 }
 

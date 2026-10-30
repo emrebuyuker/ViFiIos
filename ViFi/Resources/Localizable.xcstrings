@@ -205,6 +205,9 @@
     "Adres (isteğe bağlı)" : {
 
     },
+    "Adres alınıyor" : {
+
+    },
     "Adres en fazla %lld karakter olabilir." : {
 
     },
@@ -904,6 +907,9 @@
     },
     "Konum" : {
       "comment" : "Accessibility label of the breadcrumb trail showing the current location in the archive."
+    },
+    "Konum izni kapalı; harita bulunduğun yere odaklanmaz." : {
+
     },
     "Konum seç" : {
 

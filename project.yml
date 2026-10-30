@@ -90,6 +90,9 @@ targets:
         # The Google Maps / Places API key, injected from Config/Secrets.xcconfig (never committed). Read by
         # GoogleMapsConfiguration; empty or unexpanded means the location picker reports itself unavailable.
         GMSApiKey: $(GOOGLE_MAPS_API_KEY)
+        # Asked only when an admin opens the campaign location picker, to center its map on the device. The location
+        # is shown on the map only; it is never stored or sent.
+        NSLocationWhenInUseUsageDescription: Bildirim için konum seçerken haritayı bulunduğun yere odaklamak için konumun kullanılır. Konumun kaydedilmez ve paylaşılmaz.
         # Lets the inbox's "Konuma Git" check whether the Google Maps app is installed.
         LSApplicationQueriesSchemes:
           - comgooglemaps

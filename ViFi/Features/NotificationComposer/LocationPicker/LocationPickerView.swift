@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// The admin's location picker: a Google map with a pin fixed at its center (the coordinate is wherever the map
-/// is centered), a Places search above it that moves the map to a result, and below it the name and address the
-/// notification will show. "Bu konumu seç" hands back a valid `NotificationLocation`.
+/// is centered), a Places search above it that moves the map to a result, places on the map that can be tapped,
+/// and below it the name and address the notification will show. "Bu konumu seç" hands back a valid
+/// `NotificationLocation`. With a locator, it opens on the device's location (see `LocationPickerViewModel`).
 struct LocationPickerView: View {
     @State private var viewModel: LocationPickerViewModel
     private let onPick: (NotificationLocation) -> Void
@@ -11,10 +12,11 @@ struct LocationPickerView: View {
     init(
         initial: NotificationLocation?,
         searcher: any PlaceSearching,
+        locator: (any DeviceLocating)?,
         onPick: @escaping (NotificationLocation) -> Void,
         onCancel: @escaping () -> Void
     ) {
-        _viewModel = State(initialValue: LocationPickerViewModel(initial: initial, searcher: searcher))
+        _viewModel = State(initialValue: LocationPickerViewModel(initial: initial, searcher: searcher, locator: locator))
         self.onPick = onPick
         self.onCancel = onCancel
     }
@@ -43,6 +45,9 @@ struct LocationPickerView: View {
                         .accessibilityIdentifier("locationPicker.cancel")
                 }
             }
+            .task {
+                await viewModel.locateDevice()
+            }
         }
     }
 
@@ -50,16 +55,27 @@ struct LocationPickerView: View {
         ZStack {
             GoogleMapView(
                 initialCamera: viewModel.initialCamera,
-                cameraRequest: viewModel.cameraRequest
-            ) { latitude, longitude in
-                viewModel.mapDidSettle(latitude: latitude, longitude: longitude)
-            }
+                cameraRequest: viewModel.cameraRequest,
+                showsDeviceLocation: viewModel.showsDeviceLocation,
+                onEvent: handle
+            )
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Harita")
             .accessibilityHint("Konum, haritanın ortasındaki iğnenin gösterdiği yerdir.")
             .accessibilityIdentifier("locationPicker.map")
 
             CenterPin()
+        }
+    }
+
+    private func handle(_ event: GoogleMapView.Event) {
+        switch event {
+        case let .settled(latitude, longitude, zoom, visibleRadius):
+            viewModel.mapDidSettle(latitude: latitude, longitude: longitude, zoom: zoom, visibleRadius: visibleRadius)
+        case .gestureBegan:
+            viewModel.mapWillMoveByGesture()
+        case let .placeTapped(placeId, name, latitude, longitude):
+            viewModel.selectMapPlace(placeId: placeId, name: name, latitude: latitude, longitude: longitude)
         }
     }
 }

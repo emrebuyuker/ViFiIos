@@ -2,36 +2,6 @@ import Foundation
 import Testing
 @testable import ViFi
 
-/// A `PlaceSearching` with scripted answers that records every call.
-@MainActor
-private final class StubPlaceSearcher: PlaceSearching {
-    var suggestionsResult: Result<[PlaceSuggestion], any Error> = .success([])
-    var placeResult: Result<PlaceDetails, any Error> = .success(LocationPickerFixture.kadikoy)
-    private(set) var queries: [String] = []
-    private(set) var resolved: [PlaceSuggestion] = []
-
-    func suggestions(for query: String) async throws -> [PlaceSuggestion] {
-        queries.append(query)
-        return try suggestionsResult.get()
-    }
-
-    func place(for suggestion: PlaceSuggestion) async throws -> PlaceDetails {
-        resolved.append(suggestion)
-        return try placeResult.get()
-    }
-}
-
-private enum LocationPickerFixture {
-    static let suggestion = PlaceSuggestion(id: "place-1", title: "Kadıköy", subtitle: "İstanbul")
-    static let kadikoy = PlaceDetails(
-        placeId: "place-1",
-        name: "Kadıköy",
-        address: "Caferağa, Kadıköy/İstanbul",
-        latitude: 40.9903,
-        longitude: 29.029
-    )
-}
-
 @MainActor
 @Suite("LocationPickerViewModel")
 struct LocationPickerViewModelTests {

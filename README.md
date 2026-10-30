@@ -268,7 +268,10 @@ ertelenmez. **Konum** seçilince Tür görünür şekilde Kampanya'ya kilitlenir
 (zamanlandı / gönderiliyor / gönderildi / başarısız / iptal), kitle etiketini, sayıları (alıcı, push, açılma, aksiyon) ve
 zamanlanmış bildirim için iptali gösterir.
 
-Konum seçici Google Maps SDK + Places arama kullanır (kullanıcı konumu / CoreLocation yok). Anahtar yoksa seçici
+Konum seçici Google Maps SDK + Places arama kullanır; açılınca (yalnızca admin, yalnızca bu ekranda) "uygulamayı
+kullanırken" konum iznini bir kez ister ve haritayı cihazın konumuna odaklar (düzenlenen konum ya da admin'in daha önce
+taşıdığı/seçtiği yer öncelikli; konum kaydedilmez, gönderilmez). Haritada bir mekân etiketine dokunmak onu seçer (ad +
+koordinat + place id, adres ardından gelir). Anahtar yoksa seçici
 "yapılandırılmamış" der; örnek veri modunda Google SDK'sı hiç başlatılmaz (`MockLocationPicker`).
 
 ### Sunucu kuralları

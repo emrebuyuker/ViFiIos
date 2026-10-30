@@ -49,6 +49,8 @@
 	<array>
 		<string>comgooglemaps</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Bildirim için konum seçerken haritayı bulunduğun yere odaklamak için konumun kullanılır. Konumun kaydedilmez ve paylaşılmaz.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
