@@ -21,7 +21,9 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- The Firebase user id, kept with the account and also set as the analytics user id. -->
+		<!-- The Firebase user id, kept with the account and also set as the analytics user id. Campaign (promo)
+		     notifications are delivered to the inbox of each consenting user id: marketing sent directly to our
+		     own users, never shared with third parties. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeUserID</string>
@@ -33,6 +35,7 @@
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+				<string>NSPrivacyCollectedDataTypePurposeDeveloperAdvertising</string>
 			</array>
 		</dict>
 		<!-- Paid single-exam unlocks: the verified App Store transaction id is stored with the account and the exam. -->
@@ -62,7 +65,9 @@
 			</array>
 		</dict>
 		<!-- Profile: university, faculty, department and gender, kept with the account and used as analytics
-		     segments (canonical ids / gender, never free text). -->
+		     segments (canonical ids / gender, never free text). The same ids choose who receives a notification,
+		     campaign (promo) notifications included — those go only to users who opted in. Notification consent
+		     ({marketing, source, version, updatedAt}) is kept with the account too. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeOtherDataTypes</string>
@@ -74,9 +79,12 @@
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+				<string>NSPrivacyCollectedDataTypePurposeDeveloperAdvertising</string>
 			</array>
 		</dict>
-		<!-- Analytics (Google Analytics for Firebase, no IDFA / ad tracking): in-app interaction events. -->
+		<!-- Analytics (Google Analytics for Firebase, no IDFA / ad tracking): in-app interaction events, and whether
+		     a notification was opened or its action tapped (admin statistics). When the notifications page was
+		     last read is kept with the account so the unread badge matches across devices. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
@@ -87,10 +95,11 @@
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
 		<!-- The pseudonymous device identifiers Firebase uses (no IDFA): the Analytics app-instance id, and the
-		     Cloud Messaging registration token used to deliver notifications (#11). -->
+		     Cloud Messaging registration token used to deliver notifications, campaign (promo) ones included. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeDeviceID</string>
@@ -102,6 +111,7 @@
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+				<string>NSPrivacyCollectedDataTypePurposeDeveloperAdvertising</string>
 			</array>
 		</dict>
 		<!-- Sign-in failure diagnostics: when a sign-in fails, the failure reason, stage, App Check status and
@@ -127,8 +137,11 @@
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
 			<key>NSPrivacyAccessedAPITypeReasons</key>
 			<array>
-				<!-- Recently viewed exams are stored for the app itself only. -->
+				<!-- Recently viewed exams and other app state are stored for the app itself only. -->
 				<string>CA92.1</string>
+				<!-- The icon badge count is shared with the notification service extension through the App Group
+				     (NotificationBadgeCounter). -->
+				<string>1C8F.1</string>
 			</array>
 		</dict>
 		<dict>

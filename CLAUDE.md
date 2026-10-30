@@ -209,8 +209,11 @@ ViFi-iOS/
 - **SwiftLint** (her derlemede): satır 160 (hata 200), dosya 500 (hata 800), fonksiyon 60, tip gövdesi 300 satır,
   iç içe tip 2 seviye; `print` ve Combine yasakları özel kuralla denetlenir. Yeni uyarı bırakma.
 - **Gizlilik:** Yeni bir veri türü toplanırsa `PrivacyInfo.xcprivacy` ve App Store gizlilik etiketi birlikte güncellenir.
-  Bildirim epiği için bekleyen etiket işi: Google Maps SDK (Crash Data + Performance Data) ve kampanya hedeflemesi
-  ("Developer's Advertising or Marketing" amacı); `PrivacyInfo.xcprivacy` bu epikte henüz değişmedi.
+  Uygulamanın ve bildirim eklentisinin ayrı manifesti vardır (`ViFiNotificationService/PrivacyInfo.xcprivacy`): Required
+  Reason API kullanan her hedef kendi manifestinde beyan eder (App Group `UserDefaults` → `1C8F.1`), yoksa yükleme
+  ITMS-91053 ile reddedilir. Kampanya hedeflemesi User ID / Device ID / Other Data Types'ta "Developer's Advertising or
+  Marketing" amacıyla beyanlıdır (Tracking yok); Google Maps SDK'nın Crash + Performance Data'sı SDK manifestinde, App Store
+  etiketinde de beyan edilir. Admin seçicisindeki cihaz konumu toplanmaz, etikete girmez (kullanıcı kararı, 30 Ekim 2026).
 - **Güvenlik kuralları:** `firebase/database.rules.json`, `firebase/firestore.rules` (+ `firestore.indexes.json`) ve
   `firebase/storage.rules` her değişiklikte emulator testleriyle birlikte güncellenir (`cd firebase && npm test`);
   yayın kullanıcı onayıyla yapılır. Function değişikliği de aynı testlerle (handler'lar emulator'e karşı) doğrulanır.
@@ -291,8 +294,9 @@ cd firebase && firebase deploy --only firestore,storage,functions --project vifi
 > ilk denemede Eventarc yetki dağıtımı gecikmesiyle düştü, birkaç dakika sonra yeniden yayınlandı); Cloud Scheduler + Eventarc
 > API'leri açıldı; compute servis hesabına kendi üzerinde *Service Account Token Creator* verildi (IAM Credentials API açıktı);
 > Apple App Group iki App ID'de etkin; Google Cloud anahtarı hazır, yerel `Secrets.xcconfig` dolu. 4.0.0 istemcisi `all`
-> topic'i + `announcements` ile çalışmaya devam eder. Canlı `announcements` boştu (createdAt'siz eski kayıt yok). **Kalan:**
-> gerçek cihaz/TestFlight testi, App Store gizlilik etiketi, 4.1.0 gönderimi. Aşağıdaki liste tarihsel kayıt olarak duruyor:
+> topic'i + `announcements` ile çalışmaya devam eder. Canlı `announcements` boştu (createdAt'siz eski kayıt yok). Gerçek cihaz
+> testi geçti (izin akışı, görselli push, rozet, dokunuşla bildirim sayfası, Konuma Git, admin harita seçicisi); gizlilik
+> manifestleri güncellendi. **Kalan:** App Store Connect gizlilik etiketi, 4.1.0 gönderimi. Aşağıdaki liste tarihsel kayıt olarak duruyor:
 >
 > 1. **Yeni istemciden önce** (gerçek cihaz/TestFlight testi backend'e bağlı; 4.0.0 `devices`/`settings` kaydı yazmadığı ve
 >    `all` topic + `announcements` yolu korunduğu için geriye uyumlu — 4.0.0 kodunda doğrulandı 30 Ekim 2026):
