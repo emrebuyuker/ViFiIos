@@ -28,7 +28,23 @@
         }
       }
     },
+    "%@ · %lld kişi" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$lld kişi"
+          }
+        }
+      }
+    },
     "%@ adresine e-posta gönderebilirsiniz." : {
+
+    },
+    "%@ için zamanlandı" : {
+
+    },
+    "%@ için zamanlandı (sessiz saat)" : {
 
     },
     "%@ numarasına gönderilen 6 haneli kodu gir." : {
@@ -56,12 +72,32 @@
       },
       "shouldTranslate" : false
     },
+    "%lld / %lld karakter" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld / %2$lld karakter"
+          }
+        }
+      }
+    },
     "%lld %@" : {
       "localizations" : {
         "tr" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld %2$@"
+          }
+        }
+      }
+    },
+    "%lld alıcı · %lld push gönderildi · %lld başarısız" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld alıcı · %2$lld push gönderildi · %3$lld başarısız"
           }
         }
       }
@@ -88,6 +124,26 @@
     "%lld gönderim onay bekliyor." : {
 
     },
+    "%lld kişi açtı · %lld kişi butona dokundu" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld kişi açtı · %2$lld kişi butona dokundu"
+          }
+        }
+      }
+    },
+    "%lld kişiye gönderilecek; %lld cihaza anlık bildirim (push) iletilecek." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld kişiye gönderilecek; %2$lld cihaza anlık bildirim (push) iletilecek."
+          }
+        }
+      }
+    },
     "%lld sayfa" : {
       "comment" : "Subtitle of an image exam: its number of pages."
     },
@@ -96,6 +152,19 @@
     },
     "%lld sınav" : {
       "comment" : "Row subtitle of a course: its number of exams."
+    },
+    "%lld/%lld" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "≈ %lld kişi" : {
+
     },
     "Abone Ol" : {
 
@@ -121,10 +190,22 @@
     "Aç (%lld coin)" : {
 
     },
+    "Açık" : {
+
+    },
     "Açtığın sınav hesabında kalıcı olur, bir daha kilitlenmez." : {
 
     },
     "Ad" : {
+
+    },
+    "Ad en fazla %lld karakter olabilir." : {
+
+    },
+    "Adres (isteğe bağlı)" : {
+
+    },
+    "Adres en fazla %lld karakter olabilir." : {
 
     },
     "Adresi Kopyala" : {
@@ -136,13 +217,25 @@
     "App Store'a ulaşılamıyor. Bağlantını kontrol edip tekrar dene." : {
 
     },
+    "Apple Haritalar" : {
+
+    },
     "Ara" : {
 
     },
     "Aradığın listede yoksa, yazdığın metni olduğu gibi kullanabilirsin." : {
 
     },
+    "Arama şu an kullanılamıyor. Haritayı kaydırarak konumu yine de seçebilirsin." : {
+
+    },
     "Aramanla eşleşen ders yok." : {
+
+    },
+    "Aramayı temizle" : {
+
+    },
+    "Aranıyor…" : {
 
     },
     "Arşive sınav ekle, onaylanınca coin kazan." : {
@@ -157,10 +250,43 @@
     "Atla" : {
 
     },
+    "Ayarlar'ı Aç" : {
+
+    },
     "Aylık" : {
 
     },
+    "Bağlanacak sınavı seç." : {
+
+    },
+    "Bağlantı" : {
+
+    },
+    "Bağlantı https:// ile başlamalı." : {
+
+    },
+    "Bağlantıyı Aç" : {
+
+    },
+    "Bana test gönder" : {
+
+    },
+    "Başarısız" : {
+
+    },
     "Başla" : {
+
+    },
+    "Başlık" : {
+
+    },
+    "Başlık boş olamaz." : {
+
+    },
+    "Başlık en fazla %lld karakter olabilir." : {
+
+    },
+    "Bazı bildirimler yüklenemedi." : {
 
     },
     "Bekleyen gönderim yok" : {
@@ -172,13 +298,67 @@
     "Belge indiriliyor…" : {
       "comment" : "Loading indicator while a PDF exam is downloaded."
     },
+    "Belirli kitle" : {
+
+    },
+    "Bildirim %@ için zamanlandı." : {
+
+    },
+    "Bildirim Ayarları" : {
+
+    },
+    "Bildirim Gönder" : {
+
+    },
+    "Bildirim gönderildi. Alıcı sayısı: %lld." : {
+
+    },
+    "Bildirim gönderilemedi. Ayrıntı için geçmişe bak." : {
+
+    },
+    "Bildirim gönderilsin mi?" : {
+
+    },
+    "Bildirim gönderme henüz kullanılamıyor." : {
+
+    },
+    "Bildirim görseli" : {
+
+    },
+    "Bildirim izni" : {
+
+    },
+    "Bildirim izni henüz verilmedi." : {
+
+    },
+    "Bildirim izni ve kampanya tercihin" : {
+
+    },
+    "Bildirim tercihin şu an okunamıyor. Bağlantını kontrol edip tekrar dene." : {
+
+    },
     "Bildirim yok" : {
+
+    },
+    "Bildirim zamanlandı." : {
+
+    },
+    "Bildirim zamanlansın mı?" : {
 
     },
     "Bildirimler" : {
 
     },
-    "Bildirimlere izin ver" : {
+    "Bildirimler kapalı. Açmak için Ayarlar'a git." : {
+
+    },
+    "Bildirimler sessizce Bildirim Merkezi'ne düşüyor. Anında haberdar olmak için bildirimleri aç." : {
+
+    },
+    "Bildirimler şu an kapalı. Ayarlar'dan açabilirsin." : {
+
+    },
+    "Bildirimler yüklenemedi. Bağlantını kontrol edip tekrar dene." : {
 
     },
     "Bildirimleri Aç" : {
@@ -192,6 +372,9 @@
     },
     "Bir sorun oluştu. Lütfen tekrar dene." : {
       "comment" : "Generic sign-in or account error."
+    },
+    "Bitiş zamanı" : {
+
     },
     "Bitti" : {
       "comment" : "Button that closes the About sheet."
@@ -207,6 +390,12 @@
     },
     "Bölümlerde ara" : {
       "comment" : "Search field prompt on a department list."
+    },
+    "Bölümüne yeni sınav gelince ilk sen haberdar ol" : {
+
+    },
+    "Bu bildirim gönderildiği için artık iptal edilemez." : {
+
     },
     "Bu bölüm için arşivde kayıtlı ders yok. Aşağıdan ekleyebilirsin." : {
 
@@ -229,6 +418,9 @@
     "Bu gönderim için ödül zaten verilmiş." : {
 
     },
+    "Bu görsel kullanılamıyor. Başka bir görsel seç." : {
+
+    },
     "Bu hesap devre dışı bırakıldı." : {
       "comment" : "Sign-in error: an admin disabled the account."
     },
@@ -238,8 +430,14 @@
     "Bu işlem için yetkin yok." : {
 
     },
+    "Bu konumu seç" : {
+
+    },
     "Bu seviyeye döner" : {
       "comment" : "Accessibility hint of a breadcrumb chip."
+    },
+    "Bu sınav artık arşivde bulunmuyor." : {
+
     },
     "Bu sınav kilitli." : {
 
@@ -258,6 +456,12 @@
     },
     "Bu üniversitede henüz fakülte yok" : {
       "comment" : "Empty state title: a university without faculties."
+    },
+    "Bu yer bulunamadı. Başka bir sonuç seç." : {
+
+    },
+    "Buton" : {
+
     },
     "Cihaz doğrulanamadı. Lütfen daha sonra tekrar dene." : {
       "comment" : "Sign-in error: Firebase could not verify the app (APNs, reCAPTCHA or App Check)."
@@ -282,6 +486,9 @@
     },
     "Daha Sonra" : {
       "comment" : "Update alert button that dismisses the alert."
+    },
+    "Değiştir" : {
+
     },
     "Ders" : {
 
@@ -359,6 +566,12 @@
         }
       }
     },
+    "Duyuru" : {
+
+    },
+    "Duyuru ve kampanya gönder" : {
+
+    },
     "Eğitim" : {
 
     },
@@ -383,6 +596,12 @@
     "Erkek" : {
 
     },
+    "Evet, fırsatları bildir" : {
+
+    },
+    "Eylem" : {
+
+    },
     "Fakülte" : {
 
     },
@@ -393,6 +612,24 @@
       "comment" : "Search field prompt on a faculty list."
     },
     "Farklı ders ekle" : {
+
+    },
+    "Gece 22:00–09:00 arası asla." : {
+
+    },
+    "Geçerli bir hedef kitle seç." : {
+
+    },
+    "Geçerlilik süresi" : {
+
+    },
+    "Geçerlilik süresi gönderim zamanından sonra olmalı." : {
+
+    },
+    "Geçmiş" : {
+
+    },
+    "Geçmiş yükleniyor…" : {
 
     },
     "Geri yüklenecek bir abonelik bulunamadı." : {
@@ -410,10 +647,34 @@
     "Gönder" : {
 
     },
+    "Gönderdiğin sınav onaylanınca coin'in yüklendiğini gör" : {
+
+    },
+    "Gönderdiğin ve zamanladığın bildirimler burada görünür." : {
+
+    },
+    "Gönderildi" : {
+
+    },
+    "Gönderiliyor" : {
+
+    },
     "Gönderim" : {
 
     },
+    "Gönderim Geçmişi" : {
+
+    },
     "Gönderim onaylandı." : {
+
+    },
+    "Gönderim zamanı" : {
+
+    },
+    "Gönderim zamanı geçmişte olamaz." : {
+
+    },
+    "Gönderim zamanı: %@" : {
 
     },
     "Gönderimin eksik veya geçersiz. Lütfen bilgileri kontrol et." : {
@@ -428,16 +689,40 @@
     "Gönderimler yükleniyor…" : {
 
     },
+    "Google Haritalar" : {
+
+    },
     "Görsel" : {
       "comment" : "Format badge of an exam made of scanned image pages (the other format is “PDF”)."
     },
+    "Görsel bu bildirime ait değil; görseli yeniden seç." : {
+
+    },
+    "Görsel hazırlanıyor" : {
+
+    },
     "Görsel sayfa ekle" : {
+
+    },
+    "Görsel Seç" : {
 
     },
     "Görsel ve PDF sınavlar tek yerde" : {
       "comment" : "About screen feature."
     },
     "Görsel yüklenemedi" : {
+
+    },
+    "Görsel yüklenemedi; bildirim gönderilmedi. Tekrar dene." : {
+
+    },
+    "Görsel yüklenemedi. Başka bir görsel seç." : {
+
+    },
+    "Görseli Değiştir" : {
+
+    },
+    "Görseli Kaldır" : {
 
     },
     "Görüş, öneri ve sorularını bize e-posta ile iletebilirsin." : {
@@ -458,8 +743,29 @@
     "Hakkında" : {
       "comment" : "Toolbar button and screen title: information about the app."
     },
+    "Harita" : {
+
+    },
+    "Harita anahtarı yapılandırılmamış" : {
+
+    },
+    "Haritadan geçerli bir konum seç." : {
+
+    },
+    "Hayır, teşekkürler" : {
+
+    },
+    "Hedef kitle" : {
+
+    },
+    "Henüz bildirim yok" : {
+
+    },
     "Henüz üniversite yok" : {
       "comment" : "Empty state title: the archive has no universities."
+    },
+    "Hepsi" : {
+
     },
     "Her dersin tüm sınavları açık" : {
 
@@ -479,10 +785,22 @@
     "Hesap" : {
       "comment" : "Account screen title and the home toolbar button that opens it."
     },
+    "Hiçbir şeyi kaçırma" : {
+
+    },
+    "https://" : {
+
+    },
+    "İçerik" : {
+
+    },
     "İçerik bulunamadı." : {
       "comment" : "Error: the requested archive entry does not exist."
     },
     "İleri" : {
+
+    },
+    "İleri tarihte gönder" : {
 
     },
     "İletişim" : {
@@ -491,17 +809,56 @@
     "İnternet bağlantısı yok. Bağlantını kontrol edip tekrar dene." : {
       "comment" : "Error: offline or the request timed out."
     },
+    "İptal" : {
+
+    },
+    "İptal edildi" : {
+
+    },
+    "İptal et" : {
+
+    },
+    "İstediğin an Hesap'tan kapat." : {
+
+    },
     "İstediğin kadar görüntüle ve indir" : {
 
     },
     "İstediğin zaman iptal et" : {
 
     },
+    "İsteğe bağlı. Bildirimde ve bildirim sayfasında görünür; en fazla 1 MB JPEG'e küçültülür." : {
+
+    },
     "Kadın" : {
+
+    },
+    "Kampanya" : {
+
+    },
+    "Kampanya ve fırsat bildirimleri" : {
+
+    },
+    "Kampanyada yalnızca bildirim onayı verenler alır; kesin sayıyı göndermeden önce göreceksin." : {
+
+    },
+    "Kampanyalar yalnızca kampanya bildirimlerini açmış kullanıcılara gider." : {
+
+    },
+    "Kampüsüne yakın indirimler, öğrenciye özel kampanyalar ve Premium fırsatları." : {
+
+    },
+    "Kampüsüne yakın indirimler, öğrenciye özel kampanyalar ve Premium fırsatları. Gece 22:00–09:00 arası bildirim göndermeyiz. Kapalıyken kampanyaları ne bildirim olarak ne de Bildirimler sayfasında görürsün." : {
+
+    },
+    "Kapalı" : {
 
     },
     "Kapat" : {
       "comment" : "Accessibility label of the button that closes the full-screen viewer."
+    },
+    "Karta dokunulduğunda ya da butona basıldığında açılır. Bağlantı https ile başlamalı." : {
+
     },
     "Kaydet" : {
 
@@ -519,6 +876,12 @@
 
     },
     "Kişisel Bilgiler" : {
+
+    },
+    "Kitle" : {
+
+    },
+    "Kitle bilgisi yükleniyor…" : {
 
     },
     "Kod Gönder" : {
@@ -542,6 +905,30 @@
     "Konum" : {
       "comment" : "Accessibility label of the breadcrumb trail showing the current location in the archive."
     },
+    "Konum seç" : {
+
+    },
+    "Konum Seç" : {
+
+    },
+    "Konum seçmek için bu sürümün Google Haritalar anahtarıyla derlenmiş olması gerekir. Geliştirici ekibe haber ver." : {
+
+    },
+    "Konum, haritanın ortasındaki iğnenin gösterdiği yerdir." : {
+
+    },
+    "Konuma Git" : {
+
+    },
+    "Konumlu bildirimler her zaman Kampanya olarak gider ve yalnızca kampanya bildirimlerini açmış kullanıcılara ulaşır." : {
+
+    },
+    "Konumu hangi uygulamada açmak istersin?" : {
+
+    },
+    "Koordinat: %@" : {
+
+    },
     "Kullanım Koşulları" : {
 
     },
@@ -552,6 +939,15 @@
       "comment" : "VoiceOver value of a button while its request is running."
     },
     "Mail uygulaması bulunamadı" : {
+
+    },
+    "Mesaj" : {
+
+    },
+    "Mesaj boş olamaz." : {
+
+    },
+    "Mesaj en fazla %lld karakter olabilir." : {
 
     },
     "Mevcut Dersler" : {
@@ -575,6 +971,9 @@
     "Numarayı değiştir" : {
       "comment" : "Login button that goes back to the phone number step."
     },
+    "Öğrenci fırsatları" : {
+
+    },
     "Okul" : {
 
     },
@@ -588,6 +987,9 @@
 
     },
     "Onaylandı" : {
+
+    },
+    "Onaylanınca haber verelim mi?" : {
 
     },
     "Onaylanırsa %lld coin kazanırsın; coinlerin hesabına yüklenir." : {
@@ -606,8 +1008,17 @@
     "Onaylarsan sınav arşive eklenir ve gönderene yenilik kademesine göre coin verilir." : {
 
     },
+    "Önce bir üniversite seç. Listelerde yalnızca kayıtlı kullanıcısı olanlar görünür." : {
+
+    },
     "Öne Çıkanlar" : {
       "comment" : "About screen section header: the app’s main features."
+    },
+    "Önemli duyurular" : {
+
+    },
+    "Otomatik" : {
+
     },
     "Oturumun sona erdi. Lütfen yeniden giriş yap." : {
       "comment" : "Account error: the user is no longer signed in."
@@ -639,7 +1050,13 @@
     "PDF'i değiştir" : {
 
     },
+    "Premium" : {
+
+    },
     "Premium ile her dersteki bütün sınavlar kilitsiz açılır; coin biriktirmene gerek kalmaz." : {
+
+    },
+    "Premium'a Göz At" : {
 
     },
     "Profil" : {
@@ -715,6 +1132,15 @@
     "Seç" : {
 
     },
+    "Seçilen görsel" : {
+
+    },
+    "Seçilen konum: %@" : {
+
+    },
+    "Sessiz" : {
+
+    },
     "Sil" : {
 
     },
@@ -727,8 +1153,14 @@
     "Şimdi Değil" : {
 
     },
+    "Sistem" : {
+
+    },
     "Sınav" : {
       "comment" : "Fallback file name of a shared exam whose name is empty."
+    },
+    "Sınav açılamadı" : {
+
     },
     "Sınav adı" : {
 
@@ -751,7 +1183,13 @@
     "Sınav içeriği korumalıdır" : {
 
     },
+    "Sınav Seç" : {
+
+    },
     "Sınav silinsin mi?" : {
+
+    },
+    "Sınava Git" : {
 
     },
     "Sınavı Aç" : {
@@ -790,7 +1228,19 @@
     "Son görüntülenenler temizlensin mi?" : {
       "comment" : "Confirmation dialog title before clearing the recently viewed exams."
     },
+    "Sonuç bulunamadı." : {
+
+    },
+    "Sorulmadı" : {
+
+    },
     "Soyad" : {
+
+    },
+    "Sunucudan beklenmeyen bir yanıt alındı." : {
+
+    },
+    "Süresi dolan bildirim, kullanıcıların bildirim sayfasından kalkar." : {
 
     },
     "Sürüm %@ (%@)" : {
@@ -803,6 +1253,9 @@
           }
         }
       }
+    },
+    "Tahmini kitle" : {
+
     },
     "Tamam" : {
       "comment" : "Button that dismisses an alert."
@@ -840,6 +1293,27 @@
     "Temizle" : {
       "comment" : "Button in the “Recently Viewed” header that clears the list."
     },
+    "Tercihin kaydedilemedi. Bağlantını kontrol edip tekrar dene." : {
+
+    },
+    "Tercihin şu an okunamıyor. Bağlantını kontrol edip bu sayfayı tekrar aç." : {
+
+    },
+    "Test" : {
+
+    },
+    "Test bildirimi gönderildi. Birazdan cihazına ulaşır." : {
+
+    },
+    "Test yalnızca senin cihazına gider; kitleye ulaşmaz." : {
+
+    },
+    "Tüm bölümler" : {
+
+    },
+    "Tüm fakülteler" : {
+
+    },
     "Tüm sınavlar açık" : {
 
     },
@@ -850,6 +1324,9 @@
       "comment" : "Destructive confirmation button that clears the recently viewed exams."
     },
     "Tür" : {
+
+    },
+    "Tür Kampanya'ya kilitli: konumlu bildirimler her zaman kampanya olarak gider." : {
 
     },
     "Üniversite" : {
@@ -885,13 +1362,13 @@
     "Yakınlaştırarak ayrıntılı inceleme" : {
       "comment" : "About screen feature: pages can be zoomed in."
     },
+    "Yeni bildirimler burada görünecek." : {
+
+    },
     "Yeni bölüm" : {
 
     },
     "Yeni ders" : {
-
-    },
-    "Yeni duyurular burada görünecek." : {
 
     },
     "Yeni fakülte" : {
@@ -906,13 +1383,16 @@
     "Yeni sınav" : {
 
     },
-    "Yeni sınavlar eklendiğinde ve önemli duyurularda haberdar ol." : {
-
-    },
     "Yeni sürüm mevcut" : {
       "comment" : "Alert title: a newer version is on the App Store."
     },
     "Yeni üniversite" : {
+
+    },
+    "Yer adı (zorunlu)" : {
+
+    },
+    "Yer ara" : {
 
     },
     "Yıl" : {
@@ -921,8 +1401,20 @@
     "Yıllık" : {
 
     },
+    "Yok" : {
+
+    },
     "Yükleniyor…" : {
       "comment" : "Loading indicator."
+    },
+    "Zamanla" : {
+
+    },
+    "Zamanlama" : {
+
+    },
+    "Zamanlandı" : {
+
     }
   },
   "version" : "1.0"
