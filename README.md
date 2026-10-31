@@ -368,9 +368,12 @@ ViFi-iOS/
 
 Bağımlılıklar Swift Package Manager ile yönetilir: Firebase iOS SDK 12 (`FirebaseFirestore`, `FirebaseDatabase`,
 `FirebaseAnalyticsCore`, `FirebaseAuth`, `FirebaseAppCheck`, `FirebaseStorage`, `FirebaseFunctions`, `FirebaseMessaging`) ve
-Google Maps iOS SDK + Places iOS SDK 11.2.0 (yalnızca admin konum seçicisi). CocoaPods kullanılmaz. Paket sürümleri
+Google Maps iOS SDK + Places iOS SDK 11.2.0 (yalnızca admin konum seçicisi) ve reCAPTCHA Enterprise iOS SDK 18.9.1
+(`RecaptchaEnterprise`; telefon girişi SMS Defense, yalnızca uygulama hedefinde). CocoaPods kullanılmaz. Paket sürümleri
 depodaki `Package.resolved` ile sabitlenir (Firebase 12.19.2, Google Maps / Places 11.2.0); güncellemek için Xcode'da
-*File › Packages › Update to Latest Package Versions*. Cloud Functions için ayrıca Node.js 22 gerekir (`firebase/functions`).
+*File › Packages › Update to Latest Package Versions*. reCAPTCHA SDK'sını Firebase Auth çalışma zamanında bulur (kod değişikliği
+yok); hiçbir yerde referans verilmediği için statik kütüphaneden ayıklanmasın diye `project.yml`'de `-ObjC` linker bayrağı şarttır
+(yoksa Firebase boş reCAPTCHA belirteci yollar). Cloud Functions için ayrıca Node.js 22 gerekir (`firebase/functions`).
 
 ## Kurulum
 
@@ -676,6 +679,11 @@ Sözleşme üç yerde aynı olmalıdır: `firebase/functions/notifications/schem
 - [ ] App Store Connect gizlilik etiketi `PrivacyInfo.xcprivacy` ile birebir (Telefon Numarası, Kullanıcı Kimliği vb.); bildirim
   epiği için Google Maps SDK (Crash Data + Performance Data) ve kampanya hedeflemesi ("Developer's Advertising or Marketing"
   amacı) eklendi. Uygulamanın ve bildirim eklentisinin gizlilik manifesti pakette (eklentide App Group `UserDefaults`).
+- [ ] 4.2.0 öncesi: App Store gizlilik etiketine reCAPTCHA Enterprise SDK'sının 4 veri türü (Crash Data, Device ID, Performance Data,
+  Product Interaction) *App Functionality* amacıyla, kullanıcıya bağlı, takipsiz eklenir (SDK'nın kendi manifesti var).
+- [ ] SMS Defense (giriş SMS'i "Error code: 39" çözümü): SDK'lı sürümü yayınla → `minimumVersion` yükselt (Android dahil) →
+  Console'da AUDIT (eşik 0,8) → metrik izle → ENFORCE. SDK'sız sürümler kalırken AUDIT bile açılmaz (Firebase iOS ≥ 11.6 SDK'sız istemciyi kilitler). Android ayrı repoda: Auth ≥ 23.1.0 + `com.google.android.recaptcha:recaptcha`
+  ≥ 18.5.1. Console test numaraları ve `-ViFiPhoneAuthTesting` reCAPTCHA'yı atlar; gerçek doğrulama gerçek cihazda.
 - [ ] App Review notunda konum izninin yalnızca admin harita seçicisinde istendiği ve konumun saklanmadığı yazıldı.
 - [ ] App Review notunda test numarası ve kodu verildi (numara depoya yazılmaz).
 - [ ] [Sürüm Notları](#sürüm-notları) güncellendi.

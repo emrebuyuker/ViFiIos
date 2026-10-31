@@ -30,6 +30,11 @@ packages:
   Firebase:
     url: https://github.com/firebase/firebase-ios-sdk
     from: 12.0.0
+  # reCAPTCHA SMS defense for phone sign-in. Firebase Auth finds it at runtime (NSClassFromString) and needs
+  # 18.7.0 or later; 18.9.0+ avoids an init crash on iOS 27. Linking it is enough, no app code calls it.
+  RecaptchaEnterprise:
+    url: https://github.com/GoogleCloudPlatform/recaptcha-enterprise-mobile-sdk
+    from: 18.9.1
   # Admin location picker for campaign notifications (map + place search). No CoreLocation / "my location".
   GoogleMaps:
     url: https://github.com/googlemaps/ios-maps-sdk
@@ -106,6 +111,9 @@ targets:
         ENABLE_PREVIEWS: YES
         # Push notifications (phone sign-in app verification) and App Attest (App Check).
         CODE_SIGN_ENTITLEMENTS: ViFi/Resources/ViFi.entitlements
+        # Keeps the reCAPTCHA SDK's classes, which nothing references at link time (Firebase Auth looks them up
+        # by name), from being stripped out of the static library.
+        OTHER_LDFLAGS: "$(inherited) -ObjC"
         # The SwiftLint phase reads sources outside the script's declared inputs.
         ENABLE_USER_SCRIPT_SANDBOXING: NO
         CODE_SIGN_STYLE: Manual
@@ -135,6 +143,8 @@ targets:
         product: FirebaseFunctions
       - package: Firebase
         product: FirebaseMessaging
+      - package: RecaptchaEnterprise
+        product: RecaptchaEnterprise
       - package: GoogleMaps
         product: GoogleMaps
       - package: GooglePlaces
