@@ -696,6 +696,24 @@ commit'lenmez; depo herkese açıktır.
 
 ## Sürüm Notları
 
+### 4.2.0
+
+Giriş SMS'i için reCAPTCHA SMS Defense hazırlığı ("Error code: 39": Google'ın dolandırıcılık süzgeci bazı Türk operatör
+hatlarına doğrulama SMS'ini engelliyordu). Ekranlarda değişiklik yok.
+
+**Yeni**
+
+- reCAPTCHA Enterprise iOS SDK 18.9.1 (`RecaptchaEnterprise`, `-ObjC`): Firebase Auth telefonla girişte reCAPTCHA
+  belirteci gönderir. Uygulama kodu değişmedi; SDK çalışma zamanında bulunur.
+
+**Değişen**
+
+- Gizlilik: reCAPTCHA SDK'sının kendi manifesti var (Crash Data, Device ID, Performance Data, Product Interaction;
+  App Functionality, kullanıcıya bağlı, takipsiz); App Store etiketine eklenir.
+
+**Yayın sonrası:** `config/appUpdate/ios.minimumVersion` → 4.2.0 (Android'in SDK'lı sürümüyle birlikte), ardından
+Console'da SMS Defense AUDIT → ENFORCE. SDK'sız sürümler kalırken AUDIT açılmaz (Firebase iOS ≥ 11.6 onları kilitler).
+
 ### 4.1.0
 
 Hedefli bildirim sistemi. Backend (kurallar + 13 Cloud Function) bu sürümden önce yayınlandı ve 4.0.0 ile geriye
