@@ -1,7 +1,8 @@
 // The account-deletion cleanup (`functions/accountCleanup.js`) against the Firestore, Realtime Database and Storage
 // emulators: what a deleted account loses (per-user Firestore data, wallet + ledger, subscription, pending
-// submissions and their uploads, the RTDB profile), what is kept (published archive, reviewed submissions, other
-// users) or only unlinked (consumed purchase transactions), idempotent re-runs, partial failures and the uid guard.
+// submissions and their uploads, the RTDB profile, notification statistics markers), what is kept (published archive,
+// reviewed submissions, anonymous notification counters, other users) or only unlinked (consumed purchase
+// transactions), idempotent re-runs, partial failures and the uid guard.
 
 import { test, before, after, beforeEach, describe, mock } from 'node:test';
 import assert from 'node:assert/strict';
@@ -100,6 +101,14 @@ beforeEach(async () => {
   writer.set(db.collection('purchasedTransactions').doc('tx-gone'), { uid: GONE, examId: 'exam-1', createdAt: new Date() });
   writer.set(db.collection('purchasedTransactions').doc('tx-stay'), { uid: STAY, examId: 'exam-2', createdAt: new Date() });
   writer.set(db.collection('exams').doc('exam-1'), { title: '2024 FİNAL', status: 'published', kind: 'JPG', source: 'submission' });
+  // Notification statistics: per-user markers next to the anonymous counters (`trackNotificationEvent`).
+  writer.set(db.collection('notifications').doc('n-1'), { title: 'Duyuru', stats: { opened: 2, actionTapped: 1 } });
+  writer.set(db.collection('notifications').doc('n-1').collection('events').doc(`${GONE}_opened`), { uid: GONE, event: 'opened', createdAt: new Date() });
+  writer.set(db.collection('notifications').doc('n-1').collection('events').doc(`${GONE}_actionTapped`), { uid: GONE, event: 'actionTapped', createdAt: new Date() });
+  writer.set(db.collection('notifications').doc('n-1').collection('events').doc(`${STAY}_opened`), { uid: STAY, event: 'opened', createdAt: new Date() });
+  writer.set(db.collection('notifications').doc('n-2').collection('events').doc(`${GONE}_opened`), { uid: GONE, event: 'opened', createdAt: new Date() });
+  // An unrelated collection that happens to be named `events` is not the cleanup's business.
+  writer.set(db.collection('catalogNodes').doc('ege-universitesi').collection('events').doc('e-1'), { uid: GONE });
   writer.set(db.collection('catalogNodes').doc('ege-universitesi'), { name: 'Ege Üniversitesi', parentId: '', status: 'published' });
   await writer.close();
   for (const path of [...PENDING_FILES, ...KEPT_FILES]) {
@@ -108,6 +117,7 @@ beforeEach(async () => {
 });
 
 const exists = async (ref) => (await ref.get()).exists;
+const eventMarker = (notificationId, id) => db.collection('notifications').doc(notificationId).collection('events').doc(id);
 
 async function filesUnder(prefix) {
   const [files] = await bucket.getFiles({ prefix });
@@ -128,6 +138,9 @@ async function assertCleanedUp() {
   assert.equal((await rtdb.ref('users').child(GONE).once('value')).exists(), false);
   assert.equal((await rtdb.ref('pendingExams').child(GONE).once('value')).exists(), false);
   assert.deepEqual(await filesUnder(`pending/${GONE}/`), []);
+  assert.equal(await exists(eventMarker('n-1', `${GONE}_opened`)), false);
+  assert.equal(await exists(eventMarker('n-1', `${GONE}_actionTapped`)), false);
+  assert.equal(await exists(eventMarker('n-2', `${GONE}_opened`)), false);
 
   // Unlinked, not deleted: the purchase still cannot be replayed.
   const purchase = (await db.collection('purchasedTransactions').doc('tx-gone').get()).data();
@@ -149,6 +162,10 @@ async function assertCleanedUp() {
   assert.equal((await rtdb.ref('users').child(STAY).child('profile/name').once('value')).val(), 'Ad');
   assert.equal((await rtdb.ref('pendingExams').child(STAY).child('old-1/lesson').once('value')).val(), 'Ders');
   for (const path of KEPT_FILES) assert.deepEqual(await filesUnder(path), [path]);
+  // The anonymous counters, another user's marker and an unrelated `events` collection stay.
+  assert.deepEqual((await db.collection('notifications').doc('n-1').get()).get('stats'), { opened: 2, actionTapped: 1 });
+  assert.equal(await exists(eventMarker('n-1', `${STAY}_opened`)), true);
+  assert.equal(await exists(db.collection('catalogNodes').doc('ege-universitesi').collection('events').doc('e-1')), true);
 }
 
 // --- Tests --------------------------------------------------------------------------------------------------------
@@ -156,14 +173,14 @@ async function assertCleanedUp() {
 describe('deleteAccountData', () => {
   test('deletes the account\'s data, unlinks its purchases and keeps everything else', async () => {
     const summary = await cleanup.deleteAccountData({ db, rtdb, bucket }, GONE);
-    assert.deepEqual(summary, { uid: GONE, pendingSubmissions: 1, unlinkedPurchases: 1 });
+    assert.deepEqual(summary, { uid: GONE, pendingSubmissions: 1, unlinkedPurchases: 1, notificationEvents: 3 });
     await assertCleanedUp();
   });
 
   test('a re-run (a retried event) is a no-op that still succeeds', async () => {
     await cleanup.deleteAccountData({ db, rtdb, bucket }, GONE);
     const again = await cleanup.deleteAccountData({ db, rtdb, bucket }, GONE);
-    assert.deepEqual(again, { uid: GONE, pendingSubmissions: 0, unlinkedPurchases: 0 });
+    assert.deepEqual(again, { uid: GONE, pendingSubmissions: 0, unlinkedPurchases: 0, notificationEvents: 0 });
     await assertCleanedUp();
   });
 
@@ -198,11 +215,12 @@ describe('deleteAccountData', () => {
     assert.deepEqual(await userCollections(GONE), ['devices', 'inbox', 'settings', 'unlocks']);
     assert.equal(await exists(db.collection('submissions').doc('s-pending')), true);
     assert.equal((await filesUnder(`pending/${GONE}/`)).length, PENDING_FILES.length);
+    assert.equal(await exists(eventMarker('n-1', `${GONE}_opened`)), true);
   });
 
   test('the deployed Auth deletion trigger runs the cleanup with the live dependencies', async () => {
     const summary = await fns.onAccountDeleted.run({ uid: GONE }, { eventType: 'providers/firebase.auth/eventTypes/user.delete' });
-    assert.deepEqual(summary, { uid: GONE, pendingSubmissions: 1, unlinkedPurchases: 1 });
+    assert.deepEqual(summary, { uid: GONE, pendingSubmissions: 1, unlinkedPurchases: 1, notificationEvents: 3 });
     await assertCleanedUp();
   });
 });

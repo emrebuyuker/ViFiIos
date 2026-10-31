@@ -285,7 +285,7 @@ koordinat + place id, adres ardından gelir). Anahtar yoksa seçici
 | Otomatik bildirimler | Sınav gönderimi **onaylanınca** sahibine "Sınavın onaylandı (+coin)" ve (yeni sınav yayınlandıysa) bölümüne "yeni sınav" (bölüm başına günde en fazla 1, yükleyen hariç); **reddedilince** sahibine sebepli bildirim; yeni gönderim gelince tüm admin'lere bildirim. `exams` yazımı değil, moderasyon sonucu tetikler. |
 | İstatistik | İstemci `opened` / `actionTapped` olaylarını `trackNotificationEvent` ile bildirir; kullanıcı başı tek sayılır, yalnız teslim kopyası olan alıcı sayılır. |
 | Push görseli | Firestore'a yalnız `image.storagePath` yazılır (`notificationImages/<id>.jpg`, bir kez yüklenir, değiştirilemez). Push için sunucu gönderim anında 7 günlük V4 imzalı URL üretir ve yalnızca FCM payload'ına koyar. |
-| Hesap silme | `onAccountDeleted` silinen hesabın Firestore `users/<uid>` altını (kilitler, inbox, cihazlar, ayarlar), cüzdan + ledger'ı, aboneliği, onay bekleyen gönderimleri + `pending/<uid>/` dosyalarını ve RTDB profilini siler. Arşive eklenmiş sınavlar ve incelenmiş gönderim kayıtları kalır; `purchasedTransactions` kaydı kalır ama hesaptan koparılır. |
+| Hesap silme | `onAccountDeleted` silinen hesabın Firestore `users/<uid>` altını (kilitler, inbox, cihazlar, ayarlar), cüzdan + ledger'ı, aboneliği, onay bekleyen gönderimleri + `pending/<uid>/` dosyalarını, RTDB profilini ve bildirim istatistiğindeki kişi başı işaretleri (`notifications/<id>/events/<uid>_*`) siler. Arşive eklenmiş sınavlar, incelenmiş gönderim kayıtları ve bildirimlerin anonim sayaçları kalır; `purchasedTransactions` kaydı kalır ama hesaptan koparılır. |
 
 **Cloud Functions** (`firebase/functions/`, europe-west1; mantık `notifications/` altında, `index.js` yalnızca bağlar):
 

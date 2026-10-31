@@ -13,6 +13,8 @@
 //   account; this also covers an account deleted from the console (the e-mail request path) or a failed client delete.
 // - The legacy Realtime Database queue `pendingExams/{uid}` (submissions made before the Firestore move; no longer
 //   written, but old entries may still hold this user's uploads' metadata). User decision 2026-10-30.
+// - The per-user notification statistics markers `notifications/{id}/events/{uid}_{event}` ("Bildirim
+//   istatistiklerindeki kişisel kayıtlar"); the anonymous `stats` counters stay. User decision 2026-10-31 (Android K3).
 //
 // Kept:
 // - Published archive content (exams, catalog nodes, their files): "Arşive eklenmiş sınavlar … arşivde kalır".
@@ -40,7 +42,8 @@ const FAILED_PRECONDITION = 9;
  * @param {{ db: import('firebase-admin/firestore').Firestore, rtdb: import('firebase-admin/database').Database,
  *   bucket: { deleteFiles: (query: { prefix: string }) => Promise<void> } }} deps
  * @param {string} uid The deleted account.
- * @returns {Promise<{ uid: string, pendingSubmissions: number, unlinkedPurchases: number } | { skipped: string }>}
+ * @returns {Promise<{ uid: string, pendingSubmissions: number, unlinkedPurchases: number, notificationEvents: number }
+ *   | { skipped: string }>}
  */
 export async function deleteAccountData(deps, uid) {
   if (typeof uid !== 'string' || !UID_PATTERN.test(uid)) {
@@ -60,12 +63,13 @@ export async function deleteAccountData(deps, uid) {
     profile: () => rtdb.ref('users').child(uid).remove(),
     legacyPendingExams: () => rtdb.ref('pendingExams').child(uid).remove(),
     unlinkedPurchases: () => unlinkPurchases(db, uid),
+    notificationEvents: () => deleteNotificationEvents(db, uid),
   };
 
   const names = Object.keys(steps);
   const results = await Promise.allSettled(names.map((name) => steps[name]()));
   const failures = [];
-  const summary = { uid, pendingSubmissions: 0, unlinkedPurchases: 0 };
+  const summary = { uid, pendingSubmissions: 0, unlinkedPurchases: 0, notificationEvents: 0 };
   results.forEach((result, index) => {
     const name = names[index];
     if (result.status === 'rejected') {
@@ -127,4 +131,23 @@ async function unlinkPurchases(db, uid) {
   const failure = (await Promise.all(updates)).find(Boolean);
   if (failure) throw failure;
   return snapshot.size;
+}
+
+/**
+ * Deletes the account's notification statistics markers (`notifications/{id}/events/{uid}_{event}`, written by
+ * `trackNotificationEvent`); the notification's `stats` counters are anonymous and stay. The collection-group
+ * equality query is served by the `events.uid` field override in `firestore.indexes.json`. Only `events` directly
+ * under a notification are touched, should another collection ever be named `events`.
+ */
+async function deleteNotificationEvents(db, uid) {
+  const snapshot = await db.collectionGroup('events').where('uid', '==', uid).get();
+  const markers = snapshot.docs.filter((doc) => doc.ref.parent.parent?.parent.id === 'notifications');
+  if (markers.length === 0) return 0;
+  const writer = db.bulkWriter();
+  // Each write's own promise carries its failure (`close` does not reject); handled right away, rethrown below.
+  const deletes = markers.map((doc) => writer.delete(doc.ref).then(() => null, (error) => error));
+  await writer.close();
+  const failure = (await Promise.all(deletes)).find(Boolean);
+  if (failure) throw failure;
+  return markers.length;
 }
