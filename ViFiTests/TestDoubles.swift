@@ -735,3 +735,22 @@ enum Fixture {
         )
     }
 }
+
+// MARK: - Capture shield remote switch
+
+/// Emits the scripted remote shield configuration reads, then finishes.
+final class StubCaptureShieldConfigReader: CaptureShieldConfigReading {
+    private let reads: [CaptureShieldConfig?]
+
+    init(reads: [CaptureShieldConfig?] = []) {
+        self.reads = reads
+    }
+
+    func configChanges() -> AsyncStream<CaptureShieldConfig?> {
+        let reads = reads
+        return AsyncStream { continuation in
+            for read in reads { continuation.yield(read) }
+            continuation.finish()
+        }
+    }
+}
