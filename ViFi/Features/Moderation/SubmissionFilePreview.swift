@@ -52,9 +52,9 @@ private struct RemoteFileImage: View {
     var body: some View {
         Group {
             if let image {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
+                // Moderation previews show exam pixels too, so they sit in the same capture-shielded container.
+                ProtectedImageView(image: image)
+                    .aspectRatio(image.size, contentMode: .fit)
                     .frame(maxWidth: .infinity)
                     .clipShape(.rect(cornerRadius: 12, style: .continuous))
             } else if didFail {
