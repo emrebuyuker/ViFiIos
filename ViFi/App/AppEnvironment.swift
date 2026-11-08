@@ -240,5 +240,9 @@ enum LaunchArgument {
     /// With `-ViFiMockData` and the notification id as the next argument: starts as if that push had been
     /// tapped, so the inbox opens on it once the app is past its gates.
     static let openNotification = "-ViFiOpenNotification"
+    /// Logs the capture state at launch and on every change (plus `didMoveToWindow`) to OSLog, for device debugging.
+    static let captureLog = "-ViFiCaptureLog"
+    /// Forces the captured state on, so the recording cover shows without a real recording (UI tests).
+    static let simulateCapture = "-ViFiSimulateCapture"
     #endif
 }
