@@ -137,6 +137,7 @@ final class AppEnvironment {
         self.loginDiagnostics = loginDiagnostics
         self.locationPicker = locationPicker
         self.captureShield = captureShield
+        CaptureShield.isSwitchedOn = captureShield.isEnabled
     }
 
     /// Production services backed by Firebase and the App Store.

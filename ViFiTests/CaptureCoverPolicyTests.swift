@@ -19,4 +19,9 @@ struct CaptureCoverPolicyTests {
         #expect(CaptureCoverPolicy.shouldCover(isCaptured: true, mode: .always, shieldIsActive: true))
         #expect(CaptureCoverPolicy.shouldCover(isCaptured: true, mode: .always, shieldIsActive: false))
     }
+
+    @Test func remoteCoverModeMapsOneToOne() {
+        #expect(CaptureCoverMode(.fallback) == .fallback)
+        #expect(CaptureCoverMode(.always) == .always)
+    }
 }

@@ -24,6 +24,14 @@ final class CaptureShield {
     /// `false` when protection cannot be applied on this OS build. Read it before trusting the shield.
     let isAvailable: Bool
 
+    /// This launch's switch (`CaptureShieldRemoteSwitch.isEnabled`: remote `config/captureProtection/ios.enabled`
+    /// and Debug `-ViFiCaptureShieldOff`). Set once by `AppEnvironment` before any exam page is shown; `false` shows
+    /// pages unprotected (fail open) and lets the recording cover take over.
+    static var isSwitchedOn = true
+
+    /// Whether exam pixels are protected this launch: the shield works on this OS build and is switched on.
+    var isActive: Bool { isAvailable && Self.isSwitchedOn }
+
     private let donorField = UITextField()
     private let donorCanvas: UIView?
     private let crashGuard: CaptureShieldCrashGuard

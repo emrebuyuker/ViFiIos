@@ -19,7 +19,7 @@ import UIKit
 /// - Gestures, layout and accessibility stay on `content`; the container adds no hit-test routing.
 /// - Never put the container under `.drawingGroup()`, `shouldRasterize`, `render(in:)`, snapshot transitions or
 ///   `ImageRenderer`: they bypass or flatten the flagged layer.
-/// - Fails open: when the shield is unavailable `isShielded` is `false`, the page is still shown (and a fault is
+/// - Fails open: when the shield is unavailable or switched off (`CaptureShield.isSwitchedOn`) `isShielded` is `false`, the page is still shown (and a fault is
 ///   logged by `CaptureShield`); the recording cover remains the fallback.
 final class CaptureShieldedView<Content: UIView>: UIView {
     /// The exam surface. Its own layer carries the capture exclusion.
@@ -36,7 +36,7 @@ final class CaptureShieldedView<Content: UIView>: UIView {
         accessibilityIdentifier = "exam.shield"
         pin(notice)
         pin(content)
-        isShielded = CaptureShield.shared.setProtected(true, on: content)
+        isShielded = CaptureShield.isSwitchedOn && CaptureShield.shared.setProtected(true, on: content)
     }
 
     @available(*, unavailable)

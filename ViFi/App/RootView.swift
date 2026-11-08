@@ -28,6 +28,10 @@ struct RootView: View {
         }
         // Privacy cover for the multitasking snapshot (see `appSwitcherCover()`).
         .appSwitcherCover()
+        // The recording cover's gate (`CaptureCoverPolicy`): whether the shield protects the pixels this launch and
+        // the remote cover mode. Environment values reach the sheets and the full-screen pager presented below.
+        .environment(\.captureShieldIsActive, CaptureShield.shared.isActive)
+        .environment(\.captureCoverMode, CaptureCoverMode(environment.captureShield.coverMode))
         .task { await environment.session.observeUserChanges() }
         // Follow the device's premium (subscription) state for the app's lifetime; it is tied to the Apple ID,
         // not the signed-in user, so it is never reset on sign-out.

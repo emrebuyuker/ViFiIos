@@ -4,7 +4,7 @@ import UIKit
 
 extension View {
     /// Covers the exam content while the screen is being recorded or mirrored, and flashes a brief notice when
-    /// a screenshot is taken. Pair it with the secure host, which keeps the pixels out of the capture itself;
+    /// a screenshot is taken. Pair it with `CaptureShieldedView`, which keeps the pixels out of the capture itself;
     /// this adds a visible signal and a reliable fallback.
     func screenCaptureProtection() -> some View {
         modifier(ScreenCaptureProtectionModifier())
@@ -13,10 +13,17 @@ extension View {
 
 /// How the capture cover decides to appear. `fallback`: only when the capture shield is not protecting the pixels
 /// (the page stays visible on the device while recording, owner decision K4). `always`: on every recording or
-/// mirroring. A remote switch (`coverMode`) will drive this later; until then the environment default applies.
+/// mirroring. Driven by the remote switch (`config/captureProtection/ios.coverMode`), set at the root.
 enum CaptureCoverMode: Sendable {
     case fallback
     case always
+
+    init(_ remote: CaptureShieldConfig.CoverMode) {
+        switch remote {
+        case .fallback: self = .fallback
+        case .always: self = .always
+        }
+    }
 }
 
 /// The single gate that decides whether the capture cover is shown. Pure, so it is tested without UIKit.
@@ -33,8 +40,8 @@ enum CaptureCoverPolicy {
 extension EnvironmentValues {
     /// Whether the cover appears on every capture or only when the shield is not active. Defaults to `fallback`.
     @Entry var captureCoverMode: CaptureCoverMode = .fallback
-    /// Whether the capture shield is currently protecting the exam pixels. Defaults to `false` (no shield wired
-    /// yet), so today every capture is covered; the shield integration sets this from `CaptureShield.isAvailable`.
+    /// Whether the capture shield is protecting the exam pixels this launch. Defaults to `false` (cover every capture,
+    /// the safe side); `RootView` sets it from `CaptureShield.shared.isActive`.
     @Entry var captureShieldIsActive = false
 }
 
