@@ -262,6 +262,9 @@ enum LaunchArgument {
     static let openNotification = "-ViFiOpenNotification"
     /// Switches the screen-capture shield off for this launch (live or mock), for App Store / README screenshots.
     static let captureShieldOff = "-ViFiCaptureShieldOff"
+    /// Measures each shielded exam surface once on screen and publishes verified / unverified (`exam.shield.selfTest`)
+    /// for UI tests and the device checklist (D1). A hierarchy check, not proof for device captures.
+    static let captureShieldSelfTest = "-ViFiCaptureShieldSelfTest"
     /// Logs the capture state at launch and on every change (plus `didMoveToWindow`) to OSLog, for device debugging.
     static let captureLog = "-ViFiCaptureLog"
     /// Forces the captured state on, so the recording cover shows without a real recording (UI tests).

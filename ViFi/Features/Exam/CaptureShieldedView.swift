@@ -30,6 +30,11 @@ final class CaptureShieldedView<Content: UIView>: UIView {
 
     private let notice = CaptureNoticeView()
 
+    #if DEBUG
+    /// `-ViFiCaptureShieldSelfTest` only: measures whether captures leave `content` out (`exam.shield.selfTest`).
+    private var selfTest: CaptureShieldSelfTestProbe?
+    #endif
+
     init(content: Content) {
         self.content = content
         super.init(frame: .zero)
@@ -37,7 +42,21 @@ final class CaptureShieldedView<Content: UIView>: UIView {
         pin(notice)
         pin(content)
         isShielded = CaptureShield.isSwitchedOn && CaptureShield.shared.setProtected(true, on: content)
+        #if DEBUG
+        if CaptureShieldSelfTest.isEnabled {
+            selfTest = CaptureShieldSelfTestProbe(container: self)
+        }
+        #endif
     }
+
+    #if DEBUG
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window != nil {
+            selfTest?.start(content: content, isShielded: isShielded)
+        }
+    }
+    #endif
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
