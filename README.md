@@ -712,7 +712,13 @@ Sınav pikseli gösteren her yüzey ekran koruma kabından geçer; ayrıntılı 
   Denetim Merkezi kaydı ve uygulama değiştirici denendi (`SCREEN-CAPTURE-RESEARCH-FABLE.md` Bölüm 9.3). Her iOS betasında ve
   Xcode/SDK değişiminde tekrarlanır. App Store ekran görüntüleri `-ViFiCaptureShieldOff` ile alındı.
 - [ ] App Review notunda konum izninin yalnızca admin harita seçicisinde istendiği ve konumun saklanmadığı yazıldı.
-- [ ] App Review notunda test numarası ve kodu verildi (numara depoya yazılmaz).
+- [ ] **App Review notu (her gönderimde, hesap kapatma riski — Guideline 2.3.1 / 2.1):** iki demo hesap verildi: normal kullanıcı
+  (Sign-In alanları) **ve** `admin: true` claim'li yönetici (notta), ikisi de Firebase Console test numarası + kod. Numaralar yalnızca App Store
+  Connect ve Console'da durur, depoya yazılmaz. Her gizli ya da rolle açılan özellik yoluyla anlatıldı (Hesap › Moderasyon, Hesap › Bildirim
+  Gönder ve sonradan eklenen her yeni özellik); "review hesabına görünmez" gibi bir ifade kullanılmaz. Uzaktan ayarlar (`config/appUpdate`,
+  `config/rewards`, `config/captureProtection`) ve hata gibi görünebilecek davranışlar (ekran koruması kartı, PDF seçim kilidi, bildirim izin
+  akışı) açıklandı. What's New bu derlemenin bütün görünür değişikliklerini kesin iddia kullanmadan içeriyor. Göndermeden önce admin
+  hesabıyla giriş yapılıp iki admin girişinin göründüğü doğrulandı.
 - [ ] [Sürüm Notları](#sürüm-notları) güncellendi.
 
 ### Commit kuralları
