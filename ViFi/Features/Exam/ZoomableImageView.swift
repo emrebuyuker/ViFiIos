@@ -13,20 +13,14 @@ struct ZoomableImageView: UIViewRepresentable {
     /// A single tap that is not part of a double tap, e.g. to toggle surrounding controls.
     var onSingleTap: (() -> Void)?
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
+    // The scroll view is the shielded content: captures drop its layer subtree (zoom transform included) and show
+    // the notice card behind it. Gestures and accessibility stay on the scroll view; it is updated in place.
+    func makeUIView(context: Context) -> CaptureShieldedView<ZoomableImageScrollView> {
+        CaptureShieldedView(content: ZoomableImageScrollView())
     }
 
-    // Wrapped in a secure host so the exam page is excluded from screenshots and screen recordings; the
-    // scroll view (and its zoom/tap gestures) keeps working inside it.
-    func makeUIView(context: Context) -> SecureHostingView {
-        let scrollView = ZoomableImageScrollView()
-        context.coordinator.scrollView = scrollView
-        return SecureHostingView(protecting: scrollView)
-    }
-
-    func updateUIView(_ uiView: SecureHostingView, context: Context) {
-        guard let scrollView = context.coordinator.scrollView else { return }
+    func updateUIView(_ uiView: CaptureShieldedView<ZoomableImageScrollView>, context: Context) {
+        let scrollView = uiView.content
         scrollView.maximumZoomScale = max(maximumZoomScale, scrollView.minimumZoomScale)
         scrollView.onSingleTap = onSingleTap
         scrollView.imageDescription = imageDescription
@@ -34,11 +28,6 @@ struct ZoomableImageView: UIViewRepresentable {
         if !isActive {
             scrollView.resetZoom(animated: false)
         }
-    }
-
-    @MainActor final class Coordinator {
-        /// The protected scroll view, reconfigured on every update.
-        var scrollView: ZoomableImageScrollView?
     }
 }
 
@@ -107,7 +96,9 @@ final class ZoomableImageScrollView: UIScrollView, UIScrollViewDelegate {
 
     private func configure() {
         delegate = self
-        backgroundColor = .clear
+        // Opaque: the capture notice sits behind this view and must not show through on screen.
+        backgroundColor = .black
+        isOpaque = true
         showsHorizontalScrollIndicator = false
         showsVerticalScrollIndicator = false
         contentInsetAdjustmentBehavior = .never
