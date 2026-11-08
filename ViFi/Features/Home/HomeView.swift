@@ -87,10 +87,12 @@ private struct HomeScreen: View {
         }
         .sheet(isPresented: $isShowingAccount, onDismiss: trackScreen) {
             AccountView()
+                .appSwitcherCover()
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $isShowingAddExam, onDismiss: trackScreen) {
             AddExamView()
+                .appSwitcherCover()
                 .presentationDragIndicator(.visible)
         }
         .task {
