@@ -62,6 +62,8 @@ final class AppEnvironment {
     let notificationPrompts: NotificationPromptCoordinator
     /// The admin's map screen for choosing a campaign's location (Google Maps; a stub in mock mode).
     @ObservationIgnored let locationPicker: any LocationPicking
+    /// The screen-capture shield's remote switch, applied for this launch (`isEnabled`, `coverMode`).
+    @ObservationIgnored let captureShield: CaptureShieldRemoteSwitch
 
     init(
         repository: any ArchiveRepository,
@@ -93,7 +95,8 @@ final class AppEnvironment {
         loginDiagnostics: any LoginDiagnosticsReporting = NoopLoginDiagnosticsReporter(),
         locationPicker: any LocationPicking = GoogleLocationPicker(),
         notificationEventReporter: any NotificationEventReporting = NoopNotificationEventReporter(),
-        notificationEventDefaults: UserDefaults = .standard
+        notificationEventDefaults: UserDefaults = .standard,
+        captureShield: CaptureShieldRemoteSwitch = CaptureShieldRemoteSwitch(reader: NoopCaptureShieldConfigReader())
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -133,13 +136,14 @@ final class AppEnvironment {
         )
         self.loginDiagnostics = loginDiagnostics
         self.locationPicker = locationPicker
+        self.captureShield = captureShield
     }
 
     /// Production services backed by Firebase and the App Store.
     ///
     /// Call only once `UIApplication` exists (see `AppDelegate.environment`): Firebase Auth, created by
     /// `FirebaseApp.configure()`, needs it to set up phone sign-in.
-    static func live() -> AppEnvironment {
+    static func live(arguments: [String] = ProcessInfo.processInfo.arguments) -> AppEnvironment {
         if FirebaseApp.app() == nil {
             // App Check must be set up before Firebase is configured.
             AppCheck.setAppCheckProviderFactory(ViFiAppCheckProviderFactory())
@@ -157,6 +161,11 @@ final class AppEnvironment {
         // `FirebaseArchiveRepository(auth:)` is kept available for rollback.
         let repository = FirestoreArchiveRepository(bucket: bucket ?? "")
         let rewardsConfig = FirebaseRewardsConfigReader()
+        let captureShield = CaptureShieldRemoteSwitch(
+            reader: FirebaseCaptureShieldConfigReader(),
+            forcedOff: isCaptureShieldForcedOff(arguments: arguments)
+        )
+        captureShield.start()
         return AppEnvironment(
             repository: repository,
             fileLoader: RemoteFileLoader(authorizer: authorizer),
@@ -181,7 +190,8 @@ final class AppEnvironment {
             deviceRegistrar: FirebaseDeviceRegistrar(),
             notificationSettingsService: FirebaseNotificationSettingsService(),
             loginDiagnostics: FirebaseLoginDiagnosticsService(),
-            notificationEventReporter: FirebaseNotificationEventReporter()
+            notificationEventReporter: FirebaseNotificationEventReporter(),
+            captureShield: captureShield
         )
     }
 
@@ -192,7 +202,16 @@ final class AppEnvironment {
             return mock(arguments: arguments)
         }
         #endif
-        return live()
+        return live(arguments: arguments)
+    }
+
+    /// Whether the screen-capture shield is switched off for this launch (`-ViFiCaptureShieldOff`, Debug builds only).
+    static func isCaptureShieldForcedOff(arguments: [String] = ProcessInfo.processInfo.arguments) -> Bool {
+        #if DEBUG
+        arguments.contains(LaunchArgument.captureShieldOff)
+        #else
+        false
+        #endif
     }
 
     /// Whether the app runs on bundled sample data, without Firebase (`-ViFiMockData`, Debug builds only).
@@ -240,5 +259,7 @@ enum LaunchArgument {
     /// With `-ViFiMockData` and the notification id as the next argument: starts as if that push had been
     /// tapped, so the inbox opens on it once the app is past its gates.
     static let openNotification = "-ViFiOpenNotification"
+    /// Switches the screen-capture shield off for this launch (live or mock), for App Store / README screenshots.
+    static let captureShieldOff = "-ViFiCaptureShieldOff"
     #endif
 }
