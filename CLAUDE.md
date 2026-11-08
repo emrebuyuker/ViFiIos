@@ -34,7 +34,7 @@
 | Konu | Değer |
 |---|---|
 | **Platform** | iOS / iPadOS 17+, Swift 6 (strict concurrency), Xcode 26 |
-| **UI** | SwiftUI. UIKit yalnızca `UIViewRepresentable` sarmalayıcılarında (`PDFKitView`, `ZoomableImageView`, `PhoneNumberTextField`) |
+| **UI** | SwiftUI. UIKit yalnızca `UIViewRepresentable` sarmalayıcılarında (`PDFKitView`, `ZoomableImageView`, `ProtectedImageView`, `PhoneNumberTextField`) |
 | **Mimari** | MVVM + Observation: `@Observable` view model, view tarafından `@State` ile sahiplenilir |
 | **İzolasyon** | `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`; ağır iş `@concurrent nonisolated static` fonksiyonlarda |
 | **DI** | `AppEnvironment` → `.environment(_:)`; `live()` (Firebase) / `mock()` (örnek veri, yalnızca Debug) |
@@ -44,6 +44,7 @@
 | **Dosyalar** | `RemoteFileLoader`: URLSession + URLCache + disk; ID token ve App Check başlıklarıyla indirir |
 | **Giriş** | Firebase Phone Auth, yalnızca +90 → `AuthServicing`, `SessionStore`. Telefon doğrulaması reCAPTCHA Enterprise belirteci taşır (SMS Defense; bkz. *Firebase › SMS Defense*) |
 | **Güvenlik** | App Check (Release'te App Attest, desteklemeyen cihazda DeviceCheck; Debug ve simülatörde debug provider), `firebase/` altındaki kurallar |
+| **Ekran koruması** | Sınav pikseli çizen her UIKit yüzeyi `CaptureShieldedView` içinde (`CaptureShield` katman takası: ekran görüntüsü/kayıtta sayfa yerine "Sınav içeriği korumalıdır" kartı). Yedekler: kayıt/yansıtma örtüsü (`screenCaptureProtection()`, `CaptureCoverPolicy`), app switcher örtüsü (`appSwitcherCover()`). Uzaktan anahtar RTDB `config/captureProtection/ios`. Fail-open. **Cihazda doğrulanmadan "korunuyor" denmez** (ayrıntı: *Temel Kurallar › Ekran koruması*) |
 | **Günlük** | OSLog: `Logger.archive`, `Logger.files`, `Logger.app` |
 | **Hedefler** | `ViFi` (uygulama), `ViFiNotificationService` (Notification Service Extension, uygulamaya gömülü; paylaşılan kod yalnızca `NotificationBadgeCounter.swift`), `ViFiTests`, `ViFiUITests` |
 | **Bağımlılık** | SwiftPM, Firebase 12 (`FirebaseFirestore`, `FirebaseDatabase`, `FirebaseAuth`, `FirebaseAppCheck`, `FirebaseAnalyticsCore`, `FirebaseStorage`, `FirebaseFunctions`, `FirebaseMessaging`) + **GoogleMaps / GooglePlaces 11.2.0** (yalnızca admin konum seçicisi) + **RecaptchaEnterprise 18.9.1** (telefon girişi SMS Defense; yalnızca `ViFi` hedefine bağlı, extension'a değil; `-ObjC` linker bayrağı şart). Cloud Functions: Node 22, `firebase-functions` v2 (+ bir adet v1 auth tetikleyicisi) |
@@ -87,7 +88,8 @@ ViFi-iOS/
 │   ├── Features/
 │   │   ├── Home/             # Ana sayfa, son görüntülenenler, Hakkında, "Sınav Ekle" kapısı
 │   │   ├── Browse/           # Fakülte → sınav listeleri, breadcrumb
-│   │   ├── Exam/             # Görsel (sayfalayıcı, yakınlaştırma) ve PDF görüntüleyiciler
+│   │   ├── Exam/             # Görsel (sayfalayıcı, yakınlaştırma) ve PDF görüntüleyiciler + ekran koruması
+│   │   │                     # (CaptureShield, CaptureShieldedView, CaptureShieldCrashGuard, ProtectedImageView, ScreenCaptureProtection)
 │   │   ├── AddExam/          # Kullanıcı sınav ekleme: üniv/fakülte/bölüm bundled listeden (profilden ön-dolu) + ders (arşiv dersleri/serbest, LessonPicker) + sabit sınav-adı listesi + görsel/PDF yükleme + kademe-bazlı coin tahmini
 │   │   ├── Moderation/       # Admin paneli: bekleyen gönderimleri incele (dosya önizleme) + Onayla/Reddet; onayda arşive yayınla + coin kredisi (serverless)
 │   │   ├── Notifications/    # Bildirim sayfası (InboxView: kartlar, vurgulama, aksiyon düğmeleri, InboxExamGate = kilit kuralı,
@@ -190,6 +192,33 @@ ViFi-iOS/
   admin geçmişindeki `opened` / `actionTapped` sayıları `NotificationEventTracker` → `trackNotificationEvent` ile
   (fire-and-forget, kullanıcı başı tek; yalnızca teslim kopyası olan alıcı sayılır).
 
+### Ekran koruması
+- **Sınav pikseli çizen her UIKit yüzeyi `CaptureShieldedView` içinde kurulur** (pager `CaptureShieldedView<ZoomableImageScrollView>`,
+  PDF `<ExamPDFView>`, liste ve moderasyon önizlemesi `ProtectedImageView` = `<UIImageView>`). Kap `makeUIView`'da bir kez
+  kurulur; `updateUIView` `content`'i **yerinde** günceller, asla yenisiyle değiştirmez (yeni görünüm bayraksız kalır).
+  `content` opaktır; onu soldurup gösteren kart `.compositingGroup()` ister. Yeni bir sınav yüzeyi eklersen aynı kaba al.
+- **Mekanizma:** `CaptureShield` pencereye girmeyen donör `UITextField`'ın canvas'ını **sınıf adıyla** (`TextLayoutCanvasView`)
+  bulur, KVC `layer` ile hedef katmana bağlayıp `isSecureTextEntry` false→true yapar. `UITextField` alt görünümleri **asla sıra
+  numarasıyla** seçilmez (eski `SecureHostingView` hatası: `subviews.first` iOS 17+'da bayraksız `_UITouchPassthroughView`).
+  Özel `disableUpdateMask` anahtarı ve özel selector'lar asla doğrudan kullanılmaz; `CaptureShield`'ın public API imzaları
+  (`shared`, `isAvailable`, `isActive`, `setProtected(_:on:)`) değiştirilmez.
+- **Fail-open (sahip kararı K7):** kalkan bulunamazsa, uzaktan kapatılırsa ya da `CaptureShieldCrashGuard` (aynı build + iOS'ta
+  takas sırasında üst üste iki ölüm) devre dışı bırakırsa sayfa gösterilir, `Logger.app.fault` yazılır, kayıt örtüsü devreye girer.
+- **Örtü kararı tek yerde:** `CaptureCoverPolicy.shouldCover` (saf). `fallback` (varsayılan, K4): kayıt sırasında cihazda sayfa
+  görünür, örtü yalnızca kalkan aktif değilse; `always`: her kayıt/yansıtmada. `RootView`, `captureShieldIsActive` ve
+  `captureCoverMode` ortam değerlerini verir. Uzaktan değer (`CaptureShieldRemoteSwitch`) `UserDefaults`'a yansır, **sonraki açılışta** uygulanır.
+- **Sınav ekranlarında yasak:** `render(in:)`, `ImageRenderer`, snapshot tabanlı geçiş, `.drawingGroup()`, `shouldRasterize`,
+  `contextMenu(preview:)`, `draggable`, paylaş/yazdır. Bunlar bayraklı katmanı atlar ya da düzleştirir. Generic `UIView`
+  alt sınıflarında **açık `deinit {}`** (Swift 6.3.3 `-O` + iOS < 18.4'te örtük deinit çöküyor); her adımda Release derlemesi.
+- **PDF metin kilidi (K9):** `ExamPDFView` seçim, kopyala, paylaş, sözlükte ara, Bul ve sürüklemeyi kapatır. `document` özelliğini
+  override etme: PDFKit onu arka plan iş parçacığında okur, MainActor izolasyon denetimi uygulamayı çökertir.
+- **Doğrulama:** simülatörde yakalama kâhini yalnızca `XCUIScreen.main.screenshot()` / `drawHierarchy`'dir; `simctl io screenshot`
+  ve `CALayer.render(in:)` bayrağı uygulamaz, kanıt sayılmaz. Debug öz-denetim `-ViFiCaptureShieldSelfTest` → `exam.shield.selfTest`
+  (`verified`/`unverified`/`off`; `CaptureShieldUITests`). Bu bir hiyerarşi denetimidir, cihaz kanıtı değildir: **her iOS betasında
+  ve her Xcode/SDK değişiminde** cihaz çekirdek seti (`SCREEN-CAPTURE-RESEARCH-FABLE.md` Bölüm 9.3, D1–D4, D10, D12) geçmeden sürüm çıkmaz.
+- **Ekran görüntüleri** (App Store, README) `-ViFiCaptureShieldOff` ile alınır; yoksa sayfalar boş çıkar. Sürüm notu ve
+  arayüz metni iddiasızdır: "yakalanamaz" denmez; iPhone Yansıtma (Mirroring) bilinen bir sızıntıdır.
+
 ### Arayüz
 - **Metinler:** Kullanıcıya görünen metinler Türkçe literal (`Text("…")`, `String(localized: "…")`). String Catalog
   (`Localizable.xcstrings`) derlemede güncellenir. Kod yorumları ve dokümantasyon yorumları İngilizce.
@@ -267,6 +296,10 @@ cd firebase && firebase deploy --only firestore,storage,functions --project vifi
 | `-ViFiNotificationsReask` | `-ViFiMockData` ile birlikte (yalnızca Debug): izin adımı 31 gün önce reddedilmiş, izin "provisional" → sonraki başarılı sınav gönderiminden sonra tek seferlik tekrar sorulur |
 | `-ViFiConsentReask` | `-ViFiMockData` ile birlikte (yalnızca Debug): kampanya onayı 31 gün önce reddedilmiş, kampanyalar kapalı → bildirim sayfası açılınca onay bir kez daha sorulur |
 | `-ViFiOpenNotification <id>` | `-ViFiMockData` ile birlikte (yalnızca Debug): `<id>` bir sonraki argümandır; o push'a dokunulmuş gibi başlar, kapılardan sonra bildirim sayfası açılır ve `<id>` vurgulanır (UI testlerinde `p-paywall`, `a1` gibi örnek id'ler) |
+| `-ViFiCaptureShieldOff` | Yalnızca Debug (canlı ya da örnek veri): ekran koruma kalkanı bu açılışta kapalı. App Store/README ekran görüntüleri için; kayıt örtüsü `fallback` modunda devreye girer |
+| `-ViFiCaptureShieldSelfTest` | Yalnızca Debug: her korumalı yüzey ekrana gelince ölçülür, sonuç `exam.shield.selfTest` öğesinde (`verified`/`unverified`/`off`). Cihaz listesinde D1 |
+| `-ViFiCaptureLog` | Yalnızca Debug: yakalama sinyallerini (açılıştaki değer, her değişim, `didMoveToWindow`) zaman damgalı OSLog'a (`Logger.app`) yazar; cihazda kayıt/örtü sorunu ayıklamak için |
+| `-ViFiSimulateCapture` | Yalnızca Debug: kayıt/yansıtma varmış gibi davranır (UI testleri). Kalkan aktifken `fallback` modda örtü çıkmaz; örtüyü görmek için `-ViFiCaptureShieldOff` ile birlikte |
 
 ---
 
@@ -279,6 +312,7 @@ cd firebase && firebase deploy --only firestore,storage,functions --project vifi
 | **Diğer kayıtlar** | *"ViFiIOS"* → `com.BuyukerYazilim.ViFi` (eski kayıt, dokunma); Android `com.salticusteam.vifi` (henüz giriş/App Check yok, şu an kullanılmıyor) |
 | **Arşiv (Firestore)** | isimli `vifi` DB: `catalogNodes/<id>` (university\|faculty\|department\|course, `parentId` zinciri, `status:published`) + `exams/<id>` (`courseId`, `kind`, `files:[{storagePath,order}]`). Şema+kurallar: `FIRESTORE-MIGRATION.md`, `firebase/firestore.rules`. **Rollback (RTDB, duruyor):** `Universitiess/<üniv>/<fak>/<böl>/<ders>/<sınav>/<JPG\|PDF>/<pushId>/downloadURL` |
 | **Kullanıcı profili** | `users/<uid>/profile/{name, surname, university, universityId, universityIsCustom, faculty, facultyId, facultyIsCustom, department, departmentId, departmentIsCustom, gender(`female`\|`male`), phoneNumber, updatedAt}`. Sahibi (+90) okur/yazar, admin tüm profilleri okur. Giriş sonrası `ProfileStore` + `RootView` kapısı zorunlu kılar; `FirebaseProfileService` yazar. `updatedAt` sunucu zaman damgası. **Kanonik id'ler** (`*Id`, slug) bildirim segmentleri içindir (sunucu `users`'ı `profile/universityId` ile sorgular, fakülte/bölüm/cinsiyeti bellekte süzer); listeden seçilince id kanonik, serbest yazılınca `*IsCustom=true` + best-effort slug (`Slug`). `users` düğümü `profile/universityId\|facultyId\|departmentId\|gender` üzerinde `.indexOn`'lu |
+| **Ekran koruması** | `config/captureProtection/ios = {enabled: Bool, coverMode: "fallback"\|"always"}` — `CaptureShieldRemoteSwitch` + `FirebaseCaptureShieldConfigReader` okur; eksik/bozuk değer = `{true, fallback}`. Değer `UserDefaults`'a yansır, **sonraki açılışta** uygulanır. `config` altında olduğu için kural değişikliği gerekmez; Console'a yazım yalnızca sahibin onayıyla |
 | **Güncelleme politikası** | `config/appUpdate/ios/{minimumVersion, latestVersion, storeURL, message}` — `RemoteAppUpdateChecker` okur. `minimumVersion`'ın altı kapatılamaz zorunlu ekran, `latestVersion`'dan eski kapatılabilir öneri. Herkese okunur (App Check korumalı), yazma yalnızca `admin`. `storeURL` App Store adresidir; `AppStoreLink.productURL` yedeğidir |
 | **Storage** | `imagess/<uuid>.jpg`, `pdfs/<uuid>.pdf`; gönderim dosyaları `pending/<uid>/<submissionId>/<dosya>` (yalnız `image/jpeg`\|`application/pdf`, ≤15 MiB, üzerine yazma yok, sahip-kapsamlı yol). **NOT:** client metadata/contentDisposition/contentEncoding kuralda **kısıtlanmaz** — gerçek Apple/Android Storage SDK yüklemede kendi metadata'sını ekler (örn. `firebaseStorageDownloadTokens`; JS/Admin SDK ve emulator eklemez), bu alanları zorlamak her mobil yüklemeyi 403 yapıyordu; güvenli çünkü onay Function'ı baytları taze server-metadata ile yeniden yükler. (Canlıda uçtan uca doğrulandı 2026-10-12.) Bildirim görselleri `notificationImages/<bildirimId>.jpg`: yalnız admin **create** (update/delete yok, admin dahil), `image/jpeg`, 0 < boyut ≤ 1 MiB, ad `^[A-Za-z0-9_-]{1,128}\.jpg$`, okuma +90/admin — yayınlandı 30 Ekim 2026 |
 | **Erişim** | Arşivi (Firestore `catalogNodes`/`exams` + Storage `imagess/`, `pdfs/`) ve genel duyuruları (`announcements`) yalnızca +90 numarayla giriş yapanlar ve admin okur; Storage'da yalnızca tek dosya okunur, listeleme yok. Arşive yazma yalnızca `admin: true` custom claim'i olanlarda (RTDB `Universitiess` rollback'te kalan eski kopyadır) |
@@ -388,5 +422,5 @@ yayın için ayrıca onay ver.)*
 
 ---
 
-**Son güncelleme:** 31 Ekim 2026 (reCAPTCHA SMS Defense)
+**Son güncelleme:** 8 Kasım 2026 (ekran koruması: CaptureShield)
 **Proje:** ViFi iOS (`com.BuyukerYazilim.ViFi2`)

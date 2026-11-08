@@ -64,6 +64,7 @@ sınav dosyaları ise Firebase Storage'da tutulur. (Kullanıcı profili ve günc
 | **Bildirimler** | Zil simgesindeki tek bildirim sayfası: genel duyurular, sana özel bildirimler (sınavın onaylandı / reddedildi, bölümüne yeni sınav eklendi) ve kampanyalar. Okunmamışlar cihazlar arasında senkron; push'a dokunmak (uygulama açık, arka planda ya da kapalıyken) sayfayı açar ve o bildirimi vurgular. Kartlarda tek aksiyon: Sınava Git (arşivin kilit kuralıyla), Premium'a Göz At, Sınav Ekle, Bağlantıyı Aç, Konuma Git (Google / Apple Haritalar). Görselli push ve ikon rozeti. Ayrıntı: [Bildirimler](#bildirimler). |
 | **Bildirim ayarları** | Hesap › Bildirim Ayarları: sistem izni durumu ve ayrı **Kampanya ve fırsat bildirimleri** anahtarı. Varsayılan kapalıdır; kapalıyken kampanya ne push ne sayfa olarak gelir. Gece 22:00–09:00 arası kampanya gönderilmez. |
 | **Bildirim yönetimi (admin)** | Yönetici hesaplar Hesap › Bildirim Gönder ile duyuru ya da kampanya yollar: kitle (herkes ya da üniversite › fakülte › bölüm + cinsiyet), görsel, aksiyon (sınav / konum / Premium / Sınav Ekle / bağlantı), ileri tarih + geçerlilik süresi, kesin kitle sayısıyla onay, "bana test gönder"; geçmişte durum, sayılar (gönderilen / açılan / dokunulan) ve zamanlanmışı iptal. |
+| **Sınav içeriği koruması** | Sınav sayfaları (liste, tam ekran sayfalayıcı, PDF, moderasyon önizlemesi) ekran görüntüsü ve ekran kaydında sayfa yerine "Sınav içeriği korumalıdır" kartı olarak çıkacak şekilde işaretlenir; kayıt ya da yansıtma algılanınca gerekirse içerik örtülür, uygulama değiştiricide uygulama logosu görünür, PDF'te metin seçimi ve kopyalama kapalıdır. En iyi çaba (best-effort) korumadır: iPhone Yansıtma ve başka bir cihazla fotoğraf çekmek engellenemez. |
 | **Gizlilik** | Reklam yok, reklam kimliği (IDFA) yok, takip izni istenmez. Kampanya bildirimleri yalnızca açık onayınla gönderilir. |
 
 ## Ekran Görüntüleri
@@ -347,7 +348,7 @@ ViFi-iOS/
 │   │   ├── NotificationComposer/ # Admin "Bildirim Gönder", geçmiş ve istatistik; LocationPicker/ (Google Maps + Places)
 │   │   ├── Home/            # Ana sayfa, son görüntülenenler, Hakkında
 │   │   ├── Browse/          # Fakülte → sınav listeleri, breadcrumb
-│   │   └── Exam/            # Görsel ve PDF sınav görüntüleyicileri
+│   │   └── Exam/            # Görsel ve PDF sınav görüntüleyicileri + ekran koruması (CaptureShield, CaptureShieldedView, kayıt / app switcher örtüleri)
 │   ├── Resources/           # Assets, Info.plist, GoogleService-Info.plist, turkish-universities/-faculties/-departments.json
 │   └── Preview Content/     # Önizleme ve örnek veri dosyaları (yalnızca geliştirme)
 ├── ViFiTests/               # Birim testleri
@@ -475,6 +476,10 @@ sınav gibi uç durumları içerir. SwiftUI önizlemeleri de aynı veriyi `AppEn
 | `-ViFiNotificationsReask` | `-ViFiMockData` ile birlikte: izin adımı 31 gün önce reddedilmiş, izin "provisional"; sonraki sınav gönderiminden sonra tek seferlik tekrar sorulur. |
 | `-ViFiConsentReask` | `-ViFiMockData` ile birlikte: kampanya onayı 31 gün önce reddedilmiş, kampanyalar kapalı; bildirim sayfası açılınca onay bir kez daha sorulur. |
 | `-ViFiOpenNotification <id>` | `-ViFiMockData` ile birlikte: `<id>` bir sonraki argümandır; o push'a dokunulmuş gibi başlar, kapılardan sonra bildirim sayfası açılır ve `<id>` vurgulanır. |
+| `-ViFiCaptureShieldOff` | Canlı ya da örnek veriyle: ekran koruma kalkanı bu açılışta kapalı. App Store ve README ekran görüntüleri bununla alınır (aksi hâlde sayfalar boş çıkar). |
+| `-ViFiCaptureShieldSelfTest` | Her korumalı sayfa ekrana gelince ölçülür; sonuç `exam.shield.selfTest` öğesinde `verified` / `unverified` / `off`. Cihaz denemesinden önce ilk adım. |
+| `-ViFiCaptureLog` | Ekran kaydı / yansıtma sinyallerini zaman damgasıyla OSLog'a yazar (Console.app'te `[CaptureLog` ile süzün). |
+| `-ViFiSimulateCapture` | Ekran kaydı varmış gibi davranır (UI testleri). Kalkan çalışırken örtü çıkmaz; örtüyü görmek için `-ViFiCaptureShieldOff` ile birlikte kullanın. |
 
 ## Testler ve Kod Kalitesi
 
@@ -665,6 +670,24 @@ Sözleşme üç yerde aynı olmalıdır: `firebase/functions/notifications/schem
 5. **Yayın:** kural ve Function değişiklikleri canlıya yalnızca proje sahibinin onayıyla çıkar
    ([Yayın önkoşulları](#yayın-önkoşulları)).
 
+### Sınav ekranında içerik göstermek (ekran koruması)
+
+Sınav pikseli gösteren her yüzey ekran koruma kabından geçer; ayrıntılı kurallar `CLAUDE.md` › *Ekran koruması*.
+
+1. **UIKit yüzeyini `CaptureShieldedView` içine alın:** `makeUIView`'da `CaptureShieldedView(content: …)` kurun, `updateUIView`'da
+   `uiView.content`'i yerinde güncelleyin (asla yeni bir `content` vermeyin). Görsel için hazır sarmalayıcı `ProtectedImageView`'dır.
+   `content` opak olmalı; onu soldurup gösteren karta `.compositingGroup()` ekleyin.
+2. **Ekranı `.screenCaptureProtection()` ile sarın** (kayıt / yansıtma örtüsü ve ekran görüntüsü bildirimi). Yeni bir sheet ya da
+   tam ekran sunum kökü varsa ona `.appSwitcherCover()` ekleyin; kökteki örtü sunulan ekranlara ulaşmaz.
+3. **Yasaklara uyun:** sınav ekranlarında `render(in:)`, `ImageRenderer`, snapshot geçişi, `.drawingGroup()`, `shouldRasterize`,
+   `contextMenu(preview:)`, `draggable`, paylaş/yazdır kullanılmaz. Generic `UIView` alt sınıfına açık `deinit {}` yazın ve
+   Release'te (`-O`) de derleyin.
+4. **Doğrulayın:** `CaptureShieldUITests`'e yüzeyi ekleyin (`-ViFiCaptureShieldSelfTest` ile `verified` beklenir) ve gerekiyorsa
+   `XCUIScreen.main.screenshot()` ile sayfanın kart olarak çıktığını örnekleyin. `simctl io screenshot` bayrağı uygulamaz, kanıt
+   değildir. Simülatör yalnızca hiyerarşiyi doğrular; gerçek cihazda ekran görüntüsü ve kayıt denemesi şarttır.
+5. **Acil durumda kapatmak:** Realtime Database `config/captureProtection/ios = {enabled: false}` kalkanı kapatır,
+   `{coverMode: "always"}` her kayıtta örtü gösterir. Değer bir sonraki açılışta uygulanır; Console'a yazım proje sahibinin onayıyla.
+
 ### Sürüm öncesi kontrol listesi
 
 - [ ] `project.yml` içinde `MARKETING_VERSION` ve `CURRENT_PROJECT_VERSION` güncellendi.
@@ -684,6 +707,10 @@ Sözleşme üç yerde aynı olmalıdır: `firebase/functions/notifications/schem
 - [ ] SMS Defense (giriş SMS'i "Error code: 39" çözümü): SDK'lı sürümü yayınla → `minimumVersion` yükselt (Android dahil) →
   Console'da AUDIT (eşik 0,8) → metrik izle → ENFORCE. SDK'sız sürümler kalırken AUDIT bile açılmaz (Firebase iOS ≥ 11.6 SDK'sız istemciyi kilitler). Android ayrı repoda: Auth ≥ 23.1.0 + `com.google.android.recaptcha:recaptcha`
   ≥ 18.5.1. Console test numaraları ve `-ViFiPhoneAuthTesting` reCAPTCHA'yı atlar; gerçek doğrulama gerçek cihazda.
+- [ ] Ekran koruması: Debug build'de `-ViFiCaptureShieldSelfTest` liste, sayfalayıcı ve PDF için `verified`; gerçek cihazda
+  (en az bir güncel iOS ve bir önceki ana sürüm) donanım ekran görüntüsü (liste, sayfalayıcı yakınlaştırmalı/yakınlaştırmasız, PDF),
+  Denetim Merkezi kaydı ve uygulama değiştirici denendi (`SCREEN-CAPTURE-RESEARCH-FABLE.md` Bölüm 9.3). Her iOS betasında ve
+  Xcode/SDK değişiminde tekrarlanır. App Store ekran görüntüleri `-ViFiCaptureShieldOff` ile alındı.
 - [ ] App Review notunda konum izninin yalnızca admin harita seçicisinde istendiği ve konumun saklanmadığı yazıldı.
 - [ ] App Review notunda test numarası ve kodu verildi (numara depoya yazılmaz).
 - [ ] [Sürüm Notları](#sürüm-notları) güncellendi.
@@ -695,6 +722,28 @@ Test numaraları, debug token'ları, kişisel e-postalar, servis hesabı anahtar
 commit'lenmez; depo herkese açıktır.
 
 ## Sürüm Notları
+
+### 4.3.0 (hazırlanıyor)
+
+Sınav içeriği koruması yeniden yazıldı. Eski katman (3.0.0–4.2.0) iOS 17 ve sonrasında sınav sayfalarını ekran
+görüntüsünden fiilen gizlemiyordu: güvenli alanın yanlış alt görünümüne gömülüydü.
+
+**Yeni**
+
+- `CaptureShield` + `CaptureShieldedView`: liste kartları, tam ekran sayfalayıcı (yakınlaştırma dahil), PDF ve moderasyon
+  önizlemesi ekran görüntüsünde sayfa yerine "Sınav içeriği korumalıdır" kartı olarak çıkacak şekilde işaretlenir.
+- PDF'te metin seçimi, kopyalama, paylaşma, sözlükte arama, Bul ve sürükleme kapalı; kaydırma ve yakınlaştırma çalışır.
+- Uzaktan anahtar (`config/captureProtection/ios`) ve aynı sürüm + iOS'ta üst üste iki çökmede kalkanı kapatan koruma.
+
+**Değişen**
+
+- Kayıt / yansıtma örtüsü iki sinyalle (sahne yakalama durumu + ekran bildirimi) ve animasyonsuz çalışır; kalkan çalışırken
+  cihazda sayfa görünür kalır, örtü yalnızca kalkan devre dışıyken çıkar. Uygulama değiştirici örtüsü Hesap ve Sınav Ekle
+  sayfalarına ve tam ekran sayfalayıcıya da eklendi. `SecureHostingView` kaldırıldı.
+- Gizlilik: yeni veri toplanmaz; gizlilik manifesti ve App Store etiketi değişmez.
+
+**Yayın öncesi:** gerçek cihaz kabulü (D1–D14) geçmeden sürüm çıkmaz. Sürüm notunda "ekran görüntüsü alınamaz" gibi kesin
+bir iddia kullanılmaz.
 
 ### 4.2.0
 
@@ -792,6 +841,12 @@ uyumludur.
 - Görsel sınava geri dönüldüğünde sayfaların çoğalması.
 
 ## Bilinen Durumlar
+
+> [!NOTE]
+> **Ekran koruması en iyi çaba korumasıdır.** Koruma iOS'un belgelenmemiş bir iç yapısına dayanır; yeni bir iOS sürümünde
+> çalışmazsa sayfa yine gösterilir (fail-open), olay günlüğe yazılır ve kayıt örtüsü devreye girer. iPhone Yansıtma (Mac'ten
+> iPhone'u görüntüleme) ve ekranın başka bir cihazla fotoğraflanması engellenemez. Simülatör bayrağı yalnızca
+> `XCUIScreen` / `drawHierarchy` yolunda uygular; donanım ekran görüntüsü ve kayıt yalnızca gerçek cihazda doğrulanır.
 
 > [!WARNING]
 > **Eski sürümler çalışmaz.** Sıkı güvenlik kuralları yayınlandığında giriş ve App Check içermeyen eski uygulama
