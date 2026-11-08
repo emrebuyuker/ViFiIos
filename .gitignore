@@ -44,3 +44,6 @@ NOTIFICATIONS.md
 
 # Local secrets (API keys). The committed template is Config/Secrets.example.xcconfig.
 Config/Secrets.xcconfig
+SCREEN-CAPTURE-RESEARCH-FABLE.md
+SCREEN-CAPTURE-TODO.md
+SCREEN-PROTECTION-OPUS.md
