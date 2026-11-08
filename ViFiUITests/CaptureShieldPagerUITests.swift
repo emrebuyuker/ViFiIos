@@ -42,6 +42,7 @@ nonisolated final class CaptureShieldPagerUITests: XCTestCase {
 
     // MARK: - Helpers
 
+    @MainActor
     private func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
         app.descendants(matching: .any).matching(identifier: identifier).firstMatch
     }
