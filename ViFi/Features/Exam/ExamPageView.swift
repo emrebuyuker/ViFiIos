@@ -46,9 +46,9 @@ struct ExamPageView: View {
         ZStack {
             switch phase {
             case let .loaded(image, _):
-                // A secure host keeps the page out of screenshots and recordings; aspect-ratio drives its
+                // A shielded container keeps the page out of screenshots and recordings; aspect-ratio drives its
                 // height exactly like `Image(uiImage:).scaledToFit()` would.
-                SecureImageView(image: image)
+                ProtectedImageView(image: image)
                     .aspectRatio(image.size, contentMode: .fit)
                     .frame(maxWidth: .infinity)
                     .transition(.opacity)
@@ -64,6 +64,8 @@ struct ExamPageView: View {
             }
         }
         .frame(maxWidth: .infinity)
+        // The page fades in; flattening the group keeps the notice behind it from showing through mid-fade.
+        .compositingGroup()
         .clipShape(cardShape)
         .background {
             // The shadow is cast by a plain shape, which is cheaper to render than the image.
