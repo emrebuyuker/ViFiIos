@@ -702,7 +702,7 @@ Sınav pikseli gösteren her yüzey ekran koruma kabından geçer; ayrıntılı 
 - [ ] App Store Connect gizlilik etiketi `PrivacyInfo.xcprivacy` ile birebir (Telefon Numarası, Kullanıcı Kimliği vb.); bildirim
   epiği için Google Maps SDK (Crash Data + Performance Data) ve kampanya hedeflemesi ("Developer's Advertising or Marketing"
   amacı) eklendi. Uygulamanın ve bildirim eklentisinin gizlilik manifesti pakette (eklentide App Group `UserDefaults`).
-- [ ] 4.2.0 öncesi: App Store gizlilik etiketine reCAPTCHA Enterprise SDK'sının 4 veri türü (Crash Data, Device ID, Performance Data,
+- [ ] 4.1.0 (11) öncesi: App Store gizlilik etiketine reCAPTCHA Enterprise SDK'sının 4 veri türü (Crash Data, Device ID, Performance Data,
   Product Interaction) *App Functionality* amacıyla, kullanıcıya bağlı, takipsiz eklenir (SDK'nın kendi manifesti var).
 - [ ] SMS Defense (giriş SMS'i "Error code: 39" çözümü): SDK'lı sürümü yayınla → `minimumVersion` yükselt (Android dahil) →
   Console'da AUDIT (eşik 0,8) → metrik izle → ENFORCE. SDK'sız sürümler kalırken AUDIT bile açılmaz (Firebase iOS ≥ 11.6 SDK'sız istemciyi kilitler). Android ayrı repoda: Auth ≥ 23.1.0 + `com.google.android.recaptcha:recaptcha`
@@ -723,50 +723,39 @@ commit'lenmez; depo herkese açıktır.
 
 ## Sürüm Notları
 
-### 4.3.0 (hazırlanıyor)
+### 4.1.0
 
-Sınav içeriği koruması yeniden yazıldı. Eski katman (3.0.0–4.2.0) iOS 17 ve sonrasında sınav sayfalarını ekran
-görüntüsünden fiilen gizlemiyordu: güvenli alanın yanlış alt görünümüne gömülüydü.
+Hedefli bildirim sistemi, sınav içeriği korumasının yeniden yazılması ve giriş SMS'i için reCAPTCHA SMS Defense hazırlığı.
+Backend (kurallar + 13 Cloud Function) bu sürümden önce yayınlandı ve 4.0.0 ile geriye uyumludur.
 
-**Yeni**
+> 4.1.0 (10) 30 Ekim 2026'da incelemeye gönderildi; 8 Kasım 2026'da geri çekilip ekran koruması ve reCAPTCHA SDK'sı eklenerek
+> **4.1.0 (11)** olarak yeniden gönderildi. 4.1.0 (10) hiç yayınlanmadı.
+
+**Sınav içeriği koruması**
+
+Eski katman (3.0.0–4.0.0) iOS 17 ve sonrasında sınav sayfalarını ekran görüntüsünden fiilen gizlemiyordu: güvenli alanın
+yanlış alt görünümüne gömülüydü. Yeni yapı gerçek cihazda doğrulandı (iPhone 14 / iOS 27: ekran görüntüsü ve ekran kaydı).
 
 - `CaptureShield` + `CaptureShieldedView`: liste kartları, tam ekran sayfalayıcı (yakınlaştırma dahil), PDF ve moderasyon
-  önizlemesi ekran görüntüsünde sayfa yerine "Sınav içeriği korumalıdır" kartı olarak çıkacak şekilde işaretlenir.
+  önizlemesi ekran görüntüsünde ve ekran kaydında sayfa yerine "Sınav içeriği korumalıdır" kartı olarak çıkar.
 - PDF'te metin seçimi, kopyalama, paylaşma, sözlükte arama, Bul ve sürükleme kapalı; kaydırma ve yakınlaştırma çalışır.
 - Uzaktan anahtar (`config/captureProtection/ios`) ve aynı sürüm + iOS'ta üst üste iki çökmede kalkanı kapatan koruma.
-
-**Değişen**
-
 - Kayıt / yansıtma örtüsü iki sinyalle (sahne yakalama durumu + ekran bildirimi) ve animasyonsuz çalışır; kalkan çalışırken
   cihazda sayfa görünür kalır, örtü yalnızca kalkan devre dışıyken çıkar. Uygulama değiştirici örtüsü Hesap ve Sınav Ekle
   sayfalarına ve tam ekran sayfalayıcıya da eklendi. `SecureHostingView` kaldırıldı.
-- Gizlilik: yeni veri toplanmaz; gizlilik manifesti ve App Store etiketi değişmez.
+- Sürüm notunda "ekran görüntüsü alınamaz" gibi kesin bir iddia kullanılmaz (iPhone Yansıtma engellenemez).
 
-**Yayın öncesi:** gerçek cihaz kabulü (D1–D14) geçmeden sürüm çıkmaz. Sürüm notunda "ekran görüntüsü alınamaz" gibi kesin
-bir iddia kullanılmaz.
+**reCAPTCHA SMS Defense**
 
-### 4.2.0
+- reCAPTCHA Enterprise iOS SDK 18.9.1 (`RecaptchaEnterprise`, `-ObjC`): Firebase Auth telefonla girişte reCAPTCHA belirteci
+  gönderir ("Error code: 39": Google'ın dolandırıcılık süzgeci bazı Türk operatör hatlarına doğrulama SMS'ini engelliyordu).
+  Uygulama kodu değişmedi; SDK çalışma zamanında bulunur.
+- Gizlilik: SDK'nın kendi manifesti var (Crash Data, Device ID, Performance Data, Product Interaction; App Functionality,
+  kullanıcıya bağlı, takipsiz); App Store etiketine eklenir.
+- **Yayın sonrası:** `config/appUpdate/ios.minimumVersion` → 4.1.0 (Android'in SDK'lı sürümüyle birlikte), ardından Console'da
+  SMS Defense AUDIT → ENFORCE. SDK'sız sürümler kalırken AUDIT açılmaz (Firebase iOS ≥ 11.6 onları kilitler).
 
-Giriş SMS'i için reCAPTCHA SMS Defense hazırlığı ("Error code: 39": Google'ın dolandırıcılık süzgeci bazı Türk operatör
-hatlarına doğrulama SMS'ini engelliyordu). Ekranlarda değişiklik yok.
-
-**Yeni**
-
-- reCAPTCHA Enterprise iOS SDK 18.9.1 (`RecaptchaEnterprise`, `-ObjC`): Firebase Auth telefonla girişte reCAPTCHA
-  belirteci gönderir. Uygulama kodu değişmedi; SDK çalışma zamanında bulunur.
-
-**Değişen**
-
-- Gizlilik: reCAPTCHA SDK'sının kendi manifesti var (Crash Data, Device ID, Performance Data, Product Interaction;
-  App Functionality, kullanıcıya bağlı, takipsiz); App Store etiketine eklenir.
-
-**Yayın sonrası:** `config/appUpdate/ios.minimumVersion` → 4.2.0 (Android'in SDK'lı sürümüyle birlikte), ardından
-Console'da SMS Defense AUDIT → ENFORCE. SDK'sız sürümler kalırken AUDIT açılmaz (Firebase iOS ≥ 11.6 onları kilitler).
-
-### 4.1.0
-
-Hedefli bildirim sistemi. Backend (kurallar + 13 Cloud Function) bu sürümden önce yayınlandı ve 4.0.0 ile geriye
-uyumludur.
+**Bildirim sistemi**
 
 **Yeni**
 

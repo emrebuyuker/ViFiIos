@@ -587,7 +587,10 @@
     "Eklemek istediğin dersin adını yaz." : {
 
     },
-    "Ekran kaydı sırasında sınav içeriği gizlenir" : {
+    "Ekran görüntüsünde sınav içeriği görünmeyebilir" : {
+
+    },
+    "Ekran kaydı ya da yansıtma sırasında sınav içeriği gizlenir" : {
 
     },
     "En avantajlı" : {
@@ -866,7 +869,7 @@
     "Kaydet" : {
 
     },
-    "Kaydı durdurduğunda içerik yeniden görünür." : {
+    "Kaydı ya da yansıtmayı durdurduğunda içerik yeniden görünür." : {
 
     },
     "Kilitli sınav kalmaz, coin gerekmez" : {
