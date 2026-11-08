@@ -13,28 +13,46 @@ import UIKit
 /// (which reaches UIView's `_layer` ivar). No private selector is called and no private CALayer key
 /// is named. When the canvas cannot be found or the KVC preconditions fail, `isAvailable` is `false`
 /// and the caller decides (ViFi fails open: show the page, log a fault, show the recording cover on capture).
+/// `isAvailable` is also `false` once `CaptureShieldCrashGuard` has seen two launches in a row die inside a swap on
+/// this app build and iOS version.
 ///
 /// Rules: the canvas is found by class name, never by subview index (index 0 is an unflagged
 /// `_UITouchPassthroughView` since iOS 17); the private layer mask key is never written directly.
 final class CaptureShield {
-    static let shared = CaptureShield()
+    static let shared = CaptureShield(crashGuard: .live())
 
     /// `false` when protection cannot be applied on this OS build. Read it before trusting the shield.
     let isAvailable: Bool
 
     private let donorField = UITextField()
     private let donorCanvas: UIView?
+    private let crashGuard: CaptureShieldCrashGuard
 
-    private init() {
+    /// Internal for tests; the app uses `shared`.
+    init(crashGuard: CaptureShieldCrashGuard) {
+        self.crashGuard = crashGuard
         donorCanvas = donorField.subviews.first { view in
             String(describing: type(of: view)).contains("TextLayoutCanvasView")
         }
         // KVC on "layer" must reach UIView's private ivar, never a setter that might behave differently.
         let kvcReachesIvar = class_getInstanceVariable(UIView.self, "_layer") != nil
             && UIView.accessInstanceVariablesDirectly
-        isAvailable = donorCanvas != nil && kvcReachesIvar
-        if !isAvailable {
+        let canSwap = donorCanvas != nil && kvcReachesIvar
+        isAvailable = canSwap && !crashGuard.isTripped
+        if !canSwap {
             Logger.app.fault("Capture shield unavailable on this OS build; exam pages are capturable")
+        } else if crashGuard.didTripThisLaunch {
+            Logger.app.fault(
+                "Capture shield crash guard tripped for \(crashGuard.stamp, privacy: .public); exam pages are capturable"
+            )
+        } else if crashGuard.isTripped {
+            Logger.app.error("Capture shield off by the crash guard for \(crashGuard.stamp, privacy: .public)")
+        }
+        // Main queue, so the closure runs on the main actor; the observer lives as long as the process.
+        _ = NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
+        ) { [crashGuard] _ in
+            MainActor.assumeIsolated { crashGuard.applicationDidEnterBackground() }
         }
     }
 
@@ -45,12 +63,14 @@ final class CaptureShield {
         guard isAvailable, let donorCanvas else { return false }
         let targetLayer = view.layer
         let canvasLayer = donorCanvas.layer
-        donorCanvas.setValue(targetLayer, forKey: "layer")
-        // UIKit writes the flag only on an actual change of `isSecureTextEntry`, hence two assignments.
-        donorField.isSecureTextEntry = !isProtected
-        donorField.isSecureTextEntry = isProtected
-        // Hand the canvas its own layer back before anything else touches it.
-        donorCanvas.setValue(canvasLayer, forKey: "layer")
+        crashGuard.run(kind: "\(type(of: view))|\(isProtected)") {
+            donorCanvas.setValue(targetLayer, forKey: "layer")
+            // UIKit writes the flag only on an actual change of `isSecureTextEntry`, hence two assignments.
+            donorField.isSecureTextEntry = !isProtected
+            donorField.isSecureTextEntry = isProtected
+            // Hand the canvas its own layer back before anything else touches it.
+            donorCanvas.setValue(canvasLayer, forKey: "layer")
+        }
         // Signal's guard: if UIKit re-pointed the delegate, the view would stop drawing and laying out.
         guard targetLayer.delegate === view else {
             Logger.app.fault("Capture shield swap re-pointed the layer delegate; protection not trusted")
