@@ -86,6 +86,7 @@ struct ArchiveRow: View {
 ///
 /// Carries the `row.<name>` accessibility identifier used by UI tests.
 struct ArchiveNavigationRow: View {
+    @Environment(AppEnvironment.self) private var environment
     let item: ArchiveItem
     /// A locked exam does not navigate; tapping it runs `onLockedTap` (to offer unlocking).
     var isLocked = false
@@ -98,7 +99,7 @@ struct ArchiveNavigationRow: View {
                     ArchiveRow(item: item, isLocked: true)
                 }
                 .accessibilityHint("Kilitli; açmak için dokun")
-            } else if let route = item.route {
+            } else if let route = item.route(structuredEnabled: environment.structuredExams.isEnabled) {
                 NavigationLink(value: route) {
                     ArchiveRow(item: item)
                 }
@@ -138,10 +139,13 @@ struct LockBadge: View {
 }
 
 extension ArchiveItem {
-    /// Where tapping the entry leads; `nil` for an exam without files.
-    var route: Route? {
+    /// Where tapping the entry leads; `nil` for an exam without files. A structured exam opens the question
+    /// screen while its remote switch is on (`ExamRouting`).
+    func route(structuredEnabled: Bool) -> Route? {
         guard level == .exam else { return .browse(path) }
-        return exam.map { .exam(path, $0.kind) }
+        return exam.map {
+            ExamRouting.route(for: path, kind: $0.kind, questionCount: $0.questionCount, structuredEnabled: structuredEnabled)
+        }
     }
 }
 

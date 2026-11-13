@@ -14,6 +14,8 @@ final class ExamDocumentViewModel {
     @ObservationIgnored private let repository: any ArchiveRepository
     @ObservationIgnored private let recents: RecentExamsStore
     @ObservationIgnored private let analytics: any AnalyticsTracking
+    /// Whether a structured exam redirects to the question screen, which then records the visit itself.
+    @ObservationIgnored private let structuredEnabled: Bool
     @ObservationIgnored private var isFetching = false
     @ObservationIgnored private var hasRecordedVisit = false
 
@@ -21,8 +23,10 @@ final class ExamDocumentViewModel {
         path: ArchivePath,
         repository: any ArchiveRepository,
         recents: RecentExamsStore,
-        analytics: any AnalyticsTracking
+        analytics: any AnalyticsTracking,
+        structuredEnabled: Bool = false
     ) {
+        self.structuredEnabled = structuredEnabled
         self.path = path
         self.repository = repository
         self.recents = recents
@@ -46,6 +50,11 @@ final class ExamDocumentViewModel {
     }
 
     var document: ExamDocument? { state.value }
+
+    /// The question route that replaces this file viewer, when the loaded exam turned out to be structured.
+    var structuredRedirect: Route? {
+        document.flatMap { ExamRouting.redirect(for: $0, structuredEnabled: structuredEnabled) }
+    }
 
     /// Fetches the exam's files.
     ///
@@ -78,6 +87,8 @@ final class ExamDocumentViewModel {
 
     private func recordVisitIfNeeded(of document: ExamDocument) {
         guard !hasRecordedVisit else { return }
+        // The question screen the viewer redirects to records this visit (recents + `exam_open`), once.
+        guard ExamRouting.redirect(for: document, structuredEnabled: structuredEnabled) == nil else { return }
         hasRecordedVisit = true
         recents.record(path: path, kind: document.kind)
         analytics.track(.examOpened(kind: document.kind))

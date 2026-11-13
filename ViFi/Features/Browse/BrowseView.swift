@@ -161,8 +161,11 @@ private struct BrowseScreen: View {
 
     /// Opens an exam's viewer (used after a successful unlock).
     private func open(_ exam: ArchiveItem) {
-        guard let kind = exam.exam?.kind else { return }
-        router.openExam(at: exam.path, kind: kind)
+        guard let summary = exam.exam else { return }
+        router.openExam(
+            at: exam.path, kind: summary.kind, questionCount: summary.questionCount,
+            structuredEnabled: environment.structuredExams.isEnabled
+        )
     }
 
     /// Admins may delete the exams listed under a course.

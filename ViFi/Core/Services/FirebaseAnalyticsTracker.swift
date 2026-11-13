@@ -30,6 +30,8 @@ private extension AnalyticsEvent {
         case .browse: "browse_level"
         case .examOpened: "exam_open"
         case .recentExamOpened: "recent_exam_open"
+        case .structuredExamOpened: "exam_open"
+        case .answerRevealed: "answer_revealed"
         case .examUnlockSheetShown: "unlock_sheet_shown"
         case .earnCoinsTapped: "earn_coins_tapped"
         case .examUnlocked: "exam_unlock"
@@ -66,6 +68,10 @@ private extension AnalyticsEvent {
             return ["level": level.analyticsName]
         case let .examOpened(kind):
             return ["kind": kind.rawValue]
+        case let .structuredExamOpened(questionCount):
+            return ["kind": "structured", "question_count": questionCount]
+        case let .answerRevealed(order):
+            return ["question_order": order]
         case let .examUnlockSheetShown(canAfford):
             return ["can_afford": canAfford]
         case let .examUnlocked(kind, coinsSpent, alreadyUnlocked):

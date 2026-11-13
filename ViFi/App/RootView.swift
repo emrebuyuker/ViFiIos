@@ -158,6 +158,8 @@ struct RootView: View {
             ExamImagesView(path: path)
         case let .exam(path, .pdf):
             PDFExamView(path: path)
+        case let .questions(path, kind):
+            StructuredExamView(path: path, kind: kind)
         }
     }
 

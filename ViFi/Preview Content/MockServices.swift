@@ -64,7 +64,8 @@ extension AppEnvironment {
                 defaults: .mockSuite,
                 forcedOff: isCaptureShieldForcedOff(arguments: arguments)
             ),
-            structuredExams: StructuredExamsRemoteSwitch(reader: NoopStructuredExamsConfigReader(), defaults: .mockSuite)
+            structuredExams: StructuredExamsRemoteSwitch(reader: NoopStructuredExamsConfigReader(), defaults: .mockSuite),
+            questionReader: MockExamQuestionReader()
         )
         // `-ViFiOpenNotification <id>` starts as if the push of that notification had been tapped.
         if let tapped = openedNotificationId(arguments: arguments) {
@@ -157,7 +158,7 @@ final class MockArchiveRepository: ArchiveRepository {
 
     func items(at path: ArchivePath) async throws -> [ArchiveItem] {
         let node = try await node(at: path)
-        return ArchiveParser.items(in: node, at: path)
+        return ArchiveParser.items(in: node, at: path).map(Self.markingStructured)
     }
 
     func document(at path: ArchivePath) async throws -> ExamDocument {
@@ -165,7 +166,18 @@ final class MockArchiveRepository: ArchiveRepository {
         guard let document = ArchiveParser.document(in: node, at: path) else {
             throw ArchiveError.notFound
         }
-        return document
+        guard path == .mockStructuredExam else { return document }
+        return ExamDocument(path: path, kind: document.kind, fileURLs: document.fileURLs, questionCount: Self.structuredQuestionCount)
+    }
+
+    /// The sample structured exam (`.mockStructuredExam`) is the archive's one `format == "structured"` exam: the
+    /// RTDB-shaped tree has no such field, so the mock sets it on the parsed models.
+    private static let structuredQuestionCount = 3
+
+    private static func markingStructured(_ item: ArchiveItem) -> ArchiveItem {
+        guard item.path == .mockStructuredExam, let summary = item.exam else { return item }
+        let marked = ExamSummary(kind: summary.kind, fileCount: summary.fileCount, questionCount: structuredQuestionCount)
+        return ArchiveItem(path: item.path, level: item.level, childCount: item.childCount, exam: marked)
     }
 
     /// The raw node at `path`, after the simulated latency.
@@ -200,6 +212,14 @@ extension ArchivePath {
     static let mockImagesExam = mockLesson.appending("2019 FİNAL")
     /// A single-file PDF exam of the mock archive.
     static let mockPDFExam = mockLesson.appending("2018 VİZE")
+    /// A structured (question-by-question) exam of the mock archive, with the sample questions.
+    static let mockStructuredExam = ArchivePath(components: [
+        "KOCAELİ ÜNİVERSİTESİ",
+        "MÜHENDİSLİK FAKÜLTESİ",
+        "MATEMATİK BÖLÜMÜ",
+        "TOPOLOJİ 1",
+        "2003 FİNAL",
+    ])
     /// A lesson of the mock archive without exams (empty state).
     static let mockEmptyLesson = ArchivePath(components: [
         "KOCAELİ ÜNİVERSİTESİ",
@@ -237,6 +257,7 @@ private enum MockArchive {
                 node(.faculty, "MÜHENDİSLİK FAKÜLTESİ", [
                     node(.department, "MATEMATİK BÖLÜMÜ", [
                         node(.lesson, "TOPOLOJİ 1", [
+                            exam("2003 FİNAL", .images, files: Array(pages.prefix(2))),
                             exam("2002 VİZE", .images, files: Array(pages.prefix(2))),
                         ]),
                         node(.lesson, "TOPOLOJİ 2"),

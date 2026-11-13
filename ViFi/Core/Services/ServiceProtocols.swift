@@ -103,6 +103,10 @@ nonisolated enum AnalyticsEvent: Equatable, Sendable {
     case browse(level: ArchiveLevel)
     case examOpened(kind: ExamKind)
     case recentExamOpened
+    /// 4.2.0: a structured exam's question screen opened (`exam_open` with `kind: structured`).
+    case structuredExamOpened(questionCount: Int)
+    /// 4.2.0: "Cevabı Göster" tapped, once per question per screen visit.
+    case answerRevealed(order: Int)
 
     // Coin economy
     case examUnlockSheetShown(canAfford: Bool)

@@ -132,6 +132,49 @@ struct FirestoreArchiveParserTests {
         #expect(document.fileURLs == [StorageURL.canonical(storagePath: "pdfs/a.pdf", bucket: Self.bucket)].compactMap { $0 })
     }
 
+    // MARK: - Structured exams (4.2.0)
+
+    @Test("A structured exam carries its question count in the list summary and the document")
+    func structuredFormat() throws {
+        let examPath = course.appending(id: "s", displayName: "S")
+        var data: [String: Any] = examNode("s", title: "S", kind: "JPG", fileCount: 2).data
+        data["format"] = "structured"
+        data["questionCount"] = 12
+
+        let items = FirestoreArchiveParser.items(from: [("s", data)], under: course)
+        let document = try #require(FirestoreArchiveParser.document(from: data, at: examPath, bucket: Self.bucket))
+
+        #expect(items.first?.exam == ExamSummary(kind: .images, fileCount: 2, questionCount: 12))
+        #expect(items.first?.exam?.isStructured == true)
+        #expect(document.questionCount == 12)
+        #expect(document.isStructured)
+    }
+
+    @Test("Other formats, a missing format, or no questions are plain file exams",
+          arguments: [("files" as String?, 12 as Int?), (nil, nil), ("structured", nil), ("structured", 0)])
+    func plainFormats(format: String?, count: Int?) throws {
+        var data: [String: Any] = examNode("p", title: "P", kind: "PDF", fileCount: 1).data
+        if let format { data["format"] = format }
+        if let count { data["questionCount"] = count }
+
+        let items = FirestoreArchiveParser.items(from: [("p", data)], under: course)
+        let document = try #require(FirestoreArchiveParser.document(
+            from: data, at: course.appending(id: "p", displayName: "P"), bucket: Self.bucket
+        ))
+
+        #expect(items.first?.exam?.questionCount == nil)
+        #expect(!document.isStructured)
+    }
+
+    @Test("An older cached summary without a question count still decodes")
+    func summaryDecodesWithoutQuestionCount() throws {
+        let json = Data(#"{"kind":"JPG","fileCount":3}"#.utf8)
+
+        let summary = try JSONDecoder().decode(ExamSummary.self, from: json)
+
+        #expect(summary == ExamSummary(kind: .images, fileCount: 3))
+    }
+
     // MARK: - Helpers
 
     private func node(_ id: String, name: String, childCount: Int) -> (id: String, data: [String: Any]) {

@@ -6,6 +6,9 @@ enum Route: Hashable {
     case browse(ArchivePath)
     /// The viewer of the exam at `path`.
     case exam(ArchivePath, ExamKind)
+    /// The structured question screen of the exam at `path` (4.2.0). `ExamKind` is the original files' kind, kept
+    /// for the recents entry.
+    case questions(ArchivePath, ExamKind)
 }
 
 /// Owns the navigation stack so any screen can go home, jump to a breadcrumb or deep-link.
@@ -31,8 +34,12 @@ final class Router {
     }
 
     /// Opens an exam with its whole hierarchy on the stack, so Back walks up the archive.
-    func openExam(at examPath: ArchivePath, kind: ExamKind) {
+    ///
+    /// Callers that only know the exam's file kind (recents, notifications) open the file viewer; it replaces
+    /// itself with the question screen once it sees the exam is structured (`ExamRouting.redirect`).
+    func openExam(at examPath: ArchivePath, kind: ExamKind, questionCount: Int? = nil, structuredEnabled: Bool = false) {
         let ancestors = (1..<examPath.depth).map { Route.browse(examPath.prefix($0)) }
-        path = ancestors + [.exam(examPath, kind)]
+        let route = ExamRouting.route(for: examPath, kind: kind, questionCount: questionCount, structuredEnabled: structuredEnabled)
+        path = ancestors + [route]
     }
 }
