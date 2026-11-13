@@ -138,8 +138,14 @@ function fakeAuth(pages) {
   return auth;
 }
 
-function depsWith({ messaging = fakeMessaging(), now = DAY, auth = fakeAuth([[]]) } = {}) {
-  return { db, rtdb, messaging, auth, now: () => now };
+/** A fake task queue: records `{ jobId, ...options }` payloads instead of enqueueing. */
+function fakeQueue() {
+  const tasks = [];
+  return { tasks, enqueueConversion: async (jobId, options = {}) => { tasks.push({ jobId, ...options }); } };
+}
+
+function depsWith({ messaging = fakeMessaging(), now = DAY, auth = fakeAuth([[]]), queue = fakeQueue() } = {}) {
+  return { db, rtdb, messaging, auth, now: () => now, enqueueConversion: queue.enqueueConversion };
 }
 
 /** Publishes a department's exam the way the iOS approval does (denormalized names), returning its id. */
@@ -201,7 +207,7 @@ describe('onSubmissionModerated: approval', () => {
     const messaging = fakeMessaging();
     const { event, examId } = await approve('sub-1');
     const result = await automatic.onSubmissionModeratedHandler(depsWith({ messaging }), event);
-    assert.deepEqual(result, { owner: 'sent', department: 'sent' });
+    assert.deepEqual(result, { owner: 'sent', department: 'sent', conversion: 'waiting' });
 
     const expectedAction = {
       type: 'exam',
@@ -252,6 +258,14 @@ describe('onSubmissionModerated: approval', () => {
     const throttle = (await throttleDoc(`${EGE}__${MUHENDISLIK}__${BILGISAYAR}`)).data();
     assert.equal(throttle.lastSentAt.toMillis(), DAY.getTime());
     assert.equal(throttle.notificationId, 'auto-newexam-sub-1');
+
+    // A 4.1.0 approval (published at once, no plan) leaves a provider-less job that waits for an admin.
+    const job = (await db.collection('examConversions').doc(`exam-${examId}`).get()).data();
+    assert.equal(job.status, 'queued');
+    assert.equal(job.model, null);
+    assert.deepEqual(job.source, { type: 'legacy', examId });
+    assert.deepEqual(job.files, [{ storagePath: 'pdfs/a.pdf', order: 0 }]);
+    assert.deepEqual(job.placement.names, ['Ege Üniversitesi', 'Mühendislik Fakültesi', 'Bilgisayar Mühendisliği', 'Algoritmalar', '2024 FİNAL']);
   });
 
   test('a redelivered event sends nothing twice', async () => {
@@ -261,7 +275,7 @@ describe('onSubmissionModerated: approval', () => {
     const pushes = messaging.multicasts.length;
 
     const again = await automatic.onSubmissionModeratedHandler(depsWith({ messaging, now: NEXT_DAY }), event);
-    assert.deepEqual(again, { owner: 'duplicate', department: 'duplicate' });
+    assert.deepEqual(again, { owner: 'duplicate', department: 'duplicate', conversion: 'duplicate' });
     assert.equal(messaging.multicasts.length, pushes);
     // The throttle still records the first send.
     const throttle = (await throttleDoc(`${EGE}__${MUHENDISLIK}__${BILGISAYAR}`)).data();
@@ -272,7 +286,7 @@ describe('onSubmissionModerated: approval', () => {
     const messaging = fakeMessaging();
     const { event } = await approve('sub-1', { coins: 0, publish: false });
     const result = await automatic.onSubmissionModeratedHandler(depsWith({ messaging }), event);
-    assert.deepEqual(result, { owner: 'sent', department: 'no-new-exam' });
+    assert.deepEqual(result, { owner: 'sent', department: 'no-new-exam', conversion: 'none' });
 
     const owner = (await notificationDoc('auto-approved-sub-1')).data();
     assert.equal(owner.body, 'Algoritmalar – 2024 FİNAL gönderin onaylandı. Katkın için teşekkürler!');
@@ -289,8 +303,118 @@ describe('onSubmissionModerated: approval', () => {
     });
     const event = await updateEvent(ref, { status: 'approved', coins: 0, publishedExamId: 'legacy-exam' });
     const result = await automatic.onSubmissionModeratedHandler(depsWith(), event);
-    assert.deepEqual(result, { owner: 'sent', department: 'no-department' });
+    assert.deepEqual(result, { owner: 'sent', department: 'no-department', conversion: 'invalid-exam' });
     assert.equal((await notificationDoc('auto-approved-sub-odd')).get('action').examId, 'legacy-exam');
+  });
+});
+
+// --- 4.2.0 first approval and conversion notices ------------------------------------------------------------------
+
+/** A 4.2.0 first approval: coins + `publishPlan` + `conversionProvider`, nothing published. */
+async function approveFirst(id, { provider = 'claude', plan = true } = {}) {
+  const department = DEPARTMENTS.bilgisayar;
+  const ref = await createSubmission(id);
+  await db.collection('wallets').doc('ayse').collection('ledger').doc(id).set({
+    type: 'earn', amount: 50, submissionId: id, tier: 'newExam', createdAt: new Date(),
+  });
+  const courseId = `${department.id}__algoritmalar`;
+  const changes = { status: 'approved', tier: 'newExam', coins: 50, reviewedAt: new Date() };
+  if (provider !== undefined) changes.conversionProvider = provider;
+  if (plan) {
+    changes.publishPlan = {
+      examId: `${courseId}__2024-final`, universityId: EGE, facultyId: FACULTY_ID, departmentId: department.id, courseId,
+      nodesToCreate: [], childCountIncrements: [courseId],
+      exam: { title: '2024 FİNAL', kind: 'PDF', files: [{ storagePath: 'pdfs/copied.pdf', order: 0 }] },
+    };
+  }
+  return updateEvent(ref, changes);
+}
+
+describe('onSubmissionModerated: 4.2.0 first approval', () => {
+  test('credits the uploader without a link, queues job sub-<id> with the provider and sends no department notice', async () => {
+    const messaging = fakeMessaging();
+    const queue = fakeQueue();
+    const event = await approveFirst('sub-42');
+    const result = await automatic.onSubmissionModeratedHandler(depsWith({ messaging, queue }), event);
+    assert.deepEqual(result, { owner: 'sent', department: 'at-publish', conversion: 'queued' });
+
+    const owner = (await notificationDoc('auto-approved-sub-42')).data();
+    assert.equal(owner.body, 'Algoritmalar – 2024 FİNAL gönderin onaylandı. +50 coin hesabına yüklendi.');
+    assert.equal('action' in owner, false);
+    assert.equal((await notificationDoc('auto-newexam-sub-42')).exists, false);
+
+    const job = (await db.collection('examConversions').doc('sub-sub-42').get()).data();
+    assert.equal(job.status, 'queued');
+    assert.deepEqual(job.model, { provider: 'claude', id: null });
+    assert.deepEqual(job.source, { type: 'submission', submissionId: 'sub-42' });
+    assert.equal(job.kind, 'PDF');
+    assert.deepEqual(job.files, [{ storagePath: 'pdfs/copied.pdf', order: 0 }]);
+    assert.equal(job.placement.examId, `${DEPARTMENTS.bilgisayar.id}__algoritmalar__2024-final`);
+    assert.equal(job.attempts, 0);
+    assert.deepEqual(queue.tasks, [{ jobId: 'sub-sub-42' }]);
+
+    // A redelivered event neither recreates nor re-enqueues the job.
+    const again = await automatic.onSubmissionModeratedHandler(depsWith({ messaging, queue }), event);
+    assert.deepEqual(again, { owner: 'duplicate', department: 'at-publish', conversion: 'duplicate' });
+    assert.equal(queue.tasks.length, 1);
+  });
+
+  test('without a valid provider the job waits and nothing is enqueued; a duplicate gets no job', async () => {
+    const queue = fakeQueue();
+    const noProvider = await approveFirst('sub-np', { provider: 'gpt' });
+    assert.equal((await automatic.onSubmissionModeratedHandler(depsWith({ queue }), noProvider)).conversion, 'waiting');
+    assert.equal((await db.collection('examConversions').doc('sub-sub-np').get()).get('model'), null);
+
+    const duplicate = await approveFirst('sub-dup', { plan: false });
+    assert.deepEqual(await automatic.onSubmissionModeratedHandler(depsWith({ queue }), duplicate), {
+      owner: 'sent', department: 'no-new-exam', conversion: 'none',
+    });
+    assert.equal((await db.collection('examConversions').doc('sub-sub-dup').get()).exists, false);
+    assert.equal(queue.tasks.length, 0);
+  });
+
+  test('a failed enqueue leaves the job queued with an enqueue error and fails the event', async () => {
+    const event = await approveFirst('sub-q');
+    const deps = { ...depsWith(), enqueueConversion: async () => { throw new Error('queue missing'); } };
+    await assert.rejects(automatic.onSubmissionModeratedHandler(deps, event), /kuyruğa alınamadı/);
+    const job = (await db.collection('examConversions').doc('sub-sub-q').get()).data();
+    assert.equal(job.status, 'queued');
+    assert.match(job.error, /^enqueue: queue missing/);
+    // The uploader's notice still went out.
+    assert.equal((await notificationDoc('auto-approved-sub-q')).get('status'), 'sent');
+  });
+});
+
+describe('notifyAdminsAboutConversion', () => {
+  const ADMINS = [[{ uid: 'admin-1', customClaims: { admin: true } }]];
+
+  test('tells the admins a draft is ready or a job failed, once per job / attempt series', async () => {
+    const messaging = fakeMessaging();
+    const auth = fakeAuth(ADMINS);
+    const deps = depsWith({ messaging, auth, now: NIGHT });
+    await automatic.onSubmissionModeratedHandler(deps, await approveFirst('sub-n'));
+
+    assert.equal(await automatic.notifyAdminsAboutConversion(deps, { trigger: 'conversionReady', jobId: 'sub-sub-n' }), 'sent');
+    const ready = (await notificationDoc('auto-convready-sub-sub-n')).data();
+    assert.equal(ready.trigger, 'conversionReady');
+    assert.equal(ready.title, 'Sınav taslağı hazır');
+    assert.equal(ready.body, 'Algoritmalar – 2024 FİNAL soru soru hazırlandı, incelemeni bekliyor.');
+    assert.deepEqual(ready.audience, { scope: 'admins' });
+    assert.equal(ready.status, 'sent'); // never held for quiet hours
+    assert.deepEqual(await inboxOwners('auto-convready-sub-sub-n'), ['admin-1']);
+    assert.equal(await automatic.notifyAdminsAboutConversion(deps, { trigger: 'conversionReady', jobId: 'sub-sub-n' }), 'duplicate');
+
+    assert.equal(await automatic.notifyAdminsAboutConversion(deps, { trigger: 'conversionFailed', jobId: 'sub-sub-n', attempts: 3 }), 'sent');
+    assert.equal(await automatic.notifyAdminsAboutConversion(deps, { trigger: 'conversionFailed', jobId: 'sub-sub-n', attempts: 3 }), 'duplicate');
+    assert.equal(await automatic.notifyAdminsAboutConversion(deps, { trigger: 'conversionFailed', jobId: 'sub-sub-n', attempts: 6 }), 'sent');
+    const failed = (await notificationDoc('auto-convfailed-sub-sub-n-3')).data();
+    assert.equal(failed.trigger, 'conversionFailed');
+    assert.equal(failed.title, 'Sınav dönüştürülemedi');
+
+    // An unknown job still notifies, with a generic name.
+    assert.equal(await automatic.notifyAdminsAboutConversion(deps, { trigger: 'conversionReady', jobId: 'exam-gone' }), 'sent');
+    assert.match((await notificationDoc('auto-convready-exam-gone')).get('body'), /^Bir sınav /);
+    await assert.rejects(automatic.notifyAdminsAboutConversion(deps, { trigger: 'newExam', jobId: 'sub-sub-n' }), /Unknown conversion trigger/);
   });
 });
 
@@ -367,27 +491,27 @@ describe('department "new exam" limit and quiet hours', () => {
 
     const later = new Date(DAY.getTime() + 6 * 60 * 60 * 1000); // 18:00 in Türkiye
     const second = await automatic.onSubmissionModeratedHandler(depsWith({ messaging, now: later }), (await approve('sub-2')).event);
-    assert.deepEqual(second, { owner: 'sent', department: 'throttled' });
+    assert.deepEqual(second, { owner: 'sent', department: 'throttled', conversion: 'waiting' });
     assert.equal((await notificationDoc('auto-newexam-sub-2')).exists, false);
     assert.equal((await notificationDoc('auto-approved-sub-2')).get('status'), 'sent');
 
     // Another department the same day has its own limit.
     const makine = await approve('sub-3', { department: DEPARTMENTS.makine, ownerId: 'can' });
     assert.deepEqual(await automatic.onSubmissionModeratedHandler(depsWith({ messaging, now: later }), makine.event), {
-      owner: 'sent', department: 'sent',
+      owner: 'sent', department: 'sent', conversion: 'waiting',
     });
     assert.deepEqual(await inboxOwners('auto-newexam-sub-3'), ['mehmet']);
 
     // The next day the department is notified again.
     const nextDay = await automatic.onSubmissionModeratedHandler(depsWith({ messaging, now: NEXT_DAY }), (await approve('sub-4')).event);
-    assert.deepEqual(nextDay, { owner: 'sent', department: 'sent' });
+    assert.deepEqual(nextDay, { owner: 'sent', department: 'sent', conversion: 'waiting' });
     assert.deepEqual(await inboxOwners('auto-newexam-sub-4'), ['can', 'deniz']);
   });
 
   test('during quiet hours the department notice waits for 09:00 and counts for that day', async () => {
     const messaging = fakeMessaging();
     const result = await automatic.onSubmissionModeratedHandler(depsWith({ messaging, now: NIGHT }), (await approve('sub-1')).event);
-    assert.deepEqual(result, { owner: 'sent', department: 'scheduled' });
+    assert.deepEqual(result, { owner: 'sent', department: 'scheduled', conversion: 'waiting' });
 
     const department = (await notificationDoc('auto-newexam-sub-1')).data();
     assert.equal(department.status, 'scheduled');
@@ -401,7 +525,7 @@ describe('department "new exam" limit and quiet hours', () => {
 
     // An approval the next morning lands on the same delivery day: no second department notice.
     const morning = await automatic.onSubmissionModeratedHandler(depsWith({ messaging, now: NEXT_DAY }), (await approve('sub-2')).event);
-    assert.deepEqual(morning, { owner: 'sent', department: 'throttled' });
+    assert.deepEqual(morning, { owner: 'sent', department: 'throttled', conversion: 'waiting' });
 
     // When the dispatcher delivers the held notice (scheduled → sending), the uploader is still left out.
     await db.collection('notifications').doc('auto-newexam-sub-1').update({ status: 'sending' });

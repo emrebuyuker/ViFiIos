@@ -6,7 +6,13 @@
 //     from the ledger entry `wallets/{ownerId}/ledger/{submissionId}`), delivered now; and, when the approval
 //     published a new exam, a "new exam in your department" notice to that department's members (the uploader
 //     excluded), at most one per department per Istanbul calendar day and held until 09:00 during quiet hours.
+//   - 4.2.0 (structured exams): an approval carrying `publishPlan` is only the FIRST approval (coins, nothing
+//     published). The uploader gets the coins notice without an exam link, and the AI conversion job `sub-<id>` is
+//     created with the admin's `conversionProvider` and enqueued; the department notice moves to the second
+//     approval (`conversions/publish.js` → `notifyNewExam`). A 4.1.0 approval (`publishedExamId`, no plan) keeps the
+//     behaviour above and also gets a provider-less job `exam-<publishedExamId>` that waits for an admin.
 //   - rejected → a personal notice with the admin's reason when there is one, delivered now.
+// - `notifyAdminsAboutConversion` (called by the conversion pipeline): "draft ready" / "conversion failed" to admins.
 // - `onSubmissionCreated` (`submissions/{id}` created): a notice to every admin, delivered now.
 //
 // Every notification gets a deterministic id derived from the submission id and is recorded with `create()`, so a
@@ -32,6 +38,8 @@ import {
 } from './schema.js';
 import { examAction } from './admin.js';
 import { deliverNotification } from './deliver.js';
+import { ID_SEGMENT_PATTERN, conversionJobId } from '../conversions/schema.js';
+import { JOBS, enqueue, isPlainObject, legacyJob, submissionJob } from '../conversions/jobs.js';
 
 /** The `trigger` values of automatic notifications (NOTIFICATIONS.md §3.1). */
 export const TRIGGERS = Object.freeze({
@@ -112,8 +120,17 @@ export async function onSubmissionModeratedHandler(deps, event) {
 
   if (to === 'rejected') {
     outcome.owner = ownerId ? await attempt(errors, 'rejected', () => notifyRejected(deps, ids, submission, ownerId)) : 'no-owner';
+  } else if (isPlainObject(submission.publishPlan)) {
+    // 4.2.0 first approval: coins only, nothing published yet. The exam goes live (and its department hears about
+    // it) on the second approval, `publishExamConversion`; here the AI conversion job starts.
+    outcome.owner = ownerId
+      ? await attempt(errors, 'approved', () => notifyApproved(deps, ids, submissionId, submission, ownerId, null))
+      : 'no-owner';
+    outcome.department = 'at-publish';
+    outcome.conversion = await attempt(errors, 'conversion', () => startSubmissionConversion(deps, submissionId, submission));
   } else {
-    // The exam action (and the department notice) exist only when the approval published a new exam.
+    // A 4.1.0 admin client (published right away; `publishedExamId`, no plan) or a duplicate (neither). The exam
+    // action (and the department notice) exist only when the approval published a new exam.
     const action = await publishedExamAction(deps.db, submission.publishedExamId);
     outcome.owner = ownerId
       ? await attempt(errors, 'approved', () => notifyApproved(deps, ids, submissionId, submission, ownerId, action))
@@ -121,6 +138,9 @@ export async function onSubmissionModeratedHandler(deps, event) {
     outcome.department = action
       ? await attempt(errors, 'newExam', () => notifyDepartment(deps, ids, action, ownerId))
       : 'no-new-exam';
+    outcome.conversion = text(submission.publishedExamId)
+      ? await attempt(errors, 'conversion', () => queueLegacyConversion(deps, text(submission.publishedExamId)))
+      : 'none';
   }
 
   if (errors.length > 0) throw errors[0];
@@ -251,7 +271,107 @@ async function publishedExamAction(db, publishedExamId) {
   }
 }
 
+// MARK: - Conversion jobs (4.2.0)
+
+/**
+ * Job `sub-<submissionId>` for a 4.2.0 first approval, queued with the admin's `conversionProvider` and handed to the
+ * pipeline; without a valid provider it waits (`queued`, no model) for an admin to start it. A redelivered event
+ * finds the job and does nothing.
+ */
+async function startSubmissionConversion(deps, submissionId, submission) {
+  const job = submissionJob(submissionId, submission);
+  if (!job) {
+    logger.warn('The approved submission has an unusable publish plan; no conversion job', { submissionId });
+    return 'invalid-plan';
+  }
+  const jobId = conversionJobId({ type: 'submission', submissionId });
+  if (!(await createJob(deps.db, jobId, job))) return 'duplicate';
+  if (!job.model) return 'waiting';
+  await enqueue(deps, jobId);
+  return 'queued';
+}
+
+/**
+ * Job `exam-<examId>` for an exam a 4.1.0 admin client published at approval: it is already public, so the job only
+ * waits (`queued`, no provider) until an admin picks a model and starts it (`regenerateExamConversion`).
+ */
+async function queueLegacyConversion(deps, examId) {
+  if (!ID_SEGMENT_PATTERN.test(examId)) return 'invalid-exam';
+  const exam = await deps.db.collection('exams').doc(examId).get();
+  const job = exam.exists && exam.get('status') === 'published' ? legacyJob(examId, exam.data()) : null;
+  if (!job) {
+    logger.warn('The exam the approval published cannot be converted; no conversion job', { examId });
+    return 'invalid-exam';
+  }
+  return (await createJob(deps.db, conversionJobId({ type: 'legacy', examId }), job)) ? 'waiting' : 'duplicate';
+}
+
+/** `create()`s the job; `false` when it already exists. */
+async function createJob(db, jobId, job) {
+  try {
+    await db.collection(JOBS).doc(jobId).create(job);
+    return true;
+  } catch (error) {
+    if (error?.code === ALREADY_EXISTS) return false;
+    throw error;
+  }
+}
+
+/**
+ * Tells every admin a conversion draft is ready for review (`conversionReady`) or a job failed after its retries
+ * (`conversionFailed`). Called by the pipeline (track 1A) through injection. Not consent-filtered, never held for
+ * quiet hours; one notice per job (ready) or per failed attempt series (`attempts`), so a redelivery sends nothing.
+ *
+ * @param {object} deps What `deliverNotification` needs, including `auth` for the `admins` audience.
+ * @param {{ trigger: 'conversionReady'|'conversionFailed', jobId: string, attempts?: number }} input
+ * @returns {Promise<string>} The delivery status, or `duplicate`.
+ */
+export async function notifyAdminsAboutConversion(deps, { trigger, jobId, attempts = 0 }) {
+  if (trigger !== TRIGGERS.conversionReady && trigger !== TRIGGERS.conversionFailed) {
+    throw new Error(`Unknown conversion trigger: ${trigger}`);
+  }
+  if (typeof jobId !== 'string' || !jobId) throw new Error('A conversion notice needs the job id');
+  const ids = conversionNotificationIds(jobId, attempts);
+  const ready = trigger === TRIGGERS.conversionReady;
+
+  let names = [];
+  try {
+    const job = await deps.db.collection(JOBS).doc(jobId).get();
+    names = (job.exists ? job.get('placement.names') : null) ?? [];
+  } catch (error) {
+    logger.warn('Reading the conversion job failed; notifying without its name', { jobId, error: error?.message ?? String(error) });
+  }
+  const [, , , courseName, examTitle] = Array.isArray(names) ? names.map(text) : [];
+  const label = [courseName, examTitle].filter(Boolean).join(' – ') || 'Bir sınav';
+  const audience = { scope: 'admins' };
+  return recordAndDeliver(deps, ready ? ids.ready : ids.failed, automaticRecord({
+    trigger,
+    title: ready ? 'Sınav taslağı hazır' : 'Sınav dönüştürülemedi',
+    body: ready
+      ? `${label} soru soru hazırlandı, incelemeni bekliyor.`
+      : `${label} yapay zekâ ile dönüştürülemedi. Moderasyon ekranından tekrar başlatabilirsin.`,
+    audience,
+    label: audienceLabel(audience),
+    status: 'sending',
+  }));
+}
+
 // MARK: - Department "new exam" notice
+
+/**
+ * The department's "new exam" notice for an exam that went public on the second approval of submission
+ * `submissionId` (`publishExamConversion`). Same id, limit, quiet hours and uploader exclusion as before 4.2.0,
+ * when it was sent at approval.
+ *
+ * @returns {Promise<string>} `sent`, `scheduled`, `throttled`, `duplicate`, `no-department` or `no-new-exam`.
+ */
+export async function notifyNewExam(deps, { submissionId, examId, ownerId }) {
+  const ids = validIds(submissionId);
+  if (!ids) return 'invalid-id';
+  const action = await publishedExamAction(deps.db, examId);
+  if (!action) return 'no-new-exam';
+  return notifyDepartment(deps, ids, action, text(ownerId));
+}
 
 /**
  * The department's members (profile slugs from the exam's archive path), the uploader excluded. At most one per

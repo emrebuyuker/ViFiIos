@@ -336,8 +336,10 @@ Object.defineProperty(notificationDeps, 'auth', { get: () => getAuth(), enumerab
 
 // ⚠️ Same deploy-time check as `onDeviceWritten`: Firestore triggers on the NAMED `vifi` database (eur3).
 
-// `pending → approved`: the uploader's "approved (+coins)" notice and the department's "new exam" notice (one per
-// department per day, held over quiet hours). `pending → rejected`: the uploader's notice with the reason.
+// `pending → approved`: the uploader's "approved (+coins)" notice. A 4.2.0 first approval (`publishPlan`) also
+// creates and enqueues the AI conversion job (the department notice waits for `publishExamConversion`); a 4.1.0
+// approval sends the department's "new exam" notice (one per department per day, held over quiet hours) and leaves a
+// provider-less job for an admin. `pending → rejected`: the uploader's notice with the reason.
 export const onSubmissionModerated = onDocumentUpdated(
   { document: 'submissions/{id}', database: 'vifi', region: 'europe-west1', timeoutSeconds: 300 },
   (event) => onSubmissionModeratedHandler(notificationDeps, event)
@@ -364,4 +366,67 @@ import { trackNotificationEventHandler } from './notifications/stats.js';
 // Signed-in +90 users: counts one `opened` / `actionTapped` per user and notification toward the admin history.
 export const trackNotificationEvent = onCall({ region: 'europe-west1' }, (request) =>
   trackNotificationEventHandler(notificationDeps, request)
+);
+
+// --- Structured exams (4.2.0, `conversions/`; contract: conversions/schema.js) ----------------------------------
+
+import { getFunctions } from 'firebase-admin/functions';
+import {
+  discardExamConversionHandler,
+  publishExamConversionHandler,
+  regenerateDraftQuestionHandler,
+  regenerateExamConversionHandler,
+  regeneratePublishedQuestionHandler,
+  requestBulkConversionHandler,
+  requestExamConversionHandler,
+  updatePublishedQuestionHandler,
+} from './conversions/admin.js';
+
+/** The Cloud Tasks queue of the AI pipeline's task function (`processExamConversion`, europe-west1). */
+const CONVERSION_QUEUE = 'locations/europe-west1/functions/processExamConversion';
+
+// Hands a job (or one question of it) to the pipeline: task payload `{ jobId, ...options }` (payload contract in
+// conversions/jobs.js). The admin callables and `onSubmissionModerated` share it through `notificationDeps`.
+Object.defineProperty(notificationDeps, 'enqueueConversion', {
+  value: (jobId, options = {}) => getFunctions().taskQueue(CONVERSION_QUEUE).enqueue({ jobId, ...options }),
+  enumerable: true,
+});
+
+// TODO(4.2.0 Faz 2 merge): export `processExamConversion` here — track 1A's `onTaskDispatched` queue function
+// (conversions/pipeline.js), with `notifyAdminsAboutConversion` (notifications/automatic.js) and
+// `publishDraftQuestion` (conversions/publish.js) injected. Until it is deployed the queue does not exist: enqueueing
+// fails, and jobs stay `queued` with an `enqueue:` error that an admin can restart.
+
+// Admin-only (`admin: true` claim). Every AI-running call carries `provider` ('claude' | 'gemini'), no default.
+export const requestExamConversion = onCall({ region: 'europe-west1' }, (request) =>
+  requestExamConversionHandler(notificationDeps, request)
+);
+
+export const requestBulkConversion = onCall({ region: 'europe-west1', timeoutSeconds: 300 }, (request) =>
+  requestBulkConversionHandler(notificationDeps, request)
+);
+
+export const regenerateExamConversion = onCall({ region: 'europe-west1' }, (request) =>
+  regenerateExamConversionHandler(notificationDeps, request)
+);
+
+export const regenerateDraftQuestion = onCall({ region: 'europe-west1' }, (request) =>
+  regenerateDraftQuestionHandler(notificationDeps, request)
+);
+
+// The second approval: publishes the reviewed draft in one transaction, then sends the department notice.
+export const publishExamConversion = onCall({ region: 'europe-west1', timeoutSeconds: 300 }, (request) =>
+  publishExamConversionHandler(notificationDeps, request)
+);
+
+export const discardExamConversion = onCall({ region: 'europe-west1' }, (request) =>
+  discardExamConversionHandler(notificationDeps, request)
+);
+
+export const updatePublishedQuestion = onCall({ region: 'europe-west1' }, (request) =>
+  updatePublishedQuestionHandler(notificationDeps, request)
+);
+
+export const regeneratePublishedQuestion = onCall({ region: 'europe-west1' }, (request) =>
+  regeneratePublishedQuestionHandler(notificationDeps, request)
 );
