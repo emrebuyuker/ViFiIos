@@ -66,6 +66,8 @@ final class AppEnvironment {
     @ObservationIgnored let captureShield: CaptureShieldRemoteSwitch
     /// The 4.2.0 structured-exam screen's remote switch, applied for this launch (`isEnabled`).
     @ObservationIgnored let structuredExams: StructuredExamsRemoteSwitch
+    /// Admin-only AI conversion workflow of the 4.2.0 structured exams (review, publish, bulk, K15 edits).
+    @ObservationIgnored let conversionService: any ExamConversionServicing
 
     init(
         repository: any ArchiveRepository,
@@ -99,7 +101,8 @@ final class AppEnvironment {
         notificationEventReporter: any NotificationEventReporting = NoopNotificationEventReporter(),
         notificationEventDefaults: UserDefaults = .standard,
         captureShield: CaptureShieldRemoteSwitch = CaptureShieldRemoteSwitch(reader: NoopCaptureShieldConfigReader()),
-        structuredExams: StructuredExamsRemoteSwitch = StructuredExamsRemoteSwitch(reader: NoopStructuredExamsConfigReader())
+        structuredExams: StructuredExamsRemoteSwitch = StructuredExamsRemoteSwitch(reader: NoopStructuredExamsConfigReader()),
+        conversionService: any ExamConversionServicing = UnavailableExamConversionService()
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -141,6 +144,7 @@ final class AppEnvironment {
         self.locationPicker = locationPicker
         self.captureShield = captureShield
         self.structuredExams = structuredExams
+        self.conversionService = conversionService
         CaptureShield.isSwitchedOn = captureShield.isEnabled
     }
 
@@ -199,7 +203,8 @@ final class AppEnvironment {
             loginDiagnostics: FirebaseLoginDiagnosticsService(),
             notificationEventReporter: FirebaseNotificationEventReporter(),
             captureShield: captureShield,
-            structuredExams: structuredExams
+            structuredExams: structuredExams,
+            conversionService: FirebaseExamConversionService(auth: auth)
         )
     }
 

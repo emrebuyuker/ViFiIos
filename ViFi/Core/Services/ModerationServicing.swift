@@ -1,7 +1,7 @@
 import Foundation
 
 /// The result of approving a submission: the tier it was judged at, the coins granted, and the id of the exam
-/// it published (nil when it duplicated an existing exam).
+/// it will publish at the second approval (nil when it duplicated an existing exam; nothing is published yet).
 nonisolated struct ApprovalResult: Equatable, Sendable {
     let tier: SubmissionTier
     let coins: Int
@@ -16,9 +16,11 @@ protocol ModerationServicing: AnyObject {
     /// The submissions awaiting review, newest first.
     func pendingSubmissions() async throws -> [ExamSubmissionRecord]
 
-    /// Approves a submission: publishes it into the archive (creating any missing catalog nodes and copying the
-    /// files into the public archive storage) and credits the owner the tier reward.
-    func approve(_ record: ExamSubmissionRecord) async throws -> ApprovalResult
+    /// First approval (4.2.0): copies the files into the public archive storage, credits the owner the tier
+    /// reward and marks the submission `approved` with the chosen AI `provider` and the `publishPlan`. It writes
+    /// no catalog nodes or exams; the server converts the pages into draft questions and the admin publishes
+    /// them at the second approval.
+    func approve(_ record: ExamSubmissionRecord, provider: AIProvider) async throws -> ApprovalResult
 
     /// Rejects a submission, with an optional reason recorded on it.
     func reject(_ record: ExamSubmissionRecord, reason: String?) async throws

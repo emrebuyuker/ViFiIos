@@ -34,30 +34,56 @@ private struct ModerationScreen: View {
         case let .failed(message):
             ErrorStateView(message: message) { Task { await viewModel.refresh() } }
         case let .loaded(records):
-            if records.isEmpty {
-                EmptyStateView(
-                    title: "Bekleyen gönderim yok",
-                    systemImage: "tray",
-                    message: "Yeni gönderimler onay için burada görünür."
-                )
-            } else {
-                List {
-                    Section {
-                        ForEach(records) { record in
-                            NavigationLink {
-                                ModerationDetailView(record: record, viewModel: viewModel)
-                            } label: {
-                                ModerationRow(record: record)
-                            }
-                            .accessibilityIdentifier("moderation.row.\(record.id)")
+            List {
+                conversionSection
+                Section {
+                    if records.isEmpty {
+                        Text("Bekleyen gönderim yok. Yeni gönderimler onay için burada görünür.")
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("moderation.empty")
+                    }
+                    ForEach(records) { record in
+                        NavigationLink {
+                            ModerationDetailView(record: record, viewModel: viewModel)
+                        } label: {
+                            ModerationRow(record: record)
                         }
-                    } footer: {
+                        .accessibilityIdentifier("moderation.row.\(record.id)")
+                    }
+                } header: {
+                    Text("Bekleyen gönderimler")
+                } footer: {
+                    if !records.isEmpty {
                         Text("\(records.count) gönderim onay bekliyor.")
                     }
                 }
-                .accessibilityIdentifier("moderation.list")
-                .refreshable { await viewModel.refresh() }
             }
+            .accessibilityIdentifier("moderation.list")
+            .refreshable { await viewModel.refresh() }
+        }
+    }
+
+    /// The 4.2.0 AI conversion tools: drafts to review, failed jobs and the bulk queue.
+    private var conversionSection: some View {
+        Section("Yapılandırılmış sınavlar") {
+            NavigationLink {
+                ConversionJobsView(kind: .ready)
+            } label: {
+                Label("Hazır sınavlar", systemImage: "checkmark.seal")
+            }
+            .accessibilityIdentifier("moderation.ready")
+            NavigationLink {
+                ConversionJobsView(kind: .failed)
+            } label: {
+                Label("Başarısız işler", systemImage: "exclamationmark.triangle")
+            }
+            .accessibilityIdentifier("moderation.failed")
+            NavigationLink {
+                BulkConversionView()
+            } label: {
+                Label("Toplu dönüştür", systemImage: "square.stack.3d.up")
+            }
+            .accessibilityIdentifier("moderation.bulk")
         }
     }
 }

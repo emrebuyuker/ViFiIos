@@ -408,6 +408,7 @@ final class StubModerationService: ModerationServicing {
     var gate: AsyncGate?
 
     private(set) var approvedIDs: [String] = []
+    private(set) var approvedProviders: [AIProvider] = []
     private(set) var rejectedReasons: [(id: String, reason: String?)] = []
     private(set) var deletedExamPaths: [ArchivePath] = []
 
@@ -420,9 +421,10 @@ final class StubModerationService: ModerationServicing {
         return pending
     }
 
-    func approve(_ record: ExamSubmissionRecord) async throws -> ApprovalResult {
+    func approve(_ record: ExamSubmissionRecord, provider: AIProvider) async throws -> ApprovalResult {
         let call = approvedIDs.count
         approvedIDs.append(record.id)
+        approvedProviders.append(provider)
         await gate?.pass()
         let reply = approveReplies.isEmpty
             ? Result<ApprovalResult, any Error>.failure(ModerationError.unknown(message: "No reply"))

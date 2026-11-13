@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// One submission under review: its place in the archive, a link to preview the files, and the approve / reject
-/// actions. Approving publishes the exam and credits the owner; rejecting records an optional reason.
+/// actions. The first approval credits the owner and starts the AI conversion with the chosen provider;
+/// rejecting records an optional reason.
 struct ModerationDetailView: View {
     let record: ExamSubmissionRecord
     let viewModel: ModerationViewModel
@@ -79,19 +80,21 @@ struct ModerationDetailView: View {
 
     private var actionsSection: some View {
         Section {
-            Button {
-                performApprove()
-            } label: {
-                HStack {
-                    Label("Onayla ve Yayınla", systemImage: "checkmark.circle.fill")
-                    Spacer()
-                    if isWorking {
-                        ProgressView()
+            ForEach(AIProvider.allCases, id: \.self) { provider in
+                Button {
+                    performApprove(provider: provider)
+                } label: {
+                    HStack {
+                        Label("Onayla · \(provider.displayName) ile ilerle", systemImage: "checkmark.circle.fill")
+                        Spacer()
+                        if isWorking {
+                            ProgressView()
+                        }
                     }
                 }
+                .disabled(isWorking)
+                .accessibilityIdentifier("moderation.approve.\(provider.rawValue)")
             }
-            .disabled(isWorking)
-            .accessibilityIdentifier("moderation.detail.approve")
 
             Button(role: .destructive) {
                 rejectReason = ""
@@ -103,7 +106,8 @@ struct ModerationDetailView: View {
             .disabled(isWorking)
             .accessibilityIdentifier("moderation.detail.reject")
         } footer: {
-            Text("Onaylarsan sınav arşive eklenir ve gönderene yenilik kademesine göre coin verilir.")
+            Text("Onaylarsan gönderene yenilik kademesine göre coin verilir; sayfalar seçtiğin yapay zekâ modeliyle "
+                + "sorulara dönüştürülür. Hazır olunca Hazır sınavlar'dan inceleyip yayınlarsın.")
         }
     }
 
@@ -117,11 +121,11 @@ struct ModerationDetailView: View {
 
     // MARK: - Actions
 
-    private func performApprove() {
+    private func performApprove(provider: AIProvider) {
         errorMessage = nil
         isWorking = true
         Task {
-            let outcome = await viewModel.approve(record)
+            let outcome = await viewModel.approve(record, provider: provider)
             isWorking = false
             switch outcome {
             case let .approved(result):
@@ -155,9 +159,9 @@ struct ModerationDetailView: View {
 
     private func approvalMessage(_ result: ApprovalResult) -> String {
         if result.coins > 0 {
-            String(localized: "\(result.tier.label): gönderene \(result.coins) coin verildi.")
+            String(localized: "\(result.tier.label): gönderene \(result.coins) coin verildi. Sınav yapay zekâya gönderilecek.")
         } else {
-            String(localized: "Gönderim onaylandı.")
+            String(localized: "Gönderim onaylandı. Sınav yapay zekâya gönderilecek.")
         }
     }
 }

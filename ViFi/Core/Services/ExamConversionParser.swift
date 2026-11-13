@@ -5,7 +5,8 @@ import Foundation
 /// Pure and Firestore-free: callers convert `Timestamp` values to `Date` first. Shape (server-written,
 /// `firebase/functions/conversions/schema.js`): `{ source: {type: legacy|submission, examId?, submissionId?},
 /// kind: JPG|PDF, status, model: {provider, id}, attempts, error?, usage: {inputTokens, outputTokens, costUsd},
-/// placement: {names: [String], ids: [String]}, createdAt, readyAt? }`.
+/// placement: {names: [String], ids: [String], subjectId?, subjectName?}, files: [{storagePath, order}],
+/// createdAt, readyAt? }`.
 nonisolated enum ExamConversionParser {
     static func conversion(id: String, data: [String: Any]) -> ExamConversion? {
         guard let source = source(from: data["source"]),
@@ -24,8 +25,24 @@ nonisolated enum ExamConversionParser {
             usage: usage(from: data["usage"]),
             placementNames: (placement?["names"] as? [Any])?.compactMap { $0 as? String } ?? [],
             createdAt: data["createdAt"] as? Date,
-            readyAt: data["readyAt"] as? Date
+            readyAt: data["readyAt"] as? Date,
+            files: files(from: data["files"]),
+            suggestedSubjectId: nonEmpty(placement?["subjectId"]),
+            suggestedSubjectName: nonEmpty(placement?["subjectName"])
         )
+    }
+
+    private static func files(from value: Any?) -> [SubmissionFileRef] {
+        (value as? [[String: Any]] ?? []).compactMap { entry in
+            guard let path = nonEmpty(entry["storagePath"]), let order = integer(entry["order"]) else { return nil }
+            return SubmissionFileRef(storagePath: path, order: order)
+        }
+    }
+
+    private static func nonEmpty(_ value: Any?) -> String? {
+        guard let string = value as? String else { return nil }
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     private static func source(from value: Any?) -> ConversionSource? {

@@ -29,7 +29,7 @@ nonisolated struct ExamSubmissionRecord: Identifiable, Equatable, Sendable {
 }
 
 /// A reference to one stored file of a submission: its Storage object path and reading-order position.
-nonisolated struct SubmissionFileRef: Equatable, Sendable {
+nonisolated struct SubmissionFileRef: Hashable, Sendable {
     let storagePath: String
     let order: Int
 }

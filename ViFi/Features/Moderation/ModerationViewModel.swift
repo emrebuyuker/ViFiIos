@@ -8,7 +8,7 @@ nonisolated enum ApprovalOutcome: Equatable {
 }
 
 /// Drives the admin moderation queue: loads the pending submissions, and approves or rejects one, removing it
-/// from the list on success. Approving publishes the exam and credits the owner; the heavy lifting is in
+/// from the list on success. Approving credits the owner and hands the exam to the AI conversion; the heavy lifting is in
 /// `ModerationServicing`.
 @Observable
 final class ModerationViewModel {
@@ -32,11 +32,11 @@ final class ModerationViewModel {
         await load()
     }
 
-    /// Approves `record`: on success removes it from the queue and reports the result (coins + tier); on failure
-    /// reports the message so the detail can show it.
-    func approve(_ record: ExamSubmissionRecord) async -> ApprovalOutcome {
+    /// First approval of `record` with the AI `provider` the admin picked: on success removes it from the queue and
+    /// reports the result (coins + tier); on failure reports the message so the detail can show it.
+    func approve(_ record: ExamSubmissionRecord, provider: AIProvider) async -> ApprovalOutcome {
         do {
-            let result = try await service.approve(record)
+            let result = try await service.approve(record, provider: provider)
             remove(record)
             return .approved(result)
         } catch {

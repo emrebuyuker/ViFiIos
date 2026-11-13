@@ -40,6 +40,7 @@ final class MockExamQuestionReader: ExamQuestionReading {
 /// An in-memory conversion workflow: one ready job and one failed job; actions update the jobs like the server would.
 final class MockExamConversionService: ExamConversionServicing {
     private var jobs: [ExamConversion]
+    private var usage = AIMonthlyUsage(month: AIMonthlyUsage.monthKey(for: .now), costUsd: 12.4)
     private let latency: Duration
 
     init(jobs: [ExamConversion] = MockExamConversionService.samples, latency: Duration = .milliseconds(300)) {
@@ -53,7 +54,12 @@ final class MockExamConversionService: ExamConversionServicing {
             provider: .claude, attempts: 1, error: nil,
             usage: ConversionUsage(inputTokens: 21_000, outputTokens: 6_500, costUsd: 0.42),
             placementNames: ["Boğaziçi Üniversitesi", "Mühendislik Fakültesi", "Bilgisayar Mühendisliği", "Ayrık Matematik", "2023 VİZE"],
-            createdAt: Date(timeIntervalSince1970: 1_762_000_000), readyAt: Date(timeIntervalSince1970: 1_762_000_300)
+            createdAt: Date(timeIntervalSince1970: 1_762_000_000), readyAt: Date(timeIntervalSince1970: 1_762_000_300),
+            files: [
+                SubmissionFileRef(storagePath: "imagess/mock-1.jpg", order: 1),
+                SubmissionFileRef(storagePath: "imagess/mock-2.jpg", order: 2),
+            ],
+            suggestedSubjectId: "ayrik-matematik", suggestedSubjectName: "Ayrık Matematik"
         ),
         ExamConversion(
             id: "exam-mock-legacy", source: .legacy(examId: "mock-legacy"), kind: .pdf, status: .failed,
@@ -101,15 +107,39 @@ final class MockExamConversionService: ExamConversionServicing {
         try await Task.sleep(for: latency)
     }
 
-    func publish(jobId: String) async throws {
+    func publish(jobId: String, subjectId: String?, newSubjectName: String?) async throws -> PublishedExamResult {
         try await Task.sleep(for: latency)
         update(jobId) { $0.with(status: .published) }
+        return PublishedExamResult(examId: "mock-\(jobId)", questionCount: Self.sampleQuestionCount)
     }
 
     func discard(jobId: String) async throws {
         try await Task.sleep(for: latency)
         update(jobId) { $0.with(status: .discarded) }
     }
+
+    func requestBulkConversion(scope: BulkConversionScope, provider: AIProvider, dryRun: Bool) async throws -> BulkConversionEstimate {
+        try await Task.sleep(for: latency)
+        let count = 12
+        let cost = Double(count) * (provider == .claude ? 0.42 : 0.18)
+        if !dryRun { usage = AIMonthlyUsage(month: usage.month, costUsd: usage.costUsd + cost) }
+        return BulkConversionEstimate(examCount: count, estimatedCostUsd: cost, jobIds: dryRun ? [] : (1...count).map { "exam-bulk-\($0)" })
+    }
+
+    func monthlyUsage() async throws -> AIMonthlyUsage {
+        try await Task.sleep(for: latency)
+        return usage
+    }
+
+    func updatePublishedQuestion(_ question: ExamQuestion) async throws {
+        try await Task.sleep(for: latency)
+    }
+
+    func regeneratePublishedQuestion(questionId: String, provider: AIProvider) async throws {
+        try await Task.sleep(for: latency)
+    }
+
+    private static var sampleQuestionCount: Int { MockExamQuestionReader.sampleQuestions(examId: "count").count }
 
     private func update(_ jobId: String, _ change: (ExamConversion) -> ExamConversion) {
         guard let index = jobs.firstIndex(where: { $0.id == jobId }) else { return }
@@ -122,7 +152,8 @@ private extension ExamConversion {
         ExamConversion(
             id: id, source: source, kind: kind, status: status, provider: provider ?? self.provider,
             attempts: attempts, error: status == .failed ? error : nil, usage: usage,
-            placementNames: placementNames, createdAt: createdAt, readyAt: readyAt
+            placementNames: placementNames, createdAt: createdAt, readyAt: readyAt, files: files,
+            suggestedSubjectId: suggestedSubjectId, suggestedSubjectName: suggestedSubjectName
         )
     }
 }
