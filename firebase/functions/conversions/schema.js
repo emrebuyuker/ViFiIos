@@ -63,6 +63,41 @@ export const LIMITS = Object.freeze({
 export const ID_SEGMENT_PATTERN = /^[A-Za-z0-9_-]{1,700}$/;
 export const JOB_ID_PATTERN = /^(exam|sub)-[A-Za-z0-9_-]{1,700}$/;
 
+/**
+ * Admin callables (europe-west1, admin claim required; Faz 1B implements, iOS `FirebaseExamConversionService` calls).
+ * Every AI-running call carries `provider` ('claude' | 'gemini'); there is no default.
+ *
+ * - requestExamConversion      { examId, provider }                         → { jobId, status }   (legacy "Yeni yapıya geçir"; an active job is returned as is)
+ * - requestBulkConversion      { courseId | departmentId, provider, dryRun } → { examCount, estimatedCostUsd, jobIds }
+ * - regenerateExamConversion   { jobId, provider }                          → { status }           (K14 re-run / failed retry)
+ * - regenerateDraftQuestion    { jobId, order, provider }                   → { status }           (K8)
+ * - publishExamConversion      { jobId, subjectId?, newSubjectName? }        → { examId, questionCount }  (2nd approval)
+ * - discardExamConversion      { jobId }                                    → { status }           (K14 "Sınavı iptal et")
+ * - updatePublishedQuestion    { questionId, text?, speech?, choices?, answer?, solution? } → { updatedAt }  (K15)
+ * - regeneratePublishedQuestion { questionId, provider }                     → { status }           (K15)
+ * Draft edits are direct Firestore updates (rules: content fields + editedBy/editedAt).
+ *
+ * First approval of a submission (admin client, `FirebaseModerationService.approve`, 4.2.0): ONE batch as today
+ * (coins + ledger + Storage copy into imagess/ / pdfs/) but it writes NO catalogNodes / exams. The submission gets
+ * `{ status: 'approved', tier, coins, reviewedAt, conversionProvider, publishPlan? }` where `publishPlan` (absent for a
+ * duplicate) = `{ examId, universityId, facultyId, departmentId, courseId, nodesToCreate: [{ id, ...fields }],
+ * childCountIncrements: [id], exam: { ...exam document fields incl. copied files } }` — the iOS `ArchivePublishPlan`,
+ * executed by `publishExamConversion` on the second approval. `onSubmissionModerated` turns an approved submission
+ * with `publishPlan` into job `sub-<id>`; a 4.1.0 approval (has `publishedExamId`, no plan) into job
+ * `exam-<publishedExamId>` with `conversionProvider` absent → the job waits as `queued` without a provider until an
+ * admin starts it (`regenerateExamConversion`).
+ */
+export const CALLABLES = Object.freeze([
+  'requestExamConversion',
+  'requestBulkConversion',
+  'regenerateExamConversion',
+  'regenerateDraftQuestion',
+  'publishExamConversion',
+  'discardExamConversion',
+  'updatePublishedQuestion',
+  'regeneratePublishedQuestion',
+]);
+
 // MARK: - Ids and paths
 
 /** `exam-<examId>` for a legacy exam, `sub-<submissionId>` for a user submission. */
