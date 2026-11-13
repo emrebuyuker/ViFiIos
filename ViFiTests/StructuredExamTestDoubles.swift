@@ -26,11 +26,17 @@ final class StubExamConversionService: ExamConversionServicing {
         case regenerate(jobId: String, provider: AIProvider)
         case regenerateQuestion(jobId: String, order: Int, provider: AIProvider)
         case saveDraftQuestion(jobId: String, questionId: String)
-        case publish(jobId: String)
+        case publish(jobId: String, subjectId: String?, newSubjectName: String?)
         case discard(jobId: String)
+        case requestBulk(scope: BulkConversionScope, provider: AIProvider, dryRun: Bool)
+        case updatePublishedQuestion(questionId: String)
+        case regeneratePublishedQuestion(questionId: String, provider: AIProvider)
     }
 
     var jobs: [ExamConversion] = []
+    var bulkEstimate = BulkConversionEstimate(examCount: 0, estimatedCostUsd: 0, jobIds: [])
+    var usage = AIMonthlyUsage(month: "2026-11", costUsd: 0)
+    var publishResult = PublishedExamResult(examId: "exam-1", questionCount: 2)
     var draftsByJob: [String: [ExamQuestion]] = [:]
     var error: (any Error)?
     var gate: AsyncGate?
@@ -69,8 +75,28 @@ final class StubExamConversionService: ExamConversionServicing {
         try await record(.saveDraftQuestion(jobId: jobId, questionId: question.id))
     }
 
-    func publish(jobId: String) async throws {
-        try await record(.publish(jobId: jobId))
+    func publish(jobId: String, subjectId: String?, newSubjectName: String?) async throws -> PublishedExamResult {
+        try await record(.publish(jobId: jobId, subjectId: subjectId, newSubjectName: newSubjectName))
+        return publishResult
+    }
+
+    func requestBulkConversion(scope: BulkConversionScope, provider: AIProvider, dryRun: Bool) async throws -> BulkConversionEstimate {
+        try await record(.requestBulk(scope: scope, provider: provider, dryRun: dryRun))
+        return bulkEstimate
+    }
+
+    func monthlyUsage() async throws -> AIMonthlyUsage {
+        await gate?.pass()
+        if let error { throw error }
+        return usage
+    }
+
+    func updatePublishedQuestion(_ question: ExamQuestion) async throws {
+        try await record(.updatePublishedQuestion(questionId: question.id))
+    }
+
+    func regeneratePublishedQuestion(questionId: String, provider: AIProvider) async throws {
+        try await record(.regeneratePublishedQuestion(questionId: questionId, provider: provider))
     }
 
     func discard(jobId: String) async throws {

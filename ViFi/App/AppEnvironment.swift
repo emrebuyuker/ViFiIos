@@ -68,6 +68,8 @@ final class AppEnvironment {
     @ObservationIgnored let structuredExams: StructuredExamsRemoteSwitch
     /// Reads a structured exam's questions when its screen opens (never prefetched).
     @ObservationIgnored let questionReader: any ExamQuestionReading
+    /// Admin-only AI conversion workflow of the 4.2.0 structured exams (review, publish, bulk, K15 edits).
+    @ObservationIgnored let conversionService: any ExamConversionServicing
 
     init(
         repository: any ArchiveRepository,
@@ -102,7 +104,8 @@ final class AppEnvironment {
         notificationEventDefaults: UserDefaults = .standard,
         captureShield: CaptureShieldRemoteSwitch = CaptureShieldRemoteSwitch(reader: NoopCaptureShieldConfigReader()),
         structuredExams: StructuredExamsRemoteSwitch = StructuredExamsRemoteSwitch(reader: NoopStructuredExamsConfigReader()),
-        questionReader: any ExamQuestionReading = EmptyExamQuestionReader()
+        questionReader: any ExamQuestionReading = EmptyExamQuestionReader(),
+        conversionService: any ExamConversionServicing = UnavailableExamConversionService()
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -145,6 +148,7 @@ final class AppEnvironment {
         self.captureShield = captureShield
         self.structuredExams = structuredExams
         self.questionReader = questionReader
+        self.conversionService = conversionService
         CaptureShield.isSwitchedOn = captureShield.isEnabled
     }
 
@@ -204,7 +208,8 @@ final class AppEnvironment {
             notificationEventReporter: FirebaseNotificationEventReporter(),
             captureShield: captureShield,
             structuredExams: structuredExams,
-            questionReader: FirebaseExamQuestionReader()
+            questionReader: FirebaseExamQuestionReader(),
+            conversionService: FirebaseExamConversionService(auth: auth)
         )
     }
 

@@ -36,11 +36,12 @@ struct ModerationViewModelTests {
         let viewModel = ModerationViewModel(service: service)
         await viewModel.loadIfNeeded()
 
-        let outcome = await viewModel.approve(Fixture.submissionRecord(id: "a"))
+        let outcome = await viewModel.approve(Fixture.submissionRecord(id: "a"), provider: .claude)
 
         #expect(outcome == .approved(ApprovalResult(tier: .newUniversity, coins: 500, publishedExamId: "exam-a")))
         #expect(viewModel.state.value?.map(\.id) == ["b"])
         #expect(service.approvedIDs == ["a"])
+        #expect(service.approvedProviders == [.claude])
     }
 
     @Test("A failed approval keeps the submission in the list")
@@ -50,7 +51,7 @@ struct ModerationViewModelTests {
         let viewModel = ModerationViewModel(service: service)
         await viewModel.loadIfNeeded()
 
-        let outcome = await viewModel.approve(Fixture.submissionRecord(id: "a"))
+        let outcome = await viewModel.approve(Fixture.submissionRecord(id: "a"), provider: .claude)
 
         if case .failed = outcome {} else {
             Issue.record("Expected a failed outcome")
@@ -91,7 +92,7 @@ private final class ThrowingModerationService: ModerationServicing {
     func pendingSubmissions() async throws -> [ExamSubmissionRecord] {
         throw ModerationError.offline
     }
-    func approve(_ record: ExamSubmissionRecord) async throws -> ApprovalResult {
+    func approve(_ record: ExamSubmissionRecord, provider: AIProvider) async throws -> ApprovalResult {
         throw ModerationError.offline
     }
     func reject(_ record: ExamSubmissionRecord, reason: String?) async throws {

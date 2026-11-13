@@ -51,4 +51,9 @@ nonisolated struct ExamConversion: Identifiable, Hashable, Sendable {
     let placementNames: [String]
     let createdAt: Date?
     let readyAt: Date?
+    /// The exam's original pages (`files [{storagePath, order}]` of the job), for the side-by-side review.
+    var files: [SubmissionFileRef] = []
+    /// The server's suggested country-wide course identity (`placement.subjectId` / `subjectName`), if it has one.
+    var suggestedSubjectId: String?
+    var suggestedSubjectName: String?
 }

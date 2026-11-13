@@ -5,7 +5,8 @@ import os
 
 /// Admin moderation backed by Cloud Firestore and Cloud Storage, with no Cloud Function: the admin's device
 /// resolves the submission against the archive, copies its files into the public archive storage, and commits
-/// the catalog nodes, the exam document, the coin credit and the status change in one atomic batch.
+/// the coin credit and the status change (with the AI provider and the `publishPlan`) in one atomic batch. Since
+/// 4.2.0 this first approval writes no catalog nodes or exams; `publishExamConversion` does at the second one.
 ///
 /// The coin credit uses `FieldValue.increment`, so it is race-free; approving is guarded by a re-read of the
 /// submission's `pending` status and by the ledger entry (keyed by submission id) already existing, so a
@@ -51,7 +52,7 @@ final class FirebaseModerationService: ModerationServicing {
         }
     }
 
-    func approve(_ record: ExamSubmissionRecord) async throws -> ApprovalResult {
+    func approve(_ record: ExamSubmissionRecord, provider: AIProvider) async throws -> ApprovalResult {
         guard record.status == "pending" else { throw ModerationError.notPending }
 
         let placement = try await resolver.placement(of: record.location)
@@ -62,7 +63,8 @@ final class FirebaseModerationService: ModerationServicing {
         let publishedFiles = plan.examId == nil ? [] : try await copyFiles(record)
 
         try await ensureStillCreditable(record, coins: coins)
-        try await commit(record, placement: placement, plan: plan, coins: coins, files: publishedFiles)
+        let publishPlan = plan.publishPlanDocument(record: record, files: publishedFiles)
+        try await commit(record, tier: placement.tier, coins: coins, publishPlan: publishPlan, provider: provider)
 
         return ApprovalResult(tier: placement.tier, coins: coins, publishedExamId: plan.examId)
     }
@@ -157,30 +159,17 @@ final class FirebaseModerationService: ModerationServicing {
         return published
     }
 
-    /// Commits the whole approval atomically: catalog nodes, child-count bumps, the exam document, the coin
-    /// credit (balance + ledger) and the submission status change.
+    /// Commits the first approval atomically: the coin credit (balance + ledger) and the submission status change
+    /// carrying the AI provider and the publish plan. No catalog nodes or exams are written (4.2.0).
     private func commit(
         _ record: ExamSubmissionRecord,
-        placement: ResolvedPlacement,
-        plan: ArchivePublishPlan,
+        tier: SubmissionTier,
         coins: Int,
-        files: [SubmissionFileRef]
+        publishPlan: [String: Any]?,
+        provider: AIProvider
     ) async throws {
         let batch = firestore.batch()
-        let catalog = firestore.collection(Self.catalogNodes)
 
-        for node in plan.nodesToCreate {
-            batch.setData(node.fields, forDocument: catalog.document(node.id))
-        }
-        for id in plan.childCountIncrements {
-            batch.updateData(["childCount": FieldValue.increment(Int64(1))], forDocument: catalog.document(id))
-        }
-        if let examId = plan.examId {
-            batch.setData(
-                plan.examDocument(record: record, files: files),
-                forDocument: firestore.collection(Self.exams).document(examId)
-            )
-        }
         if coins > 0 {
             let walletRef = firestore.collection(Self.wallets).document(record.ownerId)
             batch.setData(
@@ -192,19 +181,20 @@ final class FirebaseModerationService: ModerationServicing {
                 "type": "earn",
                 "amount": coins,
                 "submissionId": record.id,
-                "tier": placement.tier.rawValue,
+                "tier": tier.rawValue,
                 "createdAt": FieldValue.serverTimestamp(),
             ], forDocument: walletRef.collection(Self.ledger).document(record.id))
         }
 
         var submissionData: [String: Any] = [
             "status": "approved",
-            "tier": placement.tier.rawValue,
+            "tier": tier.rawValue,
             "coins": coins,
             "reviewedAt": FieldValue.serverTimestamp(),
+            "conversionProvider": provider.rawValue,
         ]
-        if let examId = plan.examId {
-            submissionData["publishedExamId"] = examId
+        if let publishPlan {
+            submissionData["publishPlan"] = publishPlan
         }
         batch.updateData(submissionData, forDocument: firestore.collection(Self.submissions).document(record.id))
 

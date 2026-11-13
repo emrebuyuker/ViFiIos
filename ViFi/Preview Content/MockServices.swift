@@ -65,7 +65,8 @@ extension AppEnvironment {
                 forcedOff: isCaptureShieldForcedOff(arguments: arguments)
             ),
             structuredExams: StructuredExamsRemoteSwitch(reader: NoopStructuredExamsConfigReader(), defaults: .mockSuite),
-            questionReader: MockExamQuestionReader()
+            questionReader: MockExamQuestionReader(),
+            conversionService: MockExamConversionService()
         )
         // `-ViFiOpenNotification <id>` starts as if the push of that notification had been tapped.
         if let tapped = openedNotificationId(arguments: arguments) {
@@ -584,7 +585,7 @@ final class MockModerationService: ModerationServicing {
         return pending
     }
 
-    func approve(_ record: ExamSubmissionRecord) async throws -> ApprovalResult {
+    func approve(_ record: ExamSubmissionRecord, provider: AIProvider) async throws -> ApprovalResult {
         try? await Task.sleep(for: latency)
         pending.removeAll { $0.id == record.id }
         return ApprovalResult(tier: .newUniversity, coins: 500, publishedExamId: "pub-\(record.id)")

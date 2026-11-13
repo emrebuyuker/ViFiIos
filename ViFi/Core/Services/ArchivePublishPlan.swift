@@ -117,4 +117,27 @@ nonisolated struct ArchivePublishPlan: Equatable, Sendable {
             "sortKey": record.exam,
         ]
     }
+
+    /// The plan as stored on the approved submission (`publishPlan`, 4.2.0): the second approval
+    /// (`publishExamConversion`) executes it on the server. Shape (`firebase/functions/conversions/schema.js`):
+    /// `{ examId, universityId, facultyId, departmentId, courseId, nodesToCreate: [{ id, ...fields }],
+    /// childCountIncrements: [id], exam: { ...exam document fields incl. the copied files } }`.
+    /// `nil` for a duplicate (no `examId`): nothing is published for it.
+    func publishPlanDocument(record: ExamSubmissionRecord, files: [SubmissionFileRef]) -> [String: Any]? {
+        guard let examId else { return nil }
+        return [
+            "examId": examId,
+            "universityId": universityId,
+            "facultyId": facultyId,
+            "departmentId": departmentId,
+            "courseId": courseId,
+            "nodesToCreate": nodesToCreate.map { node -> [String: Any] in
+                var fields = node.fields
+                fields["id"] = node.id
+                return fields
+            },
+            "childCountIncrements": childCountIncrements,
+            "exam": examDocument(record: record, files: files),
+        ]
+    }
 }
