@@ -11,7 +11,9 @@
 
 import { FieldValue } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
+import * as logger from 'firebase-functions/logger';
 import { ID_SEGMENT_PATTERN, PROVIDERS, conversionJobId } from './schema.js';
+import { suggestSubject } from './subjects.js';
 
 export const JOBS = 'examConversions';
 export const DRAFTS = 'questions';
@@ -113,6 +115,22 @@ export function submissionJob(submissionId, submission) {
   });
 }
 
+/**
+ * The job with the suggested subject added to its placement (`placement.subjectId` / `placement.subjectName`, read by
+ * the admin review screen): what an automatic publish would resolve the course to now (subjects.js). Best effort —
+ * a failed lookup leaves the job without a suggestion; publishing resolves the subject again either way.
+ */
+export async function withSubjectSuggestion(db, job) {
+  if (!job) return job;
+  try {
+    const subject = await suggestSubject(db, { courseId: job.placement.courseId, courseName: job.placement.names[3] });
+    if (subject) job.placement = { ...job.placement, ...subject };
+  } catch (error) {
+    logger.warn('Could not suggest a subject for a conversion job', { error: error?.message ?? String(error) });
+  }
+  return job;
+}
+
 function baseJob({ source, placement, files, kind, provider, requestedBy }) {
   return {
     source,
@@ -148,7 +166,7 @@ export function restartFields(provider, requestedBy) {
 
 /**
  * Starts (or restarts) the whole-exam run of job `jobId` with `provider`, transactionally: when `policy` refuses the
- * current job it is returned untouched (`started: false`); a missing job is created from `create()` (`null` →
+ * current job it is returned untouched (`started: false`); a missing job is created from `await create()` (`null` →
  * `failed-precondition`). Only the call that claimed the run clears the old drafts and enqueues it.
  *
  * @returns {Promise<{ jobId: string, status: string, started: boolean }>}
@@ -165,7 +183,7 @@ export async function startRun(deps, jobId, { provider, requestedBy, policy, cre
     if (job) {
       transaction.update(ref, restartFields(provider, requestedBy));
     } else {
-      const fresh = create?.();
+      const fresh = await create?.();
       if (!fresh) throw new HttpsError('failed-precondition', 'Sınavın dosyaları dönüştürmeye uygun değil.');
       transaction.create(ref, fresh);
     }
@@ -184,7 +202,7 @@ export function startLegacyRun(deps, examId, exam, { provider, requestedBy, poli
     provider,
     requestedBy,
     policy,
-    create: () => legacyJob(examId, exam, { provider, requestedBy }),
+    create: () => withSubjectSuggestion(deps.db, legacyJob(examId, exam, { provider, requestedBy })),
   });
 }
 

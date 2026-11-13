@@ -1,7 +1,7 @@
 // What both provider clients share: the error type, the user-turn instruction and JSON parsing.
 //
 // Provider interface (claude.js, gemini.js, and the fakes in tests):
-//   { name, modelId, solveExam({ files: [{ bytes: Buffer, mimeType }], kind, pageCount }) →
+//   { name, modelId, solveExam({ files: [{ bytes: Buffer, mimeType }], kind, pageCount, focus? }) →
 //       { output: <parsed JSON, unvalidated>, usage: { inputTokens, outputTokens } } }
 // `files` are in exam order; a PDF's pages continue the page count. Validation (`validateModelOutput`) is the
 // pipeline's job, so a fake can return anything.
@@ -17,11 +17,19 @@ export class ProviderError extends Error {
   }
 }
 
-/** The user turn after the files: tells the model how many pages there are and asks for the schema. */
-export function examInstruction({ kind, pageCount }) {
+/**
+ * The user turn after the files: tells the model how many pages there are and asks for the schema. With `focus`
+ * (`{ label, order }`, a single-question regeneration, K8/K15) only that question is asked for, in the same schema.
+ */
+export function examInstruction({ kind, pageCount, focus }) {
   const what = kind === 'PDF' ? 'PDF' : 'page images';
-  return `These ${what} are one exam with ${pageCount} page(s) in total, numbered 1–${pageCount} in the order given. `
-    + 'Convert and solve every question as instructed and return the JSON object.';
+  const pages = `These ${what} are one exam with ${pageCount} page(s) in total, numbered 1–${pageCount} in the order given. `;
+  if (!focus) return `${pages}Convert and solve every question as instructed and return the JSON object.`;
+  const label = String(focus.label ?? '').replace(/["\\\n\r]/g, '').slice(0, 16) || String(focus.order);
+  return `${pages}Convert and solve ONLY the question labelled "${label}" on the paper (question number ${focus.order} `
+    + 'in paper order, sub-questions counted separately), as instructed. Return the JSON object with exactly one entry '
+    + `in "questions" (its "label" is "${label}"); "figures" page numbers still refer to the whole exam. Ignore every `
+    + 'other question; "unreadable" lists only pages that make this question unreadable.';
 }
 
 /** Parses the model's JSON text; an unparsable answer is a retryable failure that was still billed. */

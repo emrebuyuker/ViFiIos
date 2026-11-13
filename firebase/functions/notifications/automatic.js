@@ -12,7 +12,8 @@
 //     approval (`conversions/publish.js` → `notifyNewExam`). A 4.1.0 approval (`publishedExamId`, no plan) keeps the
 //     behaviour above and also gets a provider-less job `exam-<publishedExamId>` that waits for an admin.
 //   - rejected → a personal notice with the admin's reason when there is one, delivered now.
-// - `notifyAdminsAboutConversion` (called by the conversion pipeline): "draft ready" / "conversion failed" to admins.
+// - `notifyAdminsAboutConversion` (called by the conversion pipeline): "draft ready" / "conversion failed" / "monthly
+//   AI budget reached" to admins.
 // - `onSubmissionCreated` (`submissions/{id}` created): a notice to every admin, delivered now.
 //
 // Every notification gets a deterministic id derived from the submission id and is recorded with `create()`, so a
@@ -39,7 +40,7 @@ import {
 import { examAction } from './admin.js';
 import { deliverNotification } from './deliver.js';
 import { ID_SEGMENT_PATTERN, conversionJobId } from '../conversions/schema.js';
-import { JOBS, enqueue, isPlainObject, legacyJob, submissionJob } from '../conversions/jobs.js';
+import { JOBS, enqueue, isPlainObject, legacyJob, submissionJob, withSubjectSuggestion } from '../conversions/jobs.js';
 
 /** The `trigger` values of automatic notifications (NOTIFICATIONS.md §3.1). */
 export const TRIGGERS = Object.freeze({
@@ -51,6 +52,8 @@ export const TRIGGERS = Object.freeze({
   // Admin-only (`admins` audience), sent now, never consent-filtered. Wired by the conversion pipeline (Faz 1B).
   conversionReady: 'conversionReady',
   conversionFailed: 'conversionFailed',
+  // The month's regular AI spend reached the cap (conversions/usage.js): new runs wait for next month. One per month.
+  conversionBudgetExceeded: 'conversionBudgetExceeded',
 });
 
 /**
@@ -62,6 +65,12 @@ export const conversionNotificationIds = (jobId, attempts = 0) => {
   // replaced by a stable hash so the id stays deterministic and valid.
   const key = jobId.length <= 80 ? jobId : `h${createHash('sha256').update(jobId).digest('hex').slice(0, 40)}`;
   return { ready: `auto-convready-${key}`, failed: `auto-convfailed-${key}-${attempts}` };
+};
+
+/** The deterministic id of the monthly "AI budget reached" notice (`month` = `YYYY-MM`, `usageMonthKey`). */
+export const conversionBudgetNotificationId = (month) => {
+  if (!/^\d{4}-\d{2}$/.test(month ?? '')) throw new Error(`A budget notice needs a YYYY-MM month, got ${month}`);
+  return `auto-convbudget-${month}`;
 };
 
 /** Server-only "new exam" daily limit per department (NOTIFICATIONS.md §3.6): `{ lastSentAt, notificationId }`. */
@@ -285,7 +294,7 @@ async function startSubmissionConversion(deps, submissionId, submission) {
     return 'invalid-plan';
   }
   const jobId = conversionJobId({ type: 'submission', submissionId });
-  if (!(await createJob(deps.db, jobId, job))) return 'duplicate';
+  if (!(await createJob(deps.db, jobId, await withSubjectSuggestion(deps.db, job)))) return 'duplicate';
   if (!job.model) return 'waiting';
   await enqueue(deps, jobId);
   return 'queued';
@@ -303,7 +312,8 @@ async function queueLegacyConversion(deps, examId) {
     logger.warn('The exam the approval published cannot be converted; no conversion job', { examId });
     return 'invalid-exam';
   }
-  return (await createJob(deps.db, conversionJobId({ type: 'legacy', examId }), job)) ? 'waiting' : 'duplicate';
+  const jobId = conversionJobId({ type: 'legacy', examId });
+  return (await createJob(deps.db, jobId, await withSubjectSuggestion(deps.db, job))) ? 'waiting' : 'duplicate';
 }
 
 /** `create()`s the job; `false` when it already exists. */
@@ -318,15 +328,31 @@ async function createJob(db, jobId, job) {
 }
 
 /**
- * Tells every admin a conversion draft is ready for review (`conversionReady`) or a job failed after its retries
- * (`conversionFailed`). Called by the pipeline (track 1A) through injection. Not consent-filtered, never held for
- * quiet hours; one notice per job (ready) or per failed attempt series (`attempts`), so a redelivery sends nothing.
+ * Tells every admin a conversion draft is ready for review (`conversionReady`), a job failed after its retries
+ * (`conversionFailed`) or the month's AI budget is used up (`conversionBudgetExceeded`, with `month`, `spentUsd`,
+ * `capUsd`). Called by the pipeline through injection. Not consent-filtered, never held for quiet hours; one notice
+ * per job (ready), per failed attempt series (`attempts`) or per month (budget), so a redelivery sends nothing.
  *
  * @param {object} deps What `deliverNotification` needs, including `auth` for the `admins` audience.
- * @param {{ trigger: 'conversionReady'|'conversionFailed', jobId: string, attempts?: number }} input
+ * @param {{ trigger: string, jobId?: string, attempts?: number, month?: string, spentUsd?: number, capUsd?: number }} input
  * @returns {Promise<string>} The delivery status, or `duplicate`.
  */
-export async function notifyAdminsAboutConversion(deps, { trigger, jobId, attempts = 0 }) {
+export async function notifyAdminsAboutConversion(deps, { trigger, jobId, attempts = 0, month, spentUsd, capUsd }) {
+  if (trigger === TRIGGERS.conversionBudgetExceeded) {
+    const id = conversionBudgetNotificationId(month);
+    const audience = { scope: 'admins' };
+    const spent = usd(spentUsd);
+    const cap = usd(capUsd);
+    return recordAndDeliver(deps, id, automaticRecord({
+      trigger,
+      title: 'Yapay zekâ bütçesi doldu',
+      body: `${month} ayının yapay zekâ harcaması${spent ? ` (${spent})` : ''} aylık${cap ? ` ${cap}` : ''} sınırına ulaştı. `
+        + 'Yeni dönüştürmeler bekletiliyor; gelecek ayın başında kendiliğinden başlayacak.',
+      audience,
+      label: audienceLabel(audience),
+      status: 'sending',
+    }));
+  }
   if (trigger !== TRIGGERS.conversionReady && trigger !== TRIGGERS.conversionFailed) {
     throw new Error(`Unknown conversion trigger: ${trigger}`);
   }
@@ -354,6 +380,11 @@ export async function notifyAdminsAboutConversion(deps, { trigger, jobId, attemp
     label: audienceLabel(audience),
     status: 'sending',
   }));
+}
+
+/** `$49.99` for a finite amount, `''` otherwise (the notice then leaves the figure out). */
+function usd(value) {
+  return Number.isFinite(value) ? `$${(Math.round(value * 100) / 100).toFixed(2)}` : '';
 }
 
 // MARK: - Department "new exam" notice

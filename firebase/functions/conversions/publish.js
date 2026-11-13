@@ -34,6 +34,7 @@ import {
   questionPoolId,
 } from './schema.js';
 import { slug } from './slug.js';
+import { resolveSubject, subjectKey } from './subjects.js';
 import { DRAFTS, JOBS, isPlainObject, text } from './jobs.js';
 import { notifyNewExam } from '../notifications/automatic.js';
 import { requireAdmin } from '../notifications/admin.js';
@@ -76,7 +77,7 @@ export async function publishExamConversionHandler(deps, request) {
     const target = job.source?.type === 'submission'
       ? await readSubmissionTarget(transaction, db, job)
       : await readLegacyTarget(transaction, db, job);
-    const subject = await resolveSubject(transaction, db, {
+    const subject = await resolveSubject((refOrQuery) => transaction.get(refOrQuery), db, {
       courseNode: target.courseNode,
       courseName: target.names.course,
       override,
@@ -337,7 +338,9 @@ function answerOf(answer) {
   };
 }
 
-// MARK: - Subjects (country-wide course identities, Ek C)
+// MARK: - Subjects (country-wide course identities, Ek C; matching in subjects.js)
+
+export { subjectKey };
 
 /** `{ subjectId }` (an existing subject) or `{ newSubjectName }` from the request; `null` for automatic matching. */
 function subjectOverride(data) {
@@ -360,50 +363,6 @@ function subjectOverride(data) {
     return { newSubjectName: name };
   }
   return null;
-}
-
-/** The normalised alias of a course name (its slug); `null` when the name has no letters or digits. */
-export function subjectKey(name) {
-  const key = slug(String(name ?? ''));
-  return key === 'unknown' ? null : key;
-}
-
-/**
- * The exam's subject: the admin's choice (`subjectId` must exist; `newSubjectName` creates or reuses
- * `subjects/<slug>`), else the course node's `subjectId`, else a subject whose id or `aliases` match the course
- * name's slug, else a new subject named after the course. `null` only when the course has no usable name.
- *
- * @returns {Promise<{ id: string, create: object|null, aliases: string[], alias: string|null }|null>}
- */
-async function resolveSubject(transaction, db, { courseNode, courseName, override }) {
-  const alias = subjectKey(courseName);
-  const subjects = db.collection('subjects');
-  const existing = (snapshot) => ({ id: snapshot.id, create: null, aliases: snapshot.get('aliases') ?? [], alias });
-
-  if (override?.subjectId) {
-    const snapshot = await transaction.get(subjects.doc(override.subjectId));
-    if (!snapshot.exists) throw new HttpsError('invalid-argument', 'Seçilen ders kimliği bulunamadı.');
-    return existing(snapshot);
-  }
-  if (override?.newSubjectName) {
-    const id = subjectKey(override.newSubjectName);
-    const snapshot = await transaction.get(subjects.doc(id));
-    return snapshot.exists
-      ? existing(snapshot)
-      : { id, create: { name: override.newSubjectName, aliases: [...new Set([id, alias].filter(Boolean))] }, aliases: [], alias };
-  }
-
-  const nodeSubjectId = courseNode?.exists ? courseNode.get('subjectId') : null;
-  if (typeof nodeSubjectId === 'string' && ID_SEGMENT_PATTERN.test(nodeSubjectId)) {
-    const snapshot = await transaction.get(subjects.doc(nodeSubjectId));
-    if (snapshot.exists) return existing(snapshot);
-  }
-  if (!alias) return null;
-  const byId = await transaction.get(subjects.doc(alias));
-  if (byId.exists) return existing(byId);
-  const byAlias = await transaction.get(subjects.where('aliases', 'array-contains', alias).limit(1));
-  if (!byAlias.empty) return existing(byAlias.docs[0]);
-  return { id: alias, create: { name: text(courseName), aliases: [alias] }, aliases: [], alias };
 }
 
 /** Writes the subject (new, or a learnt alias) and points the course node at it. */

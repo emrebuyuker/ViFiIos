@@ -266,6 +266,7 @@ describe('onSubmissionModerated: approval', () => {
     assert.deepEqual(job.source, { type: 'legacy', examId });
     assert.deepEqual(job.files, [{ storagePath: 'pdfs/a.pdf', order: 0 }]);
     assert.deepEqual(job.placement.names, ['Ege Üniversitesi', 'Mühendislik Fakültesi', 'Bilgisayar Mühendisliği', 'Algoritmalar', '2024 FİNAL']);
+    assert.deepEqual([job.placement.subjectId, job.placement.subjectName], ['algoritmalar', 'Algoritmalar']);
   });
 
   test('a redelivered event sends nothing twice', async () => {
@@ -415,6 +416,26 @@ describe('notifyAdminsAboutConversion', () => {
     assert.equal(await automatic.notifyAdminsAboutConversion(deps, { trigger: 'conversionReady', jobId: 'exam-gone' }), 'sent');
     assert.match((await notificationDoc('auto-convready-exam-gone')).get('body'), /^Bir sınav /);
     await assert.rejects(automatic.notifyAdminsAboutConversion(deps, { trigger: 'newExam', jobId: 'sub-sub-n' }), /Unknown conversion trigger/);
+  });
+
+  test('the monthly AI budget notice goes to the admins once per month', async () => {
+    const deps = depsWith({ messaging: fakeMessaging(), auth: fakeAuth(ADMINS), now: NIGHT });
+    const notice = { trigger: 'conversionBudgetExceeded', jobId: 'exam-x', attempts: 0, month: '2026-11', spentUsd: 49.987, capUsd: 50 };
+    assert.equal(automatic.conversionBudgetNotificationId('2026-11'), 'auto-convbudget-2026-11');
+    assert.equal(await automatic.notifyAdminsAboutConversion(deps, notice), 'sent');
+    const sent = (await notificationDoc('auto-convbudget-2026-11')).data();
+    assert.equal(sent.trigger, 'conversionBudgetExceeded');
+    assert.equal(sent.kind, 'system');
+    assert.equal(sent.source, 'automatic');
+    assert.deepEqual(sent.audience, { scope: 'admins' });
+    assert.equal(sent.status, 'sent'); // never held for quiet hours
+    assert.equal(sent.title, 'Yapay zekâ bütçesi doldu');
+    assert.match(sent.body, /^2026-11 ayının yapay zekâ harcaması \(\$49\.99\) aylık \$50\.00 sınırına ulaştı\./);
+    assert.deepEqual(await inboxOwners('auto-convbudget-2026-11'), ['admin-1']);
+    // Another job hitting the cap in the same month sends nothing; the next month gets its own notice.
+    assert.equal(await automatic.notifyAdminsAboutConversion(deps, { ...notice, jobId: 'exam-y' }), 'duplicate');
+    assert.equal(await automatic.notifyAdminsAboutConversion(deps, { ...notice, month: '2026-12' }), 'sent');
+    await assert.rejects(automatic.notifyAdminsAboutConversion(deps, { ...notice, month: undefined }), /YYYY-MM/);
   });
 });
 

@@ -14,9 +14,9 @@ import { PROVIDER_CONFIG } from './config.js';
 import { ProviderError, examInstruction, parseJsonOutput } from './common.js';
 
 /** The `generateContent` parameters (exported for tests). */
-export function buildGeminiRequest({ files, kind, pageCount }, config = PROVIDER_CONFIG.gemini) {
+export function buildGeminiRequest({ files, kind, pageCount, focus }, config = PROVIDER_CONFIG.gemini) {
   const parts = files.map(({ bytes, mimeType }) => ({ inlineData: { mimeType, data: bytes.toString('base64') } }));
-  parts.push({ text: examInstruction({ kind, pageCount }) });
+  parts.push({ text: examInstruction({ kind, pageCount, focus }) });
   return {
     model: config.modelId,
     contents: [{ role: 'user', parts }],
@@ -68,11 +68,11 @@ export function createGeminiProvider({ client, projectId = process.env.GCLOUD_PR
   return {
     name: 'gemini',
     modelId: config.modelId,
-    async solveExam({ files, kind, pageCount }) {
+    async solveExam({ files, kind, pageCount, focus }) {
       const ai = await getClient();
       let response;
       try {
-        response = await ai.models.generateContent(buildGeminiRequest({ files, kind, pageCount }, config));
+        response = await ai.models.generateContent(buildGeminiRequest({ files, kind, pageCount, focus }, config));
       } catch (error) {
         const status = error?.status ?? error?.code;
         const retryable = !(status >= 400 && status < 500 && ![408, 409, 429].includes(status));

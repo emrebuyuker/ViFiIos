@@ -16,11 +16,11 @@ import { ProviderError, closedSchema, examInstruction, parseJsonOutput } from '.
 const OUTPUT_SCHEMA = closedSchema(MODEL_OUTPUT_SCHEMA);
 
 /** The Messages request body (exported for tests). */
-export function buildClaudeRequest({ files, kind, pageCount }, config = PROVIDER_CONFIG.claude) {
+export function buildClaudeRequest({ files, kind, pageCount, focus }, config = PROVIDER_CONFIG.claude) {
   const content = files.map(({ bytes, mimeType }) => (mimeType === 'application/pdf'
     ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: bytes.toString('base64') } }
     : { type: 'image', source: { type: 'base64', media_type: mimeType, data: bytes.toString('base64') } }));
-  content.push({ type: 'text', text: examInstruction({ kind, pageCount }) });
+  content.push({ type: 'text', text: examInstruction({ kind, pageCount, focus }) });
   return {
     model: config.modelId,
     max_tokens: config.maxOutputTokens,
@@ -66,11 +66,11 @@ export function createClaudeProvider({ client, projectId = process.env.GCLOUD_PR
   return {
     name: 'claude',
     modelId: config.modelId,
-    async solveExam({ files, kind, pageCount }) {
+    async solveExam({ files, kind, pageCount, focus }) {
       const anthropic = await getClient();
       let message;
       try {
-        message = await anthropic.messages.stream(buildClaudeRequest({ files, kind, pageCount }, config)).finalMessage();
+        message = await anthropic.messages.stream(buildClaudeRequest({ files, kind, pageCount, focus }, config)).finalMessage();
       } catch (error) {
         // 4xx other than 408/409/429 will not get better on retry (bad request, permission, model not enabled).
         const status = error?.status;

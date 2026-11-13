@@ -565,6 +565,25 @@ describe('Firestore rules — structured exams (4.2.0: questions, pools, subject
     await assertSucceeds(ref.update(edit({ choices: [{ label: 'A', text: '1' }], solution: [] })));
   });
 
+  test('a draft as the pipeline writes it (server-only fields included) is still editable — but not those fields', async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().collection('examConversions').doc('exam-e1').collection('questions').doc('002').set({
+        ...draft, order: 2, label: '2', schemaVersion: 1, hasFigure: true,
+        pendingFigures: [{ index: 1, page: 2, box: [400, 428, 600, 571] }],
+        provider: 'claude', modelId: 'claude-opus-5-5', promptVersion: 1, generatedAt: new Date(),
+        regenerationError: 'missing-field: question 1 text is empty',
+      });
+    });
+    const ref = db(users.admin).collection('examConversions').doc('exam-e1').collection('questions').doc('002');
+    await assertSucceeds(ref.update(edit({ choices: [], solution: ['a'] })));
+    await assertFails(ref.update(edit({ pendingFigures: [] })));
+    await assertFails(ref.update(edit({ provider: 'gemini' })));
+    await assertFails(ref.update(edit({ modelId: 'x' })));
+    await assertFails(ref.update(edit({ promptVersion: 2 })));
+    await assertFails(ref.update(edit({ generatedAt: serverTimestamp() })));
+    await assertFails(ref.update(edit({ regenerationLeaseUntil: new Date() })));
+  });
+
   test('draft edits outside the content fields, malformed, unsigned or by non-admins are rejected', async () => {
     const path = (user) => db(user).collection('examConversions').doc('exam-e1').collection('questions').doc('001');
     const ref = path(users.admin);

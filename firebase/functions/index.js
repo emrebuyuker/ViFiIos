@@ -371,6 +371,10 @@ export const trackNotificationEvent = onCall({ region: 'europe-west1' }, (reques
 // --- Structured exams (4.2.0, `conversions/`; contract: conversions/schema.js) ----------------------------------
 
 import { getFunctions } from 'firebase-admin/functions';
+import { onTaskDispatched } from 'firebase-functions/v2/tasks';
+import { TASK_QUEUE_OPTIONS, processExamConversionHandler } from './conversions/pipeline.js';
+import { liveProviders } from './conversions/providers/index.js';
+import { notifyAdminsAboutConversion } from './notifications/automatic.js';
 import {
   discardExamConversionHandler,
   publishExamConversionHandler,
@@ -385,17 +389,34 @@ import {
 /** The Cloud Tasks queue of the AI pipeline's task function (`processExamConversion`, europe-west1). */
 const CONVERSION_QUEUE = 'locations/europe-west1/functions/processExamConversion';
 
+/** Enqueues one task on the pipeline's queue; `scheduleTime` delays it (a budget-deferred job, next month). */
+const enqueueConversionTask = (data, { scheduleTime } = {}) =>
+  getFunctions().taskQueue(CONVERSION_QUEUE).enqueue(data, scheduleTime ? { scheduleTime } : {});
+
 // Hands a job (or one question of it) to the pipeline: task payload `{ jobId, ...options }` (payload contract in
 // conversions/jobs.js). The admin callables and `onSubmissionModerated` share it through `notificationDeps`.
 Object.defineProperty(notificationDeps, 'enqueueConversion', {
-  value: (jobId, options = {}) => getFunctions().taskQueue(CONVERSION_QUEUE).enqueue({ jobId, ...options }),
+  value: (jobId, options = {}) => enqueueConversionTask({ jobId, ...options }),
   enumerable: true,
 });
 
-// TODO(4.2.0 Faz 2 merge): export `processExamConversion` here — track 1A's `onTaskDispatched` queue function
-// (conversions/pipeline.js), with `notifyAdminsAboutConversion` (notifications/automatic.js) and
-// `publishDraftQuestion` (conversions/publish.js) injected. Until it is deployed the queue does not exist: enqueueing
-// fails, and jobs stay `queued` with an `enqueue:` error that an admin can restart.
+// Live dependencies of the AI pipeline. The model clients are created on first use (Vertex AI, Application Default
+// Credentials of the functions' service account — no API key). `publishDraftQuestion` (K15) and the department
+// notice need what `notificationDeps` carries, so the pipeline's deps extend it.
+const getConversionProvider = liveProviders();
+const conversionDeps = Object.create(notificationDeps, {
+  getProvider: { value: getConversionProvider, enumerable: true },
+  notifyAdmins: { value: (notice) => notifyAdminsAboutConversion(notificationDeps, notice), enumerable: true },
+  enqueue: { value: enqueueConversionTask, enumerable: true },
+});
+
+// The AI pipeline (conversions/pipeline.js): a Cloud Tasks queue function, so a long model run gets 30 minutes, at
+// most 3 run at once, and a failed attempt is retried by the queue. Payloads: `{ jobId }` (whole exam) or
+// `{ jobId, order, provider, target: 'draft' | 'published' }` (one question). Until it is deployed the queue does not
+// exist: enqueueing fails, and jobs stay `queued` with an `enqueue:` error that an admin can restart.
+export const processExamConversion = onTaskDispatched(TASK_QUEUE_OPTIONS, (request) =>
+  processExamConversionHandler(conversionDeps, { ...(request.data ?? {}), retryCount: request.retryCount })
+);
 
 // Admin-only (`admin: true` claim). Every AI-running call carries `provider` ('claude' | 'gemini'), no default.
 export const requestExamConversion = onCall({ region: 'europe-west1' }, (request) =>

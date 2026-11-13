@@ -5,7 +5,8 @@
 // Covered: happy path (drafts + figures + usage + ready + notice), the recorded provider, the monthly cap (queued +
 // one notice + re-enqueue; one-time budget exempt), invalid model output (retry, then failed on the last attempt),
 // permanent errors, idempotency of re-delivered tasks, the lease, stale drafts/figures, PDFs with and without a
-// rasteriser, and a job discarded mid-run.
+// rasteriser, a job discarded mid-run (drafts untouched), and single-question regeneration (draft / published
+// target, skips, the cap, retries, the lease).
 
 import { test, before, after, beforeEach, describe, mock } from 'node:test';
 import assert from 'node:assert/strict';
@@ -595,9 +596,12 @@ describe('processExamConversion — failures and retries', () => {
     const provider = fakeProvider('gemini', [GOOD_OUTPUT], {
       onSolve: () => db.collection('examConversions').doc(jobId).update({ status: 'discarded' }),
     });
+    await db.collection('examConversions').doc(jobId).collection('questions').doc('001').set({ order: 1, label: '1', text: 'eski' });
     const { deps, notices } = makeDeps({ provider });
     assert.equal((await pipeline.processExamConversionHandler(deps, { jobId })).outcome, 'abandoned');
     assert.equal((await jobDoc(jobId)).status, 'discarded');
+    assert.deepEqual((await draftDocs(jobId)).map((draft) => draft.text), ['eski'], 'a discarded job keeps its drafts as they were');
+    assert.deepEqual(await figureNames(jobId), [], 'and gets no new figures');
     assert.equal(notices.length, 0);
   });
 });
@@ -668,5 +672,166 @@ describe('task queue options', () => {
     assert.ok(options.retryConfig.maxAttempts >= 2);
     assert.ok(options.rateLimits.maxConcurrentDispatches >= 1 && options.rateLimits.maxConcurrentDispatches <= 5);
     assert.ok(pipeline.LEASE_MS > options.timeoutSeconds * 1000);
+  });
+});
+
+describe('processExamConversion — one question (K8 draft, K15 published)', () => {
+  const NEW_TWO = {
+    questions: [question('2', {
+      text: 'Yeni soru 2: $x^3$ türevini alınız.',
+      figures: [{ page: 2, box: [400, 428, 600, 571] }],
+      confidence: 0.95,
+    })],
+    unreadable: [],
+  };
+
+  const oldDraft = (order, overrides = {}) => ({
+    schemaVersion: 1, order, label: String(order), text: `Eski soru ${order}`, speech: `Eski soru ${order}`, choices: [],
+    figures: [], answer: { text: '1' }, solution: [], topics: [], difficulty: 2, hasFigure: false, confidence: 0.5,
+    needsReview: true, provider: 'gemini', modelId: 'fake-gemini-model', promptVersion: 1, generatedAt: NOW, ...overrides,
+  });
+
+  async function seedReadyJob(jobId, overrides = {}) {
+    await seedJob(jobId, {
+      status: 'ready', attempts: 1, model: { provider: 'gemini', id: 'fake-gemini-model' }, usage: null,
+      questionCount: 2, needsReviewCount: 2, ...overrides,
+    });
+    const drafts = db.collection('examConversions').doc(jobId).collection('questions');
+    await drafts.doc('001').set(oldDraft(1));
+    await drafts.doc('002').set(oldDraft(2, { editedBy: 'admin-1', figures: [{ storagePath: `questionFigures/${jobId}/002-2.jpg` }] }));
+    await upload(`questionFigures/${jobId}/002-2.jpg`, await pageImage(), 'image/jpeg');
+    await upload(`questionFigures/${jobId}/001-1.jpg`, await pageImage(), 'image/jpeg');
+  }
+
+  test('the provider instruction names the one question; the whole-exam instruction is unchanged', () => {
+    const whole = common.examInstruction({ kind: 'JPG', pageCount: 3 });
+    assert.match(whole, /Convert and solve every question/);
+    const one = common.examInstruction({ kind: 'JPG', pageCount: 3, focus: { label: '2b', order: 3 } });
+    assert.match(one, /ONLY the question labelled "2b"/);
+    assert.match(one, /question number 3/);
+    assert.match(one, /exactly one entry/);
+    const request = claude.buildClaudeRequest({ files: [], kind: 'JPG', pageCount: 3, focus: { label: '2b', order: 3 } });
+    assert.equal(request.system, SYSTEM_PROMPT);
+    assert.match(request.messages[0].content.at(-1).text, /"2b"/);
+    assert.match(gemini.buildGeminiRequest({ files: [], kind: 'PDF', pageCount: 3, focus: { label: '4', order: 4 } }).contents[0].parts.at(-1).text, /"4"/);
+  });
+
+  test('a draft question is rewritten with the chosen provider; the rest of the job is untouched', async () => {
+    const jobId = 'exam-one-draft';
+    await seedReadyJob(jobId);
+    const { deps, fakes, notices } = makeDeps({ outputs: [NEW_TWO] });
+
+    const result = await pipeline.processExamConversionHandler(deps, { jobId, order: 2, provider: 'claude', target: 'draft' });
+    assert.equal(result.outcome, 'ready');
+    assert.equal(fakes.gemini.calls.length, 0);
+    assert.equal(fakes.claude.calls.length, 1);
+    assert.deepEqual(fakes.claude.calls[0].focus, { label: '2', order: 2 });
+    assert.equal(fakes.claude.calls[0].pageCount, 2);
+
+    const [first, second] = await draftDocs(jobId);
+    assert.equal(first.text, 'Eski soru 1', 'other drafts are untouched');
+    assert.equal(second.order, 2);
+    assert.equal(second.label, '2');
+    assert.match(second.text, /^Yeni soru 2/);
+    assert.equal(second.provider, 'claude');
+    assert.equal(second.modelId, 'fake-claude-model');
+    assert.equal(second.needsReview, false);
+    assert.equal(second.editedBy, undefined, 'the new draft replaces the edited one');
+    assert.equal(second.regenerationLeaseUntil, undefined);
+    assert.deepEqual(second.figures.map((figure) => figure.storagePath), [`questionFigures/${jobId}/002-1.jpg`]);
+    assert.deepEqual(await figureNames(jobId), [`questionFigures/${jobId}/001-1.jpg`, `questionFigures/${jobId}/002-1.jpg`]);
+
+    const job = await jobDoc(jobId);
+    assert.equal(job.status, 'ready');
+    assert.equal(job.attempts, 1, 'a question run is not a job attempt');
+    assert.deepEqual(job.model, { provider: 'gemini', id: 'fake-gemini-model' }, 'the job keeps its whole-exam provider');
+    assert.equal(job.needsReviewCount, 1);
+    const cost = usage.costUsd('claude', { inputTokens: 6000, outputTokens: 4000 });
+    assert.deepEqual(job.usage, { inputTokens: 6000, outputTokens: 4000, costUsd: cost }, 'usage starts from a null map');
+    const month = await usageDoc();
+    assert.equal(month.runs, 1);
+    assert.equal(month.byProvider.claude.costUsd, cost);
+    assert.deepEqual(notices, []);
+  });
+
+  test('a published question is rewritten and put live under its permanent id', async () => {
+    const jobId = 'exam-e-pub';
+    await seedReadyJob(jobId, { status: 'published', publishedExamId: 'e-pub' });
+    await db.collection('exams').doc('e-pub').set({ status: 'published', format: 'structured', conversionJobId: jobId });
+    const keys = { subjectId: 'mat', courseId: 'c1', universityId: 'u1', facultyId: 'f1', departmentId: 'd1', examType: 'final', year: 2019 };
+    await db.collection('questions').doc('e-pub-002').set({ examId: 'e-pub', order: 2, text: 'Eski soru 2', answer: { text: '1' }, ...keys });
+    const { deps } = makeDeps({ outputs: [NEW_TWO] });
+
+    const result = await pipeline.processExamConversionHandler(deps, { jobId, order: 2, provider: 'gemini', target: 'published' });
+    assert.equal(result.outcome, 'published');
+    assert.equal(result.questionId, 'e-pub-002');
+    const live = (await db.collection('questions').doc('e-pub-002').get()).data();
+    assert.match(live.text, /^Yeni soru 2/);
+    assert.equal(live.subjectId, 'mat', 'the query keys (and so the pools) are kept');
+    assert.equal(live.year, 2019);
+    assert.deepEqual(live.figures.map((figure) => figure.storagePath), [`questionFigures/${jobId}/002-1.jpg`]);
+    assert.equal((await jobDoc(jobId)).status, 'published');
+  });
+
+  test('discarded, mismatched or missing targets are skipped without a model run', async () => {
+    const { deps, fakes } = makeDeps({ outputs: [NEW_TWO] });
+    await seedReadyJob('exam-gone-1', { status: 'discarded' });
+    const discarded = await pipeline.processExamConversionHandler(deps, { jobId: 'exam-gone-1', order: 2, provider: 'claude', target: 'draft' });
+    assert.deepEqual(discarded, { outcome: 'skipped', reason: 'status-discarded' });
+    assert.equal((await draftDocs('exam-gone-1'))[1].text, 'Eski soru 2');
+
+    await seedReadyJob('exam-pub-2', { status: 'published' });
+    assert.equal((await pipeline.processExamConversionHandler(deps, { jobId: 'exam-pub-2', order: 1, provider: 'claude', target: 'draft' })).reason, 'status-published');
+    assert.equal((await pipeline.processExamConversionHandler(deps, { jobId: 'exam-pub-2' })).reason, 'status-published', 'a whole run never touches a published job');
+    await seedReadyJob('exam-ready-3');
+    assert.equal((await pipeline.processExamConversionHandler(deps, { jobId: 'exam-ready-3', order: 1, provider: 'claude', target: 'published' })).reason, 'status-ready');
+    assert.equal((await pipeline.processExamConversionHandler(deps, { jobId: 'exam-ready-3', order: 9, provider: 'claude', target: 'draft' })).reason, 'missing-draft');
+    assert.equal((await pipeline.processExamConversionHandler(deps, { jobId: 'exam-ready-3', order: 1, provider: 'openai', target: 'draft' })).reason, 'no-provider');
+    assert.equal((await pipeline.processExamConversionHandler(deps, { jobId: 'exam-ready-3', order: 1, provider: 'claude', target: 'x' })).reason, 'bad-target');
+    assert.equal(fakes.claude.calls.length + fakes.gemini.calls.length, 0);
+  });
+
+  test('over the monthly cap the request is dropped with the month\'s single budget notice', async () => {
+    await db.collection('aiUsage').doc(MONTH).set({ month: MONTH, costUsd: 49.99 });
+    await seedReadyJob('exam-capped-q');
+    const { deps, fakes, notices, enqueued } = makeDeps({ outputs: [NEW_TWO] });
+    const result = await pipeline.processExamConversionHandler(deps, { jobId: 'exam-capped-q', order: 2, provider: 'claude', target: 'draft' });
+    assert.equal(result.reason, 'over-cap');
+    assert.equal(fakes.claude.calls.length, 0);
+    assert.equal(notices.length, 1);
+    assert.equal(notices[0].trigger, TRIGGERS.conversionBudgetExceeded);
+    assert.equal(notices[0].month, MONTH);
+    assert.deepEqual(enqueued, []);
+    assert.equal((await draftDocs('exam-capped-q'))[1].text, 'Eski soru 2');
+    assert.equal((await jobDoc('exam-capped-q')).status, 'ready');
+  });
+
+  test('invalid output is retried, then the draft keeps its content and records the error', async () => {
+    const jobId = 'exam-one-bad';
+    await seedReadyJob(jobId);
+    const { deps } = makeDeps({ outputs: [{ questions: [{ label: '2', text: '' }], unreadable: [] }] });
+    const payload = { jobId, order: 2, provider: 'gemini', target: 'draft' };
+    await assert.rejects(pipeline.processExamConversionHandler(deps, { ...payload, retryCount: 0 }), (error) => error.code === 'missing-field');
+    assert.equal((await draftDocs(jobId))[1].regenerationLeaseUntil, undefined, 'the lease is released for the retry');
+    const result = await pipeline.processExamConversionHandler(deps, { ...payload, retryCount: 2 });
+    assert.equal(result.outcome, 'failed');
+    const second = (await draftDocs(jobId))[1];
+    assert.equal(second.text, 'Eski soru 2');
+    assert.match(second.regenerationError, /missing-field/);
+    const job = await jobDoc(jobId);
+    assert.equal(job.status, 'ready');
+    assert.equal(job.usage.inputTokens, 12000, 'both billed runs are counted');
+  });
+
+  test('a regeneration already running is not run twice', async () => {
+    const jobId = 'exam-one-leased';
+    await seedReadyJob(jobId);
+    await db.collection('examConversions').doc(jobId).collection('questions').doc('002')
+      .update({ regenerationLeaseUntil: new Date(NOW.getTime() + 60_000) });
+    const { deps, fakes } = makeDeps({ outputs: [NEW_TWO] });
+    const payload = { jobId, order: 2, provider: 'gemini', target: 'draft' };
+    await assert.rejects(pipeline.processExamConversionHandler(deps, { ...payload, retryCount: 0 }), (error) => error.code === 'lease-held');
+    assert.deepEqual(await pipeline.processExamConversionHandler(deps, { ...payload, retryCount: 2 }), { outcome: 'skipped', reason: 'leased' });
+    assert.equal(fakes.gemini.calls.length, 0);
   });
 });

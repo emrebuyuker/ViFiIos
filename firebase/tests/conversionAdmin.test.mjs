@@ -200,6 +200,10 @@ describe('requestExamConversion', () => {
     assert.equal(created.kind, 'JPG');
     assert.equal(created.files.length, 2);
     assert.deepEqual(created.placement.names, [...Object.values(NAMES), '2019 VİZE']);
+    // What the review screen reads: the original pages and the suggested subject (none exists yet → from the name).
+    assert.deepEqual(created.files, [{ storagePath: 'imagess/e1-0.jpg', order: 0 }, { storagePath: 'imagess/e1-1.jpg', order: 1 }]);
+    assert.equal(created.placement.subjectId, publish.subjectKey(NAMES.course));
+    assert.equal(created.placement.subjectName, NAMES.course);
     assert.deepEqual(queue.tasks, [{ jobId: 'exam-e1' }]);
 
     // Pressing again while it runs does nothing.
@@ -626,5 +630,24 @@ describe('discard, edit and regenerate published questions, delete', () => {
     assert.equal((await job(jobId).get()).exists, false);
     assert.equal((await job(jobId).collection('questions').get()).size, 0);
     assert.ok(bucket.deleted.includes(`questionFigures/${jobId}/`));
+  });
+});
+
+describe('job creation: the suggested subject', () => {
+  test('a job suggests the subject an automatic publish would pick (alias match; the course node wins)', async () => {
+    await seedCatalog();
+    await seedExam('e1');
+    await db.collection('subjects').doc('algoritma-ve-programlama').set({ name: 'Algoritma ve Programlama', aliases: ['algoritmalar'] });
+    await admin.requestExamConversionHandler(depsWith(), asAdmin({ examId: 'e1', provider: 'gemini' }));
+    const byAlias = (await getData(job('exam-e1'))).placement;
+    assert.equal(byAlias.subjectId, 'algoritma-ve-programlama');
+    assert.equal(byAlias.subjectName, 'Algoritma ve Programlama');
+
+    await db.collection('subjects').doc('ayrik').set({ name: 'Ayrık Matematik', aliases: [] });
+    await db.collection('catalogNodes').doc(COURSE).update({ subjectId: 'ayrik' });
+    await seedExam('e2', { title: '2020 FİNAL' });
+    await admin.requestExamConversionHandler(depsWith(), asAdmin({ examId: 'e2', provider: 'gemini' }));
+    const byNode = (await getData(job('exam-e2'))).placement;
+    assert.deepEqual([byNode.subjectId, byNode.subjectName], ['ayrik', 'Ayrık Matematik']);
   });
 });
