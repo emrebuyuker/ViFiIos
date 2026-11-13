@@ -2,7 +2,9 @@
 // Firestore and Realtime Database emulators: the admin gate, starting / re-running jobs (a fake task queue records
 // what would be enqueued), the bulk estimate, the second approval's publish transaction (catalog nodes, exam,
 // questions, pools, subjects, department notice), discarding, editing and regenerating published questions, and the
-// exam-deletion cleanup. FCM is a fake; nothing leaves this machine and no AI is called.
+// exam-deletion cleanup; the owner decisions of 13 Nov 2026: duplicates replace the existing exam (K22), a discarded
+// submission's copies are removed (K20), a subject change moves the whole course (K21), and publishing sends the
+// uploader nothing (K19). FCM and Storage are fakes; nothing leaves this machine and no AI is called.
 
 import { test, before, after, beforeEach, describe, mock } from 'node:test';
 import assert from 'node:assert/strict';
@@ -80,9 +82,16 @@ function fakeMessaging() {
   };
 }
 
+/** Records prefix deletions (`deleted`) and single-file deletions (`removedFiles`). */
 function fakeBucket() {
   const deleted = [];
-  return { deleted, async deleteFiles({ prefix }) { deleted.push(prefix); } };
+  const removedFiles = [];
+  return {
+    deleted,
+    removedFiles,
+    async deleteFiles({ prefix }) { deleted.push(prefix); },
+    file: (name) => ({ async delete() { removedFiles.push(name); } }),
+  };
 }
 
 function depsWith({ queue = fakeQueue(), bucket = fakeBucket(), now = DAY } = {}) {
@@ -159,6 +168,30 @@ async function seedReadySubmission(id, { count = 2, nodesToCreate = [{ id: COURS
     ? { figures: [{ storagePath: `questionFigures/sub-${id}/002-1.jpg`, width: 400, height: 300 }], hasFigure: true }
     : {}));
   return { examId, jobId: `sub-${id}` };
+}
+
+/**
+ * An approved DUPLICATE submission (K22, `publishPlan.mode: 'replace'`) of the existing exam `examId`, its job
+ * `ready` with `count` drafts; the first approval copied `pdfs/new-<id>.pdf`.
+ */
+async function seedReadyDuplicate(id, examId, { count = 2 } = {}) {
+  const files = [{ storagePath: `pdfs/new-${id}.pdf`, order: 0 }];
+  await db.collection('submissions').doc(id).set({
+    ownerId: 'ayse', university: NAMES.university, faculty: NAMES.faculty, department: NAMES.department,
+    lesson: NAMES.course, exam: '2024 FİNAL', kind: 'PDF', status: 'approved', createdAt: DAY, conversionProvider: 'claude',
+    files: [{ storagePath: `pending/ayse/${id}/0.pdf`, order: 0 }],
+    publishPlan: {
+      mode: 'replace', examId, universityId: EGE, facultyId: FACULTY, departmentId: DEPARTMENT, courseId: COURSE,
+      nodesToCreate: [], childCountIncrements: [],
+      exam: { title: '2024 FİNAL', kind: 'PDF', files, courseName: NAMES.course, status: 'published' },
+    },
+  });
+  await job(`sub-${id}`).set({
+    source: { type: 'submission', submissionId: id }, status: 'ready', kind: 'PDF', attempts: 1,
+    model: { provider: 'claude', id: 'claude-opus' }, files,
+  });
+  await seedDrafts(`sub-${id}`, count);
+  return { jobId: `sub-${id}`, files };
 }
 
 // --- Admin gate ---------------------------------------------------------------------------------------------------
@@ -421,6 +454,9 @@ describe('publishExamConversion: submission (second approval)', () => {
     assert.equal(notice.action.examId, examId);
     assert.equal((await db.collection('users').doc('can').collection('inbox').doc('auto-newexam-s1').get()).exists, true);
     assert.equal((await db.collection('users').doc('ayse').collection('inbox').doc('auto-newexam-s1').get()).exists, false);
+    // K19: publishing sends the uploader no second notice (their only one is the first approval's coins notice).
+    assert.equal((await db.collection('notifications').where('audience.uid', '==', 'ayse').get()).size, 0);
+    assert.equal((await db.collection('users').doc('ayse').collection('inbox').get()).size, 0);
 
     // Idempotent: a second call reports the same result and changes nothing.
     assert.deepEqual(await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId })), result);
@@ -454,6 +490,168 @@ describe('publishExamConversion: submission (second approval)', () => {
 
     await job(again.jobId).update({ status: 'processing' });
     await assert.rejects(admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId: again.jobId })), { code: 'failed-precondition' });
+  });
+});
+
+describe('publishExamConversion: duplicate submission (K22, mode replace)', () => {
+  test('a legacy exam becomes structured with the new files; old files go unless another exam lists them', async () => {
+    await seedCatalog();
+    const examId = `${COURSE}__2024-final`;
+    await seedExam(examId, { title: '2024 FİNAL', kind: 'JPG', files: 2 });
+    // Another exam still lists the second old page: it must survive.
+    await seedExam('other', { files: 0, extra: { files: [{ storagePath: `imagess/${examId}-1.jpg`, order: 3 }] } });
+    // The exam's own legacy job, still awaiting review: ended by the replace.
+    await job(`exam-${examId}`).set({ source: { type: 'legacy', examId }, status: 'ready' });
+    const { jobId, files } = await seedReadyDuplicate('d1', examId);
+    const bucket = fakeBucket();
+
+    assert.deepEqual(await admin.publishExamConversionHandler(depsWith({ bucket }), asAdmin({ jobId })), { examId, questionCount: 2 });
+    const exam = await getData(db.collection('exams').doc(examId));
+    assert.equal(exam.format, 'structured');
+    assert.equal(exam.conversionJobId, jobId);
+    assert.equal(exam.questionCount, 2);
+    assert.deepEqual(exam.files, files);
+    assert.equal(exam.kind, 'PDF');
+    assert.equal(exam.title, '2024 FİNAL');
+    // No second copy, no catalog change.
+    assert.equal((await db.collection('exams').where('courseId', '==', COURSE).get()).size, 2);
+    assert.equal((await getData(db.collection('catalogNodes').doc(COURSE))).childCount, 4);
+    assert.equal((await getData(db.collection('catalogNodes').doc(DEPARTMENT))).childCount, 2);
+
+    assert.equal((await getData(db.collection('questions').doc(`${examId}-002`))).examType, 'final');
+    const legacy = await getData(job(`exam-${examId}`));
+    assert.deepEqual([legacy.status, legacy.discardReason, legacy.reviewedBy], ['discarded', 'replaced', 'admin-1']);
+    assert.equal((await getData(db.collection('submissions').doc('d1'))).publishedExamId, examId);
+    assert.equal((await getData(job(jobId))).status, 'published');
+
+    assert.deepEqual(bucket.removedFiles, [`imagess/${examId}-0.jpg`]);
+    // A replaced exam is not new: no department notice, and the uploader hears nothing at publish (K19).
+    assert.equal((await db.collection('notifications').get()).size, 0);
+    assert.equal((await db.collection('users').doc('ayse').collection('inbox').get()).size, 0);
+  });
+
+  test('an already structured exam gets its questions replaced; extra old questions and pool entries go', async () => {
+    await seedCatalog();
+    const examId = `${COURSE}__2024-final`;
+    await seedExam(examId, { title: '2024 FİNAL' });
+    await job(`exam-${examId}`).set({ source: { type: 'legacy', examId }, status: 'ready' });
+    await seedDrafts(`exam-${examId}`, 3);
+    await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId: `exam-${examId}` }));
+    const pool = db.collection('questionPools').doc(schema.questionPoolId({ subjectId: 'algoritmalar', examType: 'final', scope: 'tr' }));
+    assert.equal((await getData(pool)).count, 3);
+
+    const { jobId } = await seedReadyDuplicate('d2', examId, { count: 2 });
+    const bucket = fakeBucket();
+    await admin.publishExamConversionHandler(depsWith({ bucket }), asAdmin({ jobId }));
+    const ids = (await db.collection('questions').where('examId', '==', examId).get()).docs.map((doc) => doc.id).sort();
+    assert.deepEqual(ids, [`${examId}-001`, `${examId}-002`]);
+    assert.deepEqual((await getData(pool)).ids, [`${examId}-001`, `${examId}-002`]);
+    assert.equal((await getData(db.collection('exams').doc(examId))).conversionJobId, jobId);
+    // The previously published job stays published (history); its figures are no longer used.
+    assert.equal((await getData(job(`exam-${examId}`))).status, 'published');
+    assert.ok(bucket.deleted.includes(`questionFigures/exam-${examId}/`));
+    assert.deepEqual(bucket.removedFiles.sort(), [`imagess/${examId}-0.jpg`, `imagess/${examId}-1.jpg`]);
+
+    // Idempotent: publishing again changes nothing.
+    assert.deepEqual(await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId })), { examId, questionCount: 2 });
+  });
+
+  test('a replace plan whose exam is gone is refused; a create plan for an existing exam still is', async () => {
+    await seedCatalog();
+    const { jobId } = await seedReadyDuplicate('d3', `${COURSE}__yok`);
+    await assert.rejects(admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId })), { code: 'failed-precondition' });
+    assert.equal((await getData(job(jobId))).status, 'ready');
+  });
+});
+
+describe('discardExamConversion: copies of a submission (K20)', () => {
+  test('the first approval\'s copies are deleted unless an exam lists them; legacy jobs delete nothing', async () => {
+    await seedCatalog({ course: false });
+    const { jobId } = await seedReadySubmission('x1');
+    await job(jobId).update({ files: [{ storagePath: 'pdfs/copied.pdf', order: 0 }, { storagePath: 'pdfs/shared.pdf', order: 1 }] });
+    await seedExam('lister', { files: 0, extra: { files: [{ storagePath: 'pdfs/shared.pdf', order: 0 }] } });
+    const bucket = fakeBucket();
+    assert.deepEqual(await admin.discardExamConversionHandler(depsWith({ bucket }), asAdmin({ jobId })), { status: 'discarded' });
+    assert.deepEqual(bucket.removedFiles, ['pdfs/copied.pdf']);
+    // Coins / the submission stay as they are.
+    assert.equal((await getData(db.collection('submissions').doc('x1'))).status, 'approved');
+
+    // Idempotent: a repeated call only repeats the (harmless) cleanup.
+    assert.deepEqual(await admin.discardExamConversionHandler(depsWith({ bucket }), asAdmin({ jobId })), { status: 'discarded' });
+
+    const legacyBucket = fakeBucket();
+    await seedExam('e9');
+    await job('exam-e9').set({ source: { type: 'legacy', examId: 'e9' }, status: 'failed', files: [{ storagePath: 'imagess/e9-0.jpg', order: 0 }] });
+    await admin.discardExamConversionHandler(depsWith({ bucket: legacyBucket }), asAdmin({ jobId: 'exam-e9' }));
+    assert.deepEqual(legacyBucket.removedFiles, []);
+  });
+
+  test('only archive page paths are ever deleted', async () => {
+    const files = await import('../functions/conversions/files.js');
+    assert.deepEqual(files.archiveFileEntries([
+      { storagePath: 'pdfs/a.pdf', order: 1 }, { storagePath: 'pending/u/s/0.pdf' }, { storagePath: 'questionFigures/x/001-1.jpg' },
+      { storagePath: 'imagess/b.jpg' }, { storagePath: 'pdfs/a.pdf', order: 2 }, { storagePath: 'imagess/../x.jpg' }, null,
+    ]), [{ storagePath: 'pdfs/a.pdf', order: 1 }, { storagePath: 'imagess/b.jpg', order: 0 }]);
+  });
+});
+
+describe('publishExamConversion: subject change moves the course (K21)', () => {
+  test('all published questions of the course and their pool entries move to the new subject', async () => {
+    await seedCatalog();
+    await seedExam('M1', { title: '2019 VİZE' });
+    await seedExam('M2', { title: '2020 VİZE' });
+    await seedExam('M3', { title: '2021 VİZE', courseId: `${DEPARTMENT}__statik` }); // another course: untouched
+    for (const id of ['M1', 'M2', 'M3']) {
+      await job(`exam-${id}`).set({ source: { type: 'legacy', examId: id }, status: 'ready' });
+    }
+    await seedDrafts('exam-M1', 2);
+    await seedDrafts('exam-M2', 1);
+    await seedDrafts('exam-M3', 1);
+    await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId: 'exam-M1' }));
+    await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId: 'exam-M3' }));
+    assert.equal((await getData(db.collection('questions').doc('M1-001'))).subjectId, 'algoritmalar');
+    const oldPool = db.collection('questionPools').doc(schema.questionPoolId({ subjectId: 'algoritmalar', examType: 'vize', scope: 'tr' }));
+    assert.deepEqual((await getData(oldPool)).ids, ['M1-001', 'M1-002', 'M3-001']);
+
+    const deps = { ...depsWith(), subjectMoveChunk: 1 };
+    await admin.publishExamConversionHandler(deps, asAdmin({ jobId: 'exam-M2', newSubjectName: 'Algoritma Analizi' }));
+    for (const id of ['M1-001', 'M1-002', 'M2-001']) {
+      assert.equal((await getData(db.collection('questions').doc(id))).subjectId, 'algoritma-analizi', id);
+    }
+    // The other course's question keeps its subject and its pool entry.
+    assert.equal((await getData(db.collection('questions').doc('M3-001'))).subjectId, 'algoritmalar');
+    assert.deepEqual((await getData(oldPool)).ids, ['M3-001']);
+    for (const scope of [{ scope: 'tr' }, { scope: 'university', universityId: EGE }, { scope: 'course', courseId: COURSE }]) {
+      const pool = await getData(db.collection('questionPools').doc(
+        schema.questionPoolId({ subjectId: 'algoritma-analizi', examType: 'vize', ...scope }),
+      ));
+      assert.deepEqual([...pool.ids].sort(), ['M1-001', 'M1-002', 'M2-001'], scope.scope);
+    }
+    assert.equal((await getData(db.collection('catalogNodes').doc(COURSE))).subjectId, 'algoritma-analizi');
+    const move = (await getData(job('exam-M2'))).subjectMove;
+    assert.deepEqual([move.status, move.fromSubjectId, move.toSubjectId, move.movedCount], ['done', 'algoritmalar', 'algoritma-analizi', 2]);
+
+    // Resuming (a pending move after a crash) is a no-op for questions already moved.
+    await job('exam-M2').update({ 'subjectMove.status': 'pending' });
+    await admin.publishExamConversionHandler(deps, asAdmin({ jobId: 'exam-M2' }));
+    const resumed = (await getData(job('exam-M2'))).subjectMove;
+    assert.deepEqual([resumed.status, resumed.movedCount], ['done', 0]);
+    assert.deepEqual([...(await getData(db.collection('questionPools').doc(
+      schema.questionPoolId({ subjectId: 'algoritma-analizi', examType: 'vize', scope: 'tr' }),
+    ))).ids].sort(), ['M1-001', 'M1-002', 'M2-001']);
+  });
+
+  test('publishing with the course\'s current subject moves nothing', async () => {
+    await seedCatalog();
+    await seedExam('N1');
+    await job('exam-N1').set({ source: { type: 'legacy', examId: 'N1' }, status: 'ready' });
+    await seedDrafts('exam-N1', 1);
+    await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId: 'exam-N1' }));
+    await seedExam('N2', { title: '2021 FİNAL' });
+    await job('exam-N2').set({ source: { type: 'legacy', examId: 'N2' }, status: 'ready' });
+    await seedDrafts('exam-N2', 1);
+    await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId: 'exam-N2', subjectId: 'algoritmalar' }));
+    assert.equal((await getData(job('exam-N2'))).subjectMove, undefined);
   });
 });
 

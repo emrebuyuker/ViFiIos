@@ -9,6 +9,7 @@ ayrıntılı açıklama için kök [README.md](../README.md) içindeki *Firebase
 | `storage.rules` | Cloud Storage kuralları |
 | `firebase.json`, `.firebaserc` | Emülatör portları ve varsayılan proje (`vifi-831a8`) |
 | `scripts/revoke-download-tokens.mjs` | Storage indirme belirteçlerini yedekler, iptal eder, geri yükler |
+| `scripts/convert-legacy-exams.mjs` | Eski sınavları tek seferlik yeni yapıya geçirme işlerini başlatır (4.2.0, K12c) |
 | `functions/` | Cloud Functions (europe-west1): `unlockExam`, `recordLoginDiagnostic`, `purchaseExamUnlock` |
 | `tests/` | Kural testleri (emülatör), satın alma doğrulama testleri ve betik testleri |
 
@@ -128,3 +129,21 @@ node scripts/revoke-download-tokens.mjs restore --from   backups/tokens-<tarih>.
 - Gerçek bucket için `STORAGE_EMULATOR_HOST` ayarlamayın. Betiğin ilk satırı hedefi yazar
   (`PRODUCTION Cloud Storage` veya `emulator <host>`).
 - Emülatör belirteç iptalini doğru yansıtmaz; iptal/geri yükleme döngüsü `tests/fake-gcs-server.mjs` ile test edilir.
+
+## Eski sınavların tek seferlik geçişi (4.2.0, K12c / K24)
+
+```bash
+cd firebase
+node scripts/convert-legacy-exams.mjs --provider claude --course <ders-id>                 # yerel emülatörde deneme
+gcloud auth application-default login        # proje sahibi olarak
+node scripts/convert-legacy-exams.mjs --provider gemini --project vifi-831a8 --confirm-project vifi-831a8 [--limit 10]          # canlı deneme (yalnız okur)
+node scripts/convert-legacy-exams.mjs --provider gemini --project vifi-831a8 --confirm-project vifi-831a8 --apply [--limit 10]  # YALNIZCA sahip onayıyla
+```
+
+- `--provider` zorunludur (varsayılan yok). Kapsam: `--course <id>` ya da `--department <id>`; ikisi de yoksa tüm arşiv.
+- Varsayılan deneme (`--dry-run`): sınav sayısı, tahmini sayfa ve tahmini maliyet yazılır, hiçbir şey yazılmaz.
+- `--apply` işleri `budget: 'oneTime'` ile açar (aylık 50 $ sınırına girmez, `aiUsage/<ay>.oneTime` altında toplanır) ve
+  `processExamConversion` kuyruğuna verir; taslaklar yine admin incelemesinden tek tek geçer, betik hiçbir şey yayınlamaz.
+- Yerel emülatör dışındaki her çalıştırma `--project` ve aynı değerle `--confirm-project` ister; yoksa reddeder (çıkış kodu 2).
+- Tekrar çalıştırmak güvenlidir: yeni yapıdaki, işi kuyrukta/işlenmekte/incelemede olan, işi başarısız/iptal/yayınlanmış
+  sınavlar atlanır.

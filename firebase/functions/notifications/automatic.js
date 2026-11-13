@@ -9,8 +9,11 @@
 //   - 4.2.0 (structured exams): an approval carrying `publishPlan` is only the FIRST approval (coins, nothing
 //     published). The uploader gets the coins notice without an exam link, and the AI conversion job `sub-<id>` is
 //     created with the admin's `conversionProvider` and enqueued; the department notice moves to the second
-//     approval (`conversions/publish.js` → `notifyNewExam`). A 4.1.0 approval (`publishedExamId`, no plan) keeps the
-//     behaviour above and also gets a provider-less job `exam-<publishedExamId>` that waits for an admin.
+//     approval (`conversions/publish.js` → `notifyNewExam`). The uploader gets NO second notice when the exam is
+//     published (owner decision K19): the coins notice here is their only one. A duplicate (`publishPlan.mode ==
+//     'replace'`, K22) is handled the same way — coins notice + job `sub-<id>` with the chosen provider — and its
+//     publish replaces the existing exam without any department notice. A 4.1.0 approval (`publishedExamId`, no
+//     plan) keeps the behaviour above and also gets a provider-less job `exam-<publishedExamId>` that waits for an admin.
 //   - rejected → a personal notice with the admin's reason when there is one, delivered now.
 // - `notifyAdminsAboutConversion` (called by the conversion pipeline): "draft ready" / "conversion failed" / "monthly
 //   AI budget reached" to admins.
@@ -130,12 +133,13 @@ export async function onSubmissionModeratedHandler(deps, event) {
   if (to === 'rejected') {
     outcome.owner = ownerId ? await attempt(errors, 'rejected', () => notifyRejected(deps, ids, submission, ownerId)) : 'no-owner';
   } else if (isPlainObject(submission.publishPlan)) {
-    // 4.2.0 first approval: coins only, nothing published yet. The exam goes live (and its department hears about
-    // it) on the second approval, `publishExamConversion`; here the AI conversion job starts.
+    // 4.2.0 first approval: coins only, nothing published yet. The exam goes live (and, when it is new, its
+    // department hears about it) on the second approval, `publishExamConversion`; here the AI conversion job starts.
+    // A duplicate (`mode: 'replace'`, K22) gets its job too: its second approval replaces the existing exam.
     outcome.owner = ownerId
       ? await attempt(errors, 'approved', () => notifyApproved(deps, ids, submissionId, submission, ownerId, null))
       : 'no-owner';
-    outcome.department = 'at-publish';
+    outcome.department = submission.publishPlan.mode === 'replace' ? 'no-new-exam' : 'at-publish';
     outcome.conversion = await attempt(errors, 'conversion', () => startSubmissionConversion(deps, submissionId, submission));
   } else {
     // A 4.1.0 admin client (published right away; `publishedExamId`, no plan) or a duplicate (neither). The exam

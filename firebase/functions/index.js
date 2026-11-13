@@ -374,6 +374,7 @@ import { getFunctions } from 'firebase-admin/functions';
 import { onTaskDispatched } from 'firebase-functions/v2/tasks';
 import { TASK_QUEUE_OPTIONS, processExamConversionHandler } from './conversions/pipeline.js';
 import { liveProviders } from './conversions/providers/index.js';
+import { livePdf } from './conversions/pdf.js';
 import { notifyAdminsAboutConversion } from './notifications/automatic.js';
 import {
   discardExamConversionHandler,
@@ -400,7 +401,7 @@ Object.defineProperty(notificationDeps, 'enqueueConversion', {
   enumerable: true,
 });
 
-// Live dependencies of the AI pipeline. The model clients are created on first use (Vertex AI, Application Default
+// Live dependencies of the AI pipeline. The model clients and the PDF rasteriser are created on first use (Vertex AI, Application Default
 // Credentials of the functions' service account — no API key). `publishDraftQuestion` (K15) and the department
 // notice need what `notificationDeps` carries, so the pipeline's deps extend it.
 const getConversionProvider = liveProviders();
@@ -408,6 +409,8 @@ const conversionDeps = Object.create(notificationDeps, {
   getProvider: { value: getConversionProvider, enumerable: true },
   notifyAdmins: { value: (notice) => notifyAdminsAboutConversion(notificationDeps, notice), enumerable: true },
   enqueue: { value: enqueueConversionTask, enumerable: true },
+  // PDF pages are rendered (pdf.js + @napi-rs/canvas, K17) for the exact page count and the figure crops.
+  pdf: { value: livePdf(), enumerable: true },
 });
 
 // The AI pipeline (conversions/pipeline.js): a Cloud Tasks queue function, so a long model run gets 30 minutes, at

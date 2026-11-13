@@ -312,7 +312,7 @@ describe('onSubmissionModerated: approval', () => {
 // --- 4.2.0 first approval and conversion notices ------------------------------------------------------------------
 
 /** A 4.2.0 first approval: coins + `publishPlan` + `conversionProvider`, nothing published. */
-async function approveFirst(id, { provider = 'claude', plan = true } = {}) {
+async function approveFirst(id, { provider = 'claude', plan = true, mode } = {}) {
   const department = DEPARTMENTS.bilgisayar;
   const ref = await createSubmission(id);
   await db.collection('wallets').doc('ayse').collection('ledger').doc(id).set({
@@ -326,7 +326,12 @@ async function approveFirst(id, { provider = 'claude', plan = true } = {}) {
       examId: `${courseId}__2024-final`, universityId: EGE, facultyId: FACULTY_ID, departmentId: department.id, courseId,
       nodesToCreate: [], childCountIncrements: [courseId],
       exam: { title: '2024 FİNAL', kind: 'PDF', files: [{ storagePath: 'pdfs/copied.pdf', order: 0 }] },
+      ...(mode ? { mode } : {}),
     };
+    if (mode === 'replace') {
+      changes.publishPlan.nodesToCreate = [];
+      changes.publishPlan.childCountIncrements = [];
+    }
   }
   return updateEvent(ref, changes);
 }
@@ -372,6 +377,21 @@ describe('onSubmissionModerated: 4.2.0 first approval', () => {
     });
     assert.equal((await db.collection('examConversions').doc('sub-sub-dup').get()).exists, false);
     assert.equal(queue.tasks.length, 0);
+  });
+
+  test('a duplicate (publishPlan.mode replace, K22) gets the coins notice and job sub-<id> with the provider', async () => {
+    const queue = fakeQueue();
+    const event = await approveFirst('sub-rep', { provider: 'gemini', mode: 'replace' });
+    assert.deepEqual(await automatic.onSubmissionModeratedHandler(depsWith({ queue }), event), {
+      owner: 'sent', department: 'no-new-exam', conversion: 'queued',
+    });
+    const job = (await db.collection('examConversions').doc('sub-sub-rep').get()).data();
+    assert.equal(job.status, 'queued');
+    assert.deepEqual(job.model, { provider: 'gemini', id: null });
+    assert.deepEqual(job.files, [{ storagePath: 'pdfs/copied.pdf', order: 0 }]);
+    assert.equal(job.placement.examId, `${DEPARTMENTS.bilgisayar.id}__algoritmalar__2024-final`);
+    assert.deepEqual(queue.tasks, [{ jobId: 'sub-sub-rep' }]);
+    assert.equal((await notificationDoc('auto-newexam-sub-rep')).exists, false);
   });
 
   test('a failed enqueue leaves the job queued with an enqueue error and fails the event', async () => {

@@ -5,7 +5,7 @@
 // Covered: happy path (drafts + figures + usage + ready + notice), the recorded provider, the monthly cap (queued +
 // one notice + re-enqueue; one-time budget exempt), invalid model output (retry, then failed on the last attempt),
 // permanent errors, idempotency of re-delivered tasks, the lease, stale drafts/figures, PDFs with and without a
-// rasteriser, a job discarded mid-run (drafts untouched), and single-question regeneration (draft / published
+// rasteriser (the live pdf.js one, K17, on PDFs generated here — no exam content is committed), a job discarded mid-run (drafts untouched), and single-question regeneration (draft / published
 // target, skips, the cap, retries, the lease).
 
 import { test, before, after, beforeEach, describe, mock } from 'node:test';
@@ -29,6 +29,7 @@ const common = await import('../functions/conversions/providers/common.js');
 const claude = await import('../functions/conversions/providers/claude.js');
 const gemini = await import('../functions/conversions/providers/gemini.js');
 const providers = await import('../functions/conversions/providers/index.js');
+const pdf = await import('../functions/conversions/pdf.js');
 const { MODEL_OUTPUT_SCHEMA } = await import('../functions/conversions/schema.js');
 const { SYSTEM_PROMPT } = await import('../functions/conversions/prompt.js');
 
@@ -188,6 +189,22 @@ describe('images — figure geometry and PDF pages', () => {
     assert.equal(images.pixelRect([500, 500, 500, 500], 100, 100, 0), null);
   });
 
+  test('the PDF rasteriser scales to the DPI within the caps and refuses bad input', async () => {
+    assert.equal(pdf.renderScale(612, 792), pdf.PDF_RENDER_DPI / 72);
+    const poster = pdf.renderScale(2384, 3370); // A0 in points
+    assert.ok(Math.max(2384, 3370) * poster <= pdf.PDF_RENDER_MAX_EDGE + 1e-6);
+    const square = pdf.renderScale(3000, 3000);
+    assert.ok(3000 * 3000 * square * square <= pdf.PDF_RENDER_MAX_PIXELS + 1);
+    const bytes = drawnPdf(['0 g 0 0 10 10 re f']);
+    const png = await pdf.renderPdfPage(bytes, 0);
+    const meta = await sharp(png).metadata();
+    assert.deepEqual([meta.format, meta.width, meta.height], ['png', Math.round(612 * 150 / 72), Math.round(792 * 150 / 72)]);
+    await assert.rejects(pdf.renderPdfPage(bytes, 1), RangeError);
+    await assert.rejects(pdf.renderedPdfPageCount(Buffer.from('not a pdf')));
+    // The caller's buffer is not detached by pdf.js.
+    assert.equal(bytes.subarray(0, 5).toString('latin1'), '%PDF-');
+  });
+
   test('pdfPageCount reads the page tree, else counts page objects, else null', () => {
     assert.equal(images.pdfPageCount(Buffer.from(fakePdf(3))), 3);
     const noTree = '%PDF-1.4\n1 0 obj << /Type /Page >> endobj\n2 0 obj << /Type /Page >> endobj\n';
@@ -239,6 +256,40 @@ function fakePdf(pages) {
   const kids = Array.from({ length: pages }, (_, k) => `${k + 3} 0 R`).join(' ');
   const pageObjects = Array.from({ length: pages }, (_, k) => `${k + 3} 0 obj << /Type /Page /Parent 2 0 R >> endobj\n`).join('');
   return `%PDF-1.4\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n2 0 obj << /Type /Pages /Kids [${kids}] /Count ${pages} >> endobj\n${pageObjects}%%EOF\n`;
+}
+
+/**
+ * A real, drawable PDF (uncompressed, correct xref) with one 612 × 792 pt page per content stream. Its page tree
+ * deliberately claims `/Count 9`, which only a real parser (pdf.js) sees through.
+ */
+function drawnPdf(contents) {
+  const objects = ['<< /Type /Catalog /Pages 2 0 R >>'];
+  const kids = contents.map((_, k) => `${3 + k * 2} 0 R`).join(' ');
+  objects.push(`<< /Type /Pages /Kids [${kids}] /Count 9 >>`);
+  contents.forEach((content, k) => {
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents ${4 + k * 2} 0 R >>`);
+    objects.push(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  });
+  let out = '%PDF-1.4\n';
+  const offsets = objects.map((body, k) => {
+    const offset = out.length;
+    out += `${k + 1} 0 obj\n${body}\nendobj\n`;
+    return offset;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  out += offsets.map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`).join('');
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
+/** A PDF fill operator painting the 0–1000 (top-left origin) `box` black on a 612 × 792 pt page. */
+function figureBlock([x0, y0, x1, y1]) {
+  const x = (x0 / 1000) * 612;
+  const width = ((x1 - x0) / 1000) * 612;
+  const height = ((y1 - y0) / 1000) * 792;
+  const y = 792 - (y1 / 1000) * 792;
+  return `0 g ${x.toFixed(2)} ${y.toFixed(2)} ${width.toFixed(2)} ${height.toFixed(2)} re f`;
 }
 
 /** A white "scanned page" (portrait) with a black block where the figure is. */
@@ -653,6 +704,49 @@ describe('processExamConversion — regeneration and PDFs', () => {
     const second = (await draftDocs(jobId))[1];
     assert.equal(second.pendingFigures, undefined);
     assert.equal(second.figures[0].storagePath, `questionFigures/${jobId}/002-1.jpg`);
+  });
+
+  test('the live rasteriser (pdf.js) counts the pages exactly and the figure is cropped from the drawn page', async () => {
+    const jobId = 'exam-pdf-live';
+    // Page 2 has a black block exactly where GOOD_OUTPUT's figure box is (612 × 792 pt page).
+    const bytes = drawnPdf(['0.9 g 0 0 612 100 re f', figureBlock([400, 428, 600, 571])]);
+    // The regex fallback would read the lying `/Count 9`; pdf.js walks the real page tree.
+    assert.equal(images.pdfPageCount(bytes), 9);
+    assert.equal(await pdf.renderedPdfPageCount(bytes), 2);
+    const storagePath = await upload('pdfs/exam-pdf-live.pdf', bytes, 'application/pdf');
+    await seedJob(jobId, { kind: 'PDF', files: [{ storagePath, order: 0 }] });
+    const { deps, fakes } = makeDeps({ pdf: pdf.livePdf() });
+    assert.equal((await pipeline.processExamConversionHandler(deps, { jobId })).outcome, 'ready');
+    assert.equal(fakes.gemini.calls[0].pageCount, 2);
+    assert.deepEqual(fakes.gemini.calls[0].files.map((file) => file.mimeType), ['application/pdf']);
+    const second = (await draftDocs(jobId))[1];
+    assert.equal(second.pendingFigures, undefined);
+    assert.equal(second.figures.length, 1);
+    const [figure] = second.figures;
+    assert.equal(figure.storagePath, `questionFigures/${jobId}/002-1.jpg`);
+    const [cropped] = await bucket.file(figure.storagePath).download();
+    const stats = await sharp(cropped).stats();
+    // Mostly the black block (the padding adds a thin white frame).
+    assert.ok(stats.channels[0].mean < 90, `crop mean ${stats.channels[0].mean}`);
+    assert.equal((await jobDoc(jobId)).pageCount, 2);
+  });
+
+  test('a failing rasteriser keeps the fallback paths: regex page count and pending figures', async () => {
+    const jobId = 'exam-pdf-broken-rasteriser';
+    const storagePath = await upload('pdfs/exam-pdf-broken.pdf', Buffer.from(fakePdf(2)), 'application/pdf');
+    await seedJob(jobId, { kind: 'PDF', files: [{ storagePath, order: 0 }] });
+    const { deps, fakes } = makeDeps({
+      pdf: {
+        pageCount: async () => { throw new Error('cannot open'); },
+        renderPage: async () => { throw new Error('cannot draw'); },
+      },
+    });
+    assert.equal((await pipeline.processExamConversionHandler(deps, { jobId })).outcome, 'ready');
+    assert.equal(fakes.gemini.calls[0].pageCount, 2);
+    const second = (await draftDocs(jobId))[1];
+    assert.deepEqual(second.figures, []);
+    assert.deepEqual(second.pendingFigures, [{ index: 1, page: 2, box: [400, 428, 600, 571] }]);
+    assert.equal(second.needsReview, true);
   });
 
   test('a figure on a page the exam does not have is rejected as invalid output', async () => {

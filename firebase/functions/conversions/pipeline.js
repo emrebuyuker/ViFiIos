@@ -39,7 +39,9 @@
 // Dependencies (`deps`): `db` (Firestore `vifi`), `bucket` (Storage), `getProvider(name)` (providers/index.js
 // `liveProviders()`, a fake in tests), `notifyAdmins({ trigger, jobId, attempts, … })` (automatic.js
 // `notifyAdminsAboutConversion`), optional `now()`, `enqueue(data, { scheduleTime })`, `pdf: { pageCount(bytes),
-// renderPage(bytes, pageIndex) }` (a PDF rasteriser — none is bundled yet, see images.js), `maxAttempts`, `capUsd`.
+// renderPage(bytes, pageIndex) }` (the PDF rasteriser, conversions/pdf.js `livePdf()`, K17: a PDF question's figures
+// are cropped from the rendered page; when counting fails the regex count of images.js is used, when rendering fails
+// the figure stays in `pendingFigures`), `maxAttempts`, `capUsd`.
 
 import { FieldValue } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
@@ -355,7 +357,7 @@ async function loadExam(deps, job) {
   for (const [position, file] of files.entries()) {
     const bytes = await download(deps.bucket, file.storagePath);
     if (/\.pdf$/i.test(file.storagePath) || isPdf(bytes)) {
-      let count = deps.pdf?.pageCount ? await deps.pdf.pageCount(bytes) : pdfPageCount(bytes);
+      let count = await countPdfPages(deps, bytes, file.storagePath);
       if (!Number.isInteger(count) || count < 1) {
         // Unknown page count: allowed only for the last file, whose pages then run up to the page limit.
         if (position !== files.length - 1) {
@@ -397,9 +399,22 @@ async function download(bucket, storagePath) {
   }
 }
 
+/** The exact count from the rasteriser (pdf.js, K17); when it is missing or fails, the best-effort regex count. */
+async function countPdfPages(deps, bytes, storagePath) {
+  if (deps.pdf?.pageCount) {
+    try {
+      const count = await deps.pdf.pageCount(bytes);
+      if (Number.isInteger(count) && count >= 1) return count;
+    } catch (error) {
+      logger.warn('The PDF rasteriser could not count the pages; using the fallback count', { storagePath, error: String(error) });
+    }
+  }
+  return pdfPageCount(bytes);
+}
+
 const isPdf = (bytes) => bytes.length >= 5 && bytes.subarray(0, 5).toString('latin1') === '%PDF-';
 
-/** The cropped figure, or null when it cannot be cropped (PDF without rasteriser, bad box) — kept as pending. */
+/** The cropped figure, or null when it cannot be cropped (no rasteriser or a failed render, bad box) — kept as pending. */
 async function cropFor(exam, figure, where) {
   const page = exam.pages[figure.page - 1];
   if (!page) return null;

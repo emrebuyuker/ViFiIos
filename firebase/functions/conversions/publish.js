@@ -6,6 +6,10 @@
 //   approval): missing catalog nodes are created, existing parents get `childCount + 1`, and the exam document is
 //   created. Node existence is re-read here, so a plan made stale by another publish in the meantime still keeps
 //   `childCount` right; a legacy job uses the exam that already exists;
+// - a DUPLICATE submission (`publishPlan.mode == 'replace'`, K22) writes nothing in the catalog: the existing exam
+//   becomes structured (or gets its questions replaced) and its `files` / `kind` become the submission's copies; any
+//   other active job of that exam (`exam-<examId>`) is discarded. After the transaction the previous page files (and
+//   the previous job's figures) are deleted from Storage, never a file another exam still lists (files.js);
 // - the drafts become `questions/<examId>-<nnn>` (published shape + denormalised query keys + `schemaVersion`);
 //   questions of an earlier publish of the same exam that are no longer there are deleted;
 // - `exams/<id>` gets `format: 'structured'`, `questionCount`, `structuredAt`, `conversionJobId` (its `files` are kept,
@@ -13,7 +17,14 @@
 // - the practice pools (`questionPools`, scopes tr / u- / c-, split into `__pN` parts) gain the new ids and lose the
 //   removed ones; the subject (`subjects/<id>` + `catalogNodes/<courseId>.subjectId`) is resolved or created;
 // - the job becomes `published` and the submission gets `publishedExamId`.
-// Then, for a submission, the department's "new exam" notice goes out (moved here from the first approval).
+// Then, for a NEW exam from a submission, the department's "new exam" notice goes out (moved here from the first
+// approval). The uploader gets nothing here (K19): their only notice is the first approval's coins notice.
+//
+// Subject change (K21): when the resolved subject differs from the course node's previous `subjectId`, the job records
+// `subjectMove { courseId, fromSubjectId, toSubjectId, status: 'pending' }` in the transaction; afterwards EVERY
+// published question of the course (`questions where courseId == X`) is moved to the new subject with its pool
+// entries, in chunked transactions (`moveCourseSubject`), and the move is marked `done`. A move cut short is resumed
+// by calling `publishExamConversion` again (an already published job finishes its pending move).
 //
 // Handlers take their dependencies (`db`, `now`, plus what `deliverNotification` needs; `bucket` for the cleanup)
 // as the first argument, like the notification handlers.
@@ -35,7 +46,8 @@ import {
 } from './schema.js';
 import { slug } from './slug.js';
 import { resolveSubject, subjectKey } from './subjects.js';
-import { DRAFTS, JOBS, isPlainObject, text } from './jobs.js';
+import { DRAFTS, JOBS, cleanFiles, isPlainObject, text } from './jobs.js';
+import { deleteUnreferencedArchiveFiles } from './files.js';
 import { notifyNewExam } from '../notifications/automatic.js';
 import { requireAdmin } from '../notifications/admin.js';
 
@@ -45,6 +57,10 @@ export const POOL_PART_LIMIT = 15000;
 const MAX_POOL_PARTS = 50;
 const SUBJECT_NAME_LIMIT = 120;
 const CATALOG_LEVELS = Object.freeze(['university', 'faculty', 'department', 'course']);
+/** Questions moved per transaction by a subject change (each also rewrites a few pool documents; ≤ 500 writes). */
+export const SUBJECT_MOVE_CHUNK = 100;
+/** Job statuses that a replacing publish (K22) ends: anything not yet terminal. */
+const ACTIVE_JOB_STATUSES = Object.freeze(['queued', 'processing', 'ready', 'failed']);
 
 // MARK: - publishExamConversion
 
@@ -66,7 +82,12 @@ export async function publishExamConversionHandler(deps, request) {
     if (!jobSnapshot.exists) throw new HttpsError('not-found', 'Dönüştürme işi bulunamadı.');
     const job = jobSnapshot.data();
     if (job.status === 'published') {
-      return { examId: job.publishedExamId, questionCount: job.questionCount ?? 0, alreadyPublished: true };
+      return {
+        examId: job.publishedExamId,
+        questionCount: job.questionCount ?? 0,
+        alreadyPublished: true,
+        subjectMove: job.subjectMove?.status === 'pending' ? job.subjectMove : null,
+      };
     }
     if (job.status !== 'ready') throw new HttpsError('failed-precondition', 'Yalnızca hazır bir taslak yayınlanabilir.');
 
@@ -83,6 +104,11 @@ export async function publishExamConversionHandler(deps, request) {
       override,
     });
     const existingQuestions = (await transaction.get(db.collection('questions').where('examId', '==', target.examId))).docs;
+    const previousSubjectId = target.courseNode?.exists ? target.courseNode.get('subjectId') : null;
+    const subjectMove = subject && ID_SEGMENT_PATTERN.test(previousSubjectId ?? '') && previousSubjectId !== subject.id
+      && ID_SEGMENT_PATTERN.test(target.ids.course ?? '')
+      ? { courseId: target.ids.course, fromSubjectId: previousSubjectId, toSubjectId: subject.id, status: 'pending' }
+      : null;
 
     const { examType, year } = parseExamTitle(target.names.exam);
     const keys = {
@@ -105,7 +131,15 @@ export async function publishExamConversionHandler(deps, request) {
     ]);
 
     // --- Writes ---
-    if (target.type === 'submission') {
+    if (target.replace) {
+      transaction.update(target.examRef, {
+        format: 'structured', questionCount: questions.length, structuredAt: now, conversionJobId: jobId,
+        files: target.files, kind: target.kind,
+      });
+      for (const other of target.otherJobs) {
+        transaction.update(other.ref, { status: 'discarded', reviewedBy: uid, discardedAt: now, discardReason: 'replaced' });
+      }
+    } else if (target.type === 'submission') {
       writeCatalogAndExam(transaction, db, target, { now, questionCount: questions.length, jobId, subjectId: subject?.id });
     } else {
       transaction.update(db.collection('exams').doc(target.examId), {
@@ -124,6 +158,7 @@ export async function publishExamConversionHandler(deps, request) {
       questionCount: questions.length,
       subjectId: subject?.id ?? null,
       error: null,
+      ...(subjectMove ? { subjectMove } : {}),
     });
     if (target.type === 'submission') {
       transaction.update(target.submissionRef, { publishedExamId: target.examId });
@@ -131,12 +166,28 @@ export async function publishExamConversionHandler(deps, request) {
     return {
       examId: target.examId,
       questionCount: questions.length,
-      notify: target.type === 'submission'
+      // A duplicate replaces an exam the department already has: no "new exam" notice.
+      notify: target.type === 'submission' && !target.replace
         ? { submissionId: target.submissionRef.id, examId: target.examId, ownerId: target.ownerId }
         : null,
+      replaced: target.replace
+        ? { previousFiles: target.previousFiles, files: target.files, previousJobId: target.previousJobId }
+        : null,
+      subjectMove,
     };
   });
 
+  if (result.replaced) await removeReplacedFiles(deps, jobId, result.replaced);
+  if (result.subjectMove) {
+    try {
+      await moveCourseSubject(deps, jobId, result.subjectMove);
+    } catch (error) {
+      // The exam is live; the job keeps `subjectMove.status: 'pending'` and a repeated publish call finishes it.
+      logger.error('Moving the course to its new subject failed; publish again to resume', {
+        jobId, courseId: result.subjectMove.courseId, error: error?.message ?? String(error),
+      });
+    }
+  }
   if (result.notify) {
     try {
       await notifyNewExam(deps, result.notify);
@@ -167,6 +218,7 @@ async function readSubmissionTarget(transaction, db, job) {
     throw new HttpsError('failed-precondition', 'Gönderimin yayın planı eksik.');
   }
   if (submission.status !== 'approved') throw new HttpsError('failed-precondition', 'Gönderim onaylı değil.');
+  if (plan.mode === 'replace') return readReplaceTarget(transaction, db, { plan, submission, submissionRef });
 
   const examRef = db.collection('exams').doc(plan.examId);
   const nodeRefs = CATALOG_LEVELS.map((level) => db.collection('catalogNodes').doc(ids[level]));
@@ -193,6 +245,80 @@ async function readSubmissionTarget(transaction, db, job) {
     submissionRef,
     ownerId: text(submission.ownerId),
   };
+}
+
+/**
+ * A duplicate submission's target (`publishPlan.mode == 'replace'`, K22): the EXISTING published exam, whose ids and
+ * title stay; its `files` / `kind` become the plan's copies. Also reads the exam's other job (`exam-<examId>`) to end
+ * it when it is still active.
+ */
+async function readReplaceTarget(transaction, db, { plan, submission, submissionRef }) {
+  const examRef = db.collection('exams').doc(plan.examId);
+  const examSnapshot = await transaction.get(examRef);
+  const exam = examSnapshot.exists ? examSnapshot.data() : null;
+  if (!exam || exam.status !== 'published') {
+    throw new HttpsError('failed-precondition', 'Yerine konacak sınav arşivde bulunamadı. Taslağı iptal edebilirsin.');
+  }
+  const files = cleanFiles(plan.exam?.files);
+  const kind = plan.exam?.kind ?? submission.kind;
+  if (!files || !['JPG', 'PDF'].includes(kind)) throw new HttpsError('failed-precondition', 'Gönderimin dosyaları eksik.');
+
+  const ids = {
+    university: text(exam.universityId) || plan.universityId,
+    faculty: text(exam.facultyId) || plan.facultyId,
+    department: text(exam.departmentId) || plan.departmentId,
+    course: text(exam.courseId) || plan.courseId,
+  };
+  const courseNode = ID_SEGMENT_PATTERN.test(ids.course ?? '')
+    ? await transaction.get(db.collection('catalogNodes').doc(ids.course))
+    : null;
+  const ownJobId = `sub-${submissionRef.id}`;
+  const legacyJobId = `exam-${plan.examId}`;
+  const otherJobs = [];
+  if (JOB_ID_PATTERN.test(legacyJobId)) {
+    const snapshot = await transaction.get(db.collection(JOBS).doc(legacyJobId));
+    if (snapshot.exists && ACTIVE_JOB_STATUSES.includes(snapshot.get('status'))) otherJobs.push({ ref: snapshot.ref });
+  }
+  const previousJobId = JOB_ID_PATTERN.test(exam.conversionJobId ?? '') && exam.conversionJobId !== ownJobId
+    ? exam.conversionJobId
+    : null;
+  return {
+    type: 'submission',
+    replace: true,
+    examId: plan.examId,
+    examRef,
+    plan,
+    ids,
+    names: {
+      course: text(exam.courseName) || text(plan.exam?.courseName) || text(submission.lesson)
+        || text(courseNode?.exists ? courseNode.get('name') : ''),
+      exam: text(exam.title) || text(plan.exam?.title) || text(submission.exam),
+    },
+    courseNode,
+    submissionRef,
+    ownerId: text(submission.ownerId),
+    files,
+    kind,
+    previousFiles: Array.isArray(exam.files) ? exam.files : [],
+    previousJobId,
+    otherJobs,
+  };
+}
+
+/**
+ * After a replacing publish (K22): the exam's previous page files that the new `files` do not reuse and no exam
+ * lists any more, and the figures of the job whose questions were live before. Best effort; never throws.
+ */
+async function removeReplacedFiles(deps, jobId, { previousFiles, files, previousJobId }) {
+  if (!deps.bucket) return;
+  try {
+    await deleteUnreferencedArchiveFiles(deps, previousFiles, { except: files.map((file) => file.storagePath) });
+    if (previousJobId && previousJobId !== jobId) {
+      await deps.bucket.deleteFiles({ prefix: `questionFigures/${previousJobId}/` });
+    }
+  } catch (error) {
+    logger.warn('Could not remove the replaced exam files', { jobId, error: error?.message ?? String(error) });
+  }
 }
 
 /** A legacy job's target: the published exam itself. */
@@ -373,8 +499,9 @@ function writeSubject(transaction, db, subject, target, now) {
   } else if (subject.alias && !subject.aliases.includes(subject.alias)) {
     transaction.update(ref, { aliases: FieldValue.arrayUnion(subject.alias), updatedAt: now });
   }
-  // A submission's course node is written once by `writeCatalogAndExam` (created with, or updated to, the subject).
-  if (target.type === 'legacy' && target.courseNode?.exists && target.courseNode.get('subjectId') !== subject.id) {
+  // A new submission's course node is written once by `writeCatalogAndExam` (created with, or updated to, the subject).
+  if ((target.type === 'legacy' || target.replace) && target.courseNode?.exists
+    && target.courseNode.get('subjectId') !== subject.id) {
     transaction.update(target.courseNode.ref, { subjectId: subject.id });
   }
 }
@@ -472,28 +599,89 @@ export function writePools(transaction, db, pools, now) {
   }
 }
 
+// MARK: - Subject change of a course (K21)
+
+/**
+ * Moves every published question of `courseId` to `toSubjectId` (field + pool entries), `chunk` questions per
+ * transaction; a question already on the new subject is skipped, so a repeated or resumed move is a no-op for it.
+ * Marks the job's `subjectMove` done at the end.
+ *
+ * @returns {Promise<{ moved: number }>}
+ */
+export async function moveCourseSubject(deps, jobId, { courseId, toSubjectId }) {
+  const { db } = deps;
+  if (!ID_SEGMENT_PATTERN.test(courseId ?? '') || !ID_SEGMENT_PATTERN.test(toSubjectId ?? '')) throw new Error('Bad subject move');
+  const now = Timestamp.fromDate(deps.now?.() ?? new Date());
+  const chunk = deps.subjectMoveChunk ?? SUBJECT_MOVE_CHUNK;
+  const all = await db.collection('questions').where('courseId', '==', courseId).get();
+  const refs = all.docs.filter((doc) => doc.get('subjectId') !== toSubjectId).map((doc) => doc.ref);
+  let moved = 0;
+  for (let start = 0; start < refs.length; start += chunk) {
+    const slice = refs.slice(start, start + chunk);
+    moved += await db.runTransaction(async (transaction) => {
+      const snapshots = (await transaction.getAll(...slice))
+        .filter((snapshot) => snapshot.exists && snapshot.get('subjectId') !== toSubjectId && snapshot.get('courseId') === courseId);
+      const pools = await readPools(transaction, db, snapshots.flatMap((snapshot) => [
+        { id: snapshot.id, keys: snapshot.data(), remove: true },
+        { id: snapshot.id, keys: { ...snapshot.data(), subjectId: toSubjectId }, remove: false },
+      ]));
+      writePools(transaction, db, pools, now);
+      for (const snapshot of snapshots) transaction.update(snapshot.ref, { subjectId: toSubjectId });
+      return snapshots.length;
+    });
+  }
+  await db.collection(JOBS).doc(jobId).update({
+    'subjectMove.status': 'done', 'subjectMove.movedCount': moved, 'subjectMove.doneAt': now,
+  });
+  return { moved };
+}
+
 // MARK: - discardExamConversion (K14 "Sınavı iptal et")
 
 /**
  * `discardExamConversion` `{ jobId }` → `{ status: 'discarded' }`. A queued, ready or failed job ends for good; the
- * exam stays as it is (a legacy exam keeps its pages; a submission's exam is never published). Coins are never
- * taken back. A running job must finish first; a published one cannot be discarded. Drafts are kept for reference.
+ * exam stays as it is (a legacy exam keeps its pages; a submission's exam is never published). Coins and the
+ * submission record are never taken back. A running job must finish first; a published one cannot be discarded.
+ * Drafts are kept for reference.
+ *
+ * K20: for a submission job (`sub-<id>`) the page files its first approval copied into `imagess/` / `pdfs/` (the
+ * job's `files` and the plan's `exam.files`) are deleted from Storage, except a file an exam document lists.
+ * Repeating the call repeats only that (idempotent) cleanup.
  */
 export async function discardExamConversionHandler(deps, request) {
   const uid = requireAdmin(request);
   const jobId = requireJobId(request.data?.jobId);
   const ref = deps.db.collection(JOBS).doc(jobId);
   const now = Timestamp.fromDate(deps.now?.() ?? new Date());
-  return deps.db.runTransaction(async (transaction) => {
+  const job = await deps.db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(ref);
     if (!snapshot.exists) throw new HttpsError('not-found', 'Dönüştürme işi bulunamadı.');
     const status = snapshot.get('status');
-    if (status === 'discarded') return { status };
+    if (status === 'discarded') return snapshot.data();
     if (status === 'published') throw new HttpsError('failed-precondition', 'Yayınlanmış bir sınav iptal edilemez.');
     if (status === 'processing') throw new HttpsError('failed-precondition', 'Dönüştürme sürüyor; bitince iptal edebilirsin.');
     transaction.update(ref, { status: 'discarded', reviewedBy: uid, discardedAt: now });
-    return { status: 'discarded' };
+    return snapshot.data();
   });
+  if (job.source?.type === 'submission' || jobId.startsWith('sub-')) await removeDiscardedCopies(deps, jobId, job);
+  return { status: 'discarded' };
+}
+
+/** K20: the copies a discarded submission job's first approval made (best effort; logged, never thrown). */
+async function removeDiscardedCopies(deps, jobId, job) {
+  if (!deps.bucket) return;
+  try {
+    const submissionId = job.source?.submissionId ?? jobId.replace(/^sub-/, '');
+    const submission = ID_SEGMENT_PATTERN.test(submissionId)
+      ? await deps.db.collection('submissions').doc(submissionId).get()
+      : null;
+    const planFiles = submission?.exists ? submission.get('publishPlan')?.exam?.files : null;
+    const files = [...(Array.isArray(job.files) ? job.files : []), ...(Array.isArray(planFiles) ? planFiles : [])];
+    const { deleted } = await deleteUnreferencedArchiveFiles(deps, files);
+    if (deleted.length > 0) logger.info('Removed the copies of a discarded submission', { jobId, deleted: deleted.length });
+  } catch (error) {
+    logger.warn('Could not remove the copies of a discarded submission', { jobId, error: error?.message ?? String(error) });
+  }
 }
 
 // MARK: - Published questions (K15)

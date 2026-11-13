@@ -2,9 +2,10 @@
 // rotation applied, long edge ≤ MODEL_IMAGE_MAX, JPEG) — the model sees exactly that image, so the normalised 0–1000
 // figure boxes it returns map onto it — and figures are cropped from it, JPEG, long edge ≤ FIGURE_MAX.
 //
-// PDFs: the prebuilt `sharp` (libvips) has no PDF loader, so a PDF page can only be cropped when a rasteriser is
-// injected (`deps.pdf.renderPage`, see pipeline.js). Without one the figure boxes are kept on the draft as
-// `pendingFigures` and the question is flagged for review.
+// PDFs: the prebuilt `sharp` (libvips) has no PDF loader, so a PDF page is rendered by the injected rasteriser
+// (`deps.pdf.renderPage`, conversions/pdf.js — pdf.js + @napi-rs/canvas, K17) and then normalised and cropped like a
+// photo. When rendering fails the figure boxes are kept on the draft as `pendingFigures` and the question is flagged
+// for review; `pdfPageCount` below is the fallback when the rasteriser cannot count the pages.
 
 export const MODEL_IMAGE_MAX = 2048;
 export const FIGURE_MAX = 1200;

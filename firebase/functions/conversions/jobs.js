@@ -64,7 +64,7 @@ export function cleanFiles(files) {
 }
 
 /** The job for a published archive exam (`exam-<examId>`); `null` when the exam cannot be converted. */
-export function legacyJob(examId, exam, { provider = null, requestedBy = 'system' } = {}) {
+export function legacyJob(examId, exam, { provider = null, requestedBy = 'system', budget = null } = {}) {
   const files = cleanFiles(exam?.files);
   if (!files || !EXAM_KINDS.includes(exam?.kind)) return null;
   return baseJob({
@@ -81,6 +81,7 @@ export function legacyJob(examId, exam, { provider = null, requestedBy = 'system
     kind: exam.kind,
     provider,
     requestedBy,
+    budget,
   });
 }
 
@@ -131,8 +132,13 @@ export async function withSubjectSuggestion(db, job) {
   return job;
 }
 
-function baseJob({ source, placement, files, kind, provider, requestedBy }) {
+/**
+ * The job document. `budget: 'oneTime'` (K12c, only the one-time migration script) keeps the job's runs out of the
+ * monthly cap (usage.js); absent = the regular monthly budget.
+ */
+function baseJob({ source, placement, files, kind, provider, requestedBy, budget = null }) {
   return {
+    ...(budget === 'oneTime' ? { budget } : {}),
     source,
     placement,
     files,
@@ -151,9 +157,13 @@ function baseJob({ source, placement, files, kind, provider, requestedBy }) {
   };
 }
 
-/** The fields that put an existing job back to `queued` for a fresh whole-exam run with `provider`. */
-export function restartFields(provider, requestedBy) {
+/**
+ * The fields that put an existing job back to `queued` for a fresh whole-exam run with `provider`. The run's budget
+ * is the restarter's: the script's `oneTime`, else the regular monthly one (an admin re-run is never one-time).
+ */
+export function restartFields(provider, requestedBy, budget = null) {
   return {
+    budget: budget === 'oneTime' ? budget : FieldValue.delete(),
     status: 'queued',
     attempts: 0,
     error: null,
@@ -171,7 +181,7 @@ export function restartFields(provider, requestedBy) {
  *
  * @returns {Promise<{ jobId: string, status: string, started: boolean }>}
  */
-export async function startRun(deps, jobId, { provider, requestedBy, policy, create }) {
+export async function startRun(deps, jobId, { provider, requestedBy, policy, create, budget = null }) {
   const ref = deps.db.collection(JOBS).doc(jobId);
   const outcome = await deps.db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(ref);
@@ -181,7 +191,7 @@ export async function startRun(deps, jobId, { provider, requestedBy, policy, cre
       return { status: job.status, started: false };
     }
     if (job) {
-      transaction.update(ref, restartFields(provider, requestedBy));
+      transaction.update(ref, restartFields(provider, requestedBy, budget));
     } else {
       const fresh = await create?.();
       if (!fresh) throw new HttpsError('failed-precondition', 'Sınavın dosyaları dönüştürmeye uygun değil.');
@@ -196,13 +206,14 @@ export async function startRun(deps, jobId, { provider, requestedBy, policy, cre
   return { jobId, ...outcome };
 }
 
-/** `startRun` for a published archive exam's job `exam-<examId>`. */
-export function startLegacyRun(deps, examId, exam, { provider, requestedBy, policy }) {
+/** `startRun` for a published archive exam's job `exam-<examId>` (`budget: 'oneTime'` only from the K12c script). */
+export function startLegacyRun(deps, examId, exam, { provider, requestedBy, policy, budget = null }) {
   return startRun(deps, conversionJobId({ type: 'legacy', examId }), {
     provider,
     requestedBy,
     policy,
-    create: () => withSubjectSuggestion(deps.db, legacyJob(examId, exam, { provider, requestedBy })),
+    budget,
+    create: () => withSubjectSuggestion(deps.db, legacyJob(examId, exam, { provider, requestedBy, budget })),
   });
 }
 
