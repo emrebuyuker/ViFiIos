@@ -6,7 +6,7 @@ struct ModerationView: View {
     @Environment(AppEnvironment.self) private var environment
 
     var body: some View {
-        ModerationScreen(service: environment.moderationService)
+        ModerationScreen(service: environment.moderationService, submitterReader: environment.submitterReader)
             .onAppear { environment.analytics.track(.screenView(name: "Moderation")) }
     }
 }
@@ -14,8 +14,8 @@ struct ModerationView: View {
 private struct ModerationScreen: View {
     @State private var viewModel: ModerationViewModel
 
-    init(service: any ModerationServicing) {
-        _viewModel = State(initialValue: ModerationViewModel(service: service))
+    init(service: any ModerationServicing, submitterReader: any SubmitterProfileReading) {
+        _viewModel = State(initialValue: ModerationViewModel(service: service, submitterReader: submitterReader))
     }
 
     var body: some View {
@@ -46,7 +46,7 @@ private struct ModerationScreen: View {
                         NavigationLink {
                             ModerationDetailView(record: record, viewModel: viewModel)
                         } label: {
-                            ModerationRow(record: record)
+                            ModerationRow(record: record, viewModel: viewModel)
                         }
                         .accessibilityIdentifier("moderation.row.\(record.id)")
                     }
@@ -91,6 +91,7 @@ private struct ModerationScreen: View {
 /// One row of the moderation queue: the exam, its place in the archive, and its size.
 private struct ModerationRow: View {
     let record: ExamSubmissionRecord
+    let viewModel: ModerationViewModel
 
     var body: some View {
         HStack(spacing: 14) {
@@ -106,6 +107,7 @@ private struct ModerationRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                submitterLines
             }
             Spacer()
             Text("\(record.files.count) \(record.kind == .images ? "görsel" : "PDF")")
@@ -114,6 +116,52 @@ private struct ModerationRow: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+        .task { await viewModel.loadSubmitter(uid: record.ownerId) }
+    }
+
+    /// "Gönderen: Ad Soyad" plus "Üniversite · Bölüm", or a quiet placeholder / non-blocking error.
+    @ViewBuilder
+    private var submitterLines: some View {
+        switch viewModel.submitters[record.ownerId] {
+        case let .loaded(info):
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Gönderen: \(info.fullName)")
+                    .font(.caption.weight(.medium))
+                    .lineLimit(1)
+                Text(SubmitterSummary.affiliation(info))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .accessibilityIdentifier("moderation.submitter")
+        case .missing:
+            Text("Profil bulunamadı (hesap silinmiş olabilir)")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .accessibilityIdentifier("moderation.submitter")
+        case .failed:
+            Text("Gönderen bilgisi yüklenemedi")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .accessibilityIdentifier("moderation.submitter")
+        case .loading, nil:
+            Text("Gönderen yükleniyor…")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .lineLimit(1)
+                .redacted(reason: .placeholder)
+        }
+    }
+}
+
+/// Text helpers for the submitter shown in the queue.
+nonisolated enum SubmitterSummary {
+    /// "Üniversite · Bölüm", skipping whichever part is empty.
+    static func affiliation(_ info: SubmitterInfo) -> String {
+        [info.university, info.department].filter { !$0.isEmpty }.joined(separator: " · ")
     }
 }
 

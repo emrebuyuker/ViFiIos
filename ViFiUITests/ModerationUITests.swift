@@ -34,6 +34,37 @@ nonisolated final class ModerationUITests: XCTestCase {
     }
 
     @MainActor
+    func testQueueAndDetailShowTheSubmitter() {
+        let app = launchApp(admin: true)
+
+        tap("toolbar.account", in: app)
+        tap("account.moderation", in: app)
+
+        // The rows are combined accessibility elements, so the name is matched on the label.
+        let name = NSPredicate(format: "label CONTAINS %@", "Ayşe Demir")
+        let inList = app.descendants(matching: .any).matching(name).firstMatch
+        XCTAssertTrue(inList.waitForExistence(timeout: Timeout.content), "The submitter did not appear in the queue")
+
+        tap("moderation.row.sub-1", in: app)
+        let inDetail = element("moderation.detail.submitter", in: app)
+        XCTAssertTrue(inDetail.waitForExistence(timeout: Timeout.content), "The submitter did not appear in the detail")
+        XCTAssertTrue(inDetail.label.contains("Ayşe Demir"), "The submitter's name is missing in the detail")
+    }
+
+    @MainActor
+    func testMissingSubmitterProfileDoesNotBlockReview() {
+        let app = launchApp(admin: true)
+
+        tap("toolbar.account", in: app)
+        tap("account.moderation", in: app)
+        tap("moderation.row.sub-2", in: app)
+
+        let note = element("moderation.detail.submitter", in: app)
+        XCTAssertTrue(note.waitForExistence(timeout: Timeout.content), "The missing-profile note did not appear")
+        XCTAssertTrue(reveal("moderation.approve.claude", in: app), "Approving is blocked without a profile")
+    }
+
+    @MainActor
     func testApprovalOffersBothProviders() {
         let app = launchApp(admin: true)
 
@@ -41,9 +72,9 @@ nonisolated final class ModerationUITests: XCTestCase {
         tap("account.moderation", in: app)
         tap("moderation.row.sub-2", in: app)
 
-        XCTAssertTrue(element("moderation.approve.claude", in: app).waitForExistence(timeout: Timeout.transition),
+        XCTAssertTrue(reveal("moderation.approve.claude", in: app),
                       "The Claude approval button did not appear")
-        XCTAssertTrue(element("moderation.approve.gemini", in: app).exists, "The Gemini approval button did not appear")
+        XCTAssertTrue(reveal("moderation.approve.gemini", in: app), "The Gemini approval button did not appear")
 
         tap("moderation.approve.gemini", in: app)
 
@@ -64,8 +95,8 @@ nonisolated final class ModerationUITests: XCTestCase {
 
         XCTAssertTrue(element("moderation.duplicateWarning", in: app).waitForExistence(timeout: Timeout.content),
                       "The duplicate warning did not appear")
-        XCTAssertTrue(element("moderation.approve.claude", in: app).exists, "The Claude approval button did not appear")
-        XCTAssertTrue(element("moderation.approve.gemini", in: app).exists, "The Gemini approval button did not appear")
+        XCTAssertTrue(reveal("moderation.approve.claude", in: app), "The Claude approval button did not appear")
+        XCTAssertTrue(reveal("moderation.approve.gemini", in: app), "The Gemini approval button did not appear")
     }
 
     @MainActor
@@ -76,7 +107,7 @@ nonisolated final class ModerationUITests: XCTestCase {
         tap("account.moderation", in: app)
         tap("moderation.row.sub-2", in: app)
 
-        XCTAssertTrue(element("moderation.approve.claude", in: app).waitForExistence(timeout: Timeout.transition))
+        XCTAssertTrue(reveal("moderation.approve.claude", in: app))
         XCTAssertFalse(element("moderation.duplicateWarning", in: app).exists, "A new submission showed the warning")
     }
 
@@ -179,10 +210,20 @@ nonisolated final class ModerationUITests: XCTestCase {
         return app
     }
 
+    /// Waits for `identifier`, scrolling the (lazily built) form until it exists.
+    @MainActor
+    @discardableResult
+    private func reveal(_ identifier: String, in app: XCUIApplication) -> Bool {
+        let target = element(identifier, in: app)
+        if target.waitForExistence(timeout: Timeout.transition) { return true }
+        for _ in 0..<5 where !target.exists { app.swipeUp() }
+        return target.exists
+    }
+
     @MainActor
     private func tap(_ identifier: String, in app: XCUIApplication) {
         let target = element(identifier, in: app)
-        XCTAssertTrue(target.waitForExistence(timeout: Timeout.transition), "\(identifier) did not appear")
+        XCTAssertTrue(reveal(identifier, in: app), "\(identifier) did not appear")
         for _ in 0..<5 where !target.isHittable { app.swipeUp() }
         target.tap()
     }

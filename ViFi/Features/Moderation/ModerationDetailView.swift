@@ -21,6 +21,7 @@ struct ModerationDetailView: View {
             if duplicateExamId != nil {
                 duplicateWarningSection
             }
+            submitterSection
             detailsSection
             filesSection
             actionsSection
@@ -37,6 +38,7 @@ struct ModerationDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .animation(.smooth, value: errorMessage)
         .animation(.smooth, value: duplicateExamId)
+        .task { await viewModel.loadSubmitter(uid: record.ownerId) }
         .task { duplicateExamId = await viewModel.duplicateExamId(for: record) }
         .interactiveDismissDisabled(isWorking)
         .alert("Reddedilsin mi?", isPresented: $isConfirmingReject) {
@@ -68,6 +70,36 @@ struct ModerationDetailView: View {
             }
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("moderation.duplicateWarning")
+        }
+    }
+
+    /// Who submitted this exam: name and affiliation only, never the phone number. A failed or missing lookup
+    /// is shown as a note and never blocks approving or rejecting.
+    private var submitterSection: some View {
+        Section("Gönderen") {
+            switch viewModel.submitters[record.ownerId] {
+            case let .loaded(info):
+                Group {
+                    detailRow("Ad Soyad", info.fullName)
+                    if !info.university.isEmpty { detailRow("Üniversite", info.university) }
+                    if !info.faculty.isEmpty { detailRow("Fakülte", info.faculty) }
+                    if !info.department.isEmpty { detailRow("Bölüm", info.department) }
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("moderation.detail.submitter")
+            case .missing:
+                Text("Profil bulunamadı (hesap silinmiş olabilir)")
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("moderation.detail.submitter")
+            case .failed:
+                Text("Gönderen bilgisi yüklenemedi")
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("moderation.detail.submitter")
+            case .loading, nil:
+                Text("Gönderen yükleniyor…")
+                    .foregroundStyle(.tertiary)
+                    .redacted(reason: .placeholder)
+            }
         }
     }
 

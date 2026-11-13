@@ -65,7 +65,8 @@ extension AppEnvironment {
                 forcedOff: isCaptureShieldForcedOff(arguments: arguments)
             ),
             questionReader: MockExamQuestionReader(),
-            conversionService: MockExamConversionService()
+            conversionService: MockExamConversionService(),
+            submitterReader: MockSubmitterProfileReader()
         )
         // `-ViFiOpenNotification <id>` starts as if the push of that notification had been tapped.
         if let tapped = openedNotificationId(arguments: arguments) {
@@ -547,6 +548,22 @@ final class MockExamSubmissionService: ExamSubmissionServicing {
 
 // MARK: - Moderation
 
+/// Sample submitters for the `MockModerationService.samples` owners; "mock-user-2" has no profile (deleted account).
+struct MockSubmitterProfileReader: SubmitterProfileReading {
+    func submitter(uid: String) async throws -> SubmitterInfo? {
+        try? await Task.sleep(for: .milliseconds(150))
+        switch uid {
+        case "mock-user":
+            return SubmitterInfo(
+                fullName: "Ayşe Demir", university: "Boğaziçi Üniversitesi",
+                faculty: "Mühendislik Fakültesi", department: "Bilgisayar Mühendisliği"
+            )
+        default:
+            return nil
+        }
+    }
+}
+
 /// In-memory moderation for previews and UI tests: a small pending queue; approving or rejecting removes an
 /// item. The sample files reference pending paths that do not resolve off Firebase, so the preview shows its
 /// error state in sample mode (the queue, approve and reject flows are what the UI tests exercise).
@@ -579,7 +596,7 @@ final class MockModerationService: ModerationServicing {
             files: [SubmissionFileRef(storagePath: "pending/mock-user/sub-dup/1.jpg", order: 1)]
         ),
         ExamSubmissionRecord(
-            id: "sub-2", ownerId: "mock-user",
+            id: "sub-2", ownerId: "mock-user-2",
             university: "Sakarya Üniversitesi", faculty: "İşletme Fakültesi",
             department: "İşletme", lesson: "Muhasebe", exam: "2022 FİNAL",
             kind: .pdf, status: "pending", createdAt: Date(timeIntervalSince1970: 1_759_000_000),

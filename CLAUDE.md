@@ -99,6 +99,7 @@ ViFi-iOS/
 │   │   │                     # QuestionContentView (kalkan içindeki UIKit içerik), FormulaText (SwiftMath + Markdown)
 │   │   ├── AddExam/          # Kullanıcı sınav ekleme: üniv/fakülte/bölüm bundled listeden (profilden ön-dolu) + ders (arşiv dersleri/serbest, LessonPicker) + sabit sınav-adı listesi + görsel/PDF yükleme + kademe-bazlı coin tahmini
 │   │   ├── Moderation/       # Admin paneli: bekleyen gönderimleri incele (dosya önizleme) + iki düğmeli 1. onay ("Onayla · Claude/Gemini ile ilerle": coin + dosya kopyası + dönüştürme) / Reddet;
+│   │   │                     # Gönderen (ad soyad, üniv., fakülte, bölüm): `SubmitterProfileReading` RTDB profilinden okur, uid başı önbellekli; telefon numarası modelde bile tutulmaz (KVKK)
 │   │   │                     # dönüştürme ekranları: ConversionReviewView (hazır sınavlar: orijinal + taslak, düzenle, yeniden üret, yayınla/iptal), ConversionJobsView (başarısızlar),
 │   │   │                     # BulkConversionView (toplu kuyruk + aylık sınır göstergesi), ExamConversionAdminButton ("Yeni yapıya geçir"), PublishedQuestionAdminActions (K15)
 │   │   ├── Notifications/    # Bildirim sayfası (InboxView: kartlar, vurgulama, aksiyon düğmeleri, InboxExamGate = kilit kuralı,

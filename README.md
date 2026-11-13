@@ -415,7 +415,7 @@ ViFi-iOS/
 │   │   ├── Account/         # Hesap: profil düzenle, Bildirim Ayarları, çıkış ve hesap silme
 │   │   ├── Notifications/   # Bildirim sayfası (inbox), aksiyonlar, "Konuma Git", izin / kampanya onayı akışı
 │   │   ├── NotificationComposer/ # Admin "Bildirim Gönder", geçmiş ve istatistik; LocationPicker/ (Google Maps + Places)
-│   │   ├── Moderation/      # Admin: gönderim moderasyonu (iki düğmeli 1. onay) + yapay zekâ dönüştürme ekranları (inceleme, başarısızlar, toplu kuyruk, "Yeni yapıya geçir")
+│   │   ├── Moderation/      # Admin: gönderim moderasyonu (gönderenin ad soyad/üniv./bölümü gösterilir, telefon numarası asla; iki düğmeli 1. onay) + yapay zekâ dönüştürme ekranları (inceleme, başarısızlar, toplu kuyruk, "Yeni yapıya geçir")
 │   │   ├── Home/            # Ana sayfa, son görüntülenenler, Hakkında
 │   │   ├── Browse/          # Fakülte → sınav listeleri, breadcrumb
 │   │   └── Exam/            # Görsel ve PDF sınav görüntüleyicileri + ekran koruması (CaptureShield, CaptureShieldedView, kayıt / app switcher örtüleri)

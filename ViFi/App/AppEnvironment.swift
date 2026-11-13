@@ -21,6 +21,8 @@ final class AppEnvironment {
     @ObservationIgnored let walletReader: any WalletReading
     /// Admin-only moderation of user submissions (approve → publish + credit, or reject).
     @ObservationIgnored let moderationService: any ModerationServicing
+    /// Admin-only, read-only lookup of who submitted an exam (name, university, department; never the phone number).
+    @ObservationIgnored let submitterReader: any SubmitterProfileReading
     /// Unlocks a locked exam by spending coins (via the server-side Cloud Function).
     @ObservationIgnored let unlockService: any ExamUnlockServicing
     /// Unlocks a single exam paid for with money (StoreKit consumable + the server-side Cloud Function).
@@ -102,7 +104,8 @@ final class AppEnvironment {
         notificationEventDefaults: UserDefaults = .standard,
         captureShield: CaptureShieldRemoteSwitch = CaptureShieldRemoteSwitch(reader: NoopCaptureShieldConfigReader()),
         questionReader: any ExamQuestionReading = EmptyExamQuestionReader(),
-        conversionService: any ExamConversionServicing = UnavailableExamConversionService()
+        conversionService: any ExamConversionServicing = UnavailableExamConversionService(),
+        submitterReader: any SubmitterProfileReading = NoopSubmitterProfileReader()
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -145,6 +148,7 @@ final class AppEnvironment {
         self.captureShield = captureShield
         self.questionReader = questionReader
         self.conversionService = conversionService
+        self.submitterReader = submitterReader
         CaptureShield.isSwitchedOn = captureShield.isEnabled
     }
 
@@ -202,7 +206,8 @@ final class AppEnvironment {
             notificationEventReporter: FirebaseNotificationEventReporter(),
             captureShield: captureShield,
             questionReader: FirebaseExamQuestionReader(),
-            conversionService: FirebaseExamConversionService(auth: auth)
+            conversionService: FirebaseExamConversionService(auth: auth),
+            submitterReader: FirebaseSubmitterProfileReader()
         )
     }
 
