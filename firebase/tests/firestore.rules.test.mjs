@@ -186,6 +186,20 @@ describe('Firestore rules — submissions (create, read, moderate)', () => {
     await assertFails(db(users.alice).collection('submissions').doc('bob-pending').update({ status: 'approved' }));
   });
 
+  test('4.2.0 first approval: an admin writes conversionProvider + publishPlan; the owner cannot', async () => {
+    const firstApproval = {
+      status: 'approved', tier: 'newExam', coins: 50, reviewedAt: new Date(), conversionProvider: 'claude',
+      publishPlan: {
+        examId: 'u__f__d__c__2019-final', universityId: 'u', facultyId: 'u__f', departmentId: 'u__f__d', courseId: 'u__f__d__c',
+        nodesToCreate: [{ id: 'u__f__d__c', level: 'course', name: 'Ders', parentId: 'u__f__d', childCount: 1 }],
+        childCountIncrements: ['u__f__d'],
+        exam: { title: '2019 Final', kind: 'JPG', files: [{ storagePath: 'imagess/x.jpg', order: 0 }] },
+      },
+    };
+    await assertFails(db(users.bob).collection('submissions').doc('bob-pending').update(firstApproval));
+    await assertSucceeds(db(users.admin).collection('submissions').doc('bob-pending').update(firstApproval));
+  });
+
   test('non-+90 and anonymous users cannot create or read submissions', async () => {
     for (const user of [users.usPhone, users.emailOnly, null]) {
       await assertFails(db(user).collection('submissions').doc('x').set(validSubmission(user ? user.uid : 'anon')));
