@@ -11,6 +11,12 @@ nonisolated struct ExamSummary: Hashable, Codable, Sendable {
     let kind: ExamKind
     /// Number of image pages, or PDF files.
     let fileCount: Int
+    /// 4.2.0: the number of structured questions when the exam is `format == "structured"`, otherwise `nil`. Optional
+    /// (and `var`) so older cached summaries still decode and existing call sites compile unchanged.
+    var questionCount: Int?
+
+    /// Whether the exam has structured questions to show (see `ExamRouting`).
+    var isStructured: Bool { questionCount != nil }
 }
 
 /// One entry of an archive list: a university, faculty, department, lesson or exam.
@@ -32,6 +38,11 @@ nonisolated struct ExamDocument: Hashable, Sendable {
     let kind: ExamKind
     /// Image pages in reading order, or the PDF file(s).
     let fileURLs: [URL]
+    /// 4.2.0: the number of structured questions when the exam is `format == "structured"`, otherwise `nil`.
+    var questionCount: Int?
+
+    /// Whether the exam has structured questions to show (see `ExamRouting`).
+    var isStructured: Bool { questionCount != nil }
 
     var title: String { path.displayName ?? "" }
 }

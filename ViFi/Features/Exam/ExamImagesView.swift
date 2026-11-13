@@ -14,7 +14,8 @@ struct ExamImagesView: View {
                 path: path,
                 repository: environment.repository,
                 recents: environment.recents,
-                analytics: environment.analytics
+                analytics: environment.analytics,
+                structuredEnabled: environment.structuredExams.isEnabled
             )
         )
     }
@@ -60,6 +61,9 @@ private struct ExamImagesScreen: View {
             .onChange(of: viewModel.document?.kind) { _, kind in
                 redirectIfKindChanged(kind)
             }
+            .onChange(of: viewModel.structuredRedirect) { _, route in
+                redirectToQuestions(route)
+            }
             .fullScreenCover(item: $openedPage) { page in
                 if let document = viewModel.document {
                     FullScreenPagerView(
@@ -81,6 +85,13 @@ private struct ExamImagesScreen: View {
         router.path[router.path.count - 1] = .exam(viewModel.path, kind)
     }
 
+    /// A structured exam reached without its list summary (recents, a notification) replaces this viewer with the
+    /// question screen (`ExamRouting.redirect`).
+    private func redirectToQuestions(_ route: Route?) {
+        guard let route, router.path.last == .exam(viewModel.path, .images) else { return }
+        router.path[router.path.count - 1] = route
+    }
+
     // MARK: - Content
 
     @ViewBuilder
@@ -92,7 +103,8 @@ private struct ExamImagesScreen: View {
             ErrorStateView(message: message) {
                 loadAttempt += 1
             }
-        case let .loaded(document) where document.kind != .images:
+        case let .loaded(document) where document.kind != .images || viewModel.structuredRedirect != nil:
+            // Waiting for the redirect to the matching viewer.
             LoadingStateView()
         case let .loaded(document) where document.fileURLs.isEmpty:
             EmptyStateView(title: "Bu sınavda sayfa yok", systemImage: "doc.text")

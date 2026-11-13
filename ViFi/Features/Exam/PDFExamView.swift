@@ -15,7 +15,8 @@ struct PDFExamView: View {
                 path: path,
                 repository: environment.repository,
                 recents: environment.recents,
-                analytics: environment.analytics
+                analytics: environment.analytics,
+                structuredEnabled: environment.structuredExams.isEnabled
             )
         )
     }
@@ -68,6 +69,9 @@ private struct PDFExamScreen: View {
             .onChange(of: viewModel.document?.kind) { _, kind in
                 redirectIfKindChanged(kind)
             }
+            .onChange(of: viewModel.structuredRedirect) { _, route in
+                redirectToQuestions(route)
+            }
             .task(id: fileRequest) { [request = fileRequest] in
                 await loadFile(for: request)
             }
@@ -82,6 +86,13 @@ private struct PDFExamScreen: View {
         router.path[router.path.count - 1] = .exam(viewModel.path, kind)
     }
 
+    /// A structured exam reached without its list summary (recents, a notification) replaces this viewer with the
+    /// question screen (`ExamRouting.redirect`).
+    private func redirectToQuestions(_ route: Route?) {
+        guard let route, router.path.last == .exam(viewModel.path, .pdf) else { return }
+        router.path[router.path.count - 1] = route
+    }
+
     // MARK: - Content
 
     @ViewBuilder
@@ -93,7 +104,8 @@ private struct PDFExamScreen: View {
             ErrorStateView(message: message) {
                 loadAttempt += 1
             }
-        case let .loaded(document) where document.kind != .pdf:
+        case let .loaded(document) where document.kind != .pdf || viewModel.structuredRedirect != nil:
+            // Waiting for the redirect to the matching viewer.
             LoadingStateView()
         case let .loaded(document) where document.fileURLs.isEmpty:
             EmptyStateView(title: "Bu sınavda dosya yok", systemImage: "doc.richtext")

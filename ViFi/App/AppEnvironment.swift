@@ -66,6 +66,8 @@ final class AppEnvironment {
     @ObservationIgnored let captureShield: CaptureShieldRemoteSwitch
     /// The 4.2.0 structured-exam screen's remote switch, applied for this launch (`isEnabled`).
     @ObservationIgnored let structuredExams: StructuredExamsRemoteSwitch
+    /// Reads a structured exam's questions when its screen opens (never prefetched).
+    @ObservationIgnored let questionReader: any ExamQuestionReading
 
     init(
         repository: any ArchiveRepository,
@@ -99,7 +101,8 @@ final class AppEnvironment {
         notificationEventReporter: any NotificationEventReporting = NoopNotificationEventReporter(),
         notificationEventDefaults: UserDefaults = .standard,
         captureShield: CaptureShieldRemoteSwitch = CaptureShieldRemoteSwitch(reader: NoopCaptureShieldConfigReader()),
-        structuredExams: StructuredExamsRemoteSwitch = StructuredExamsRemoteSwitch(reader: NoopStructuredExamsConfigReader())
+        structuredExams: StructuredExamsRemoteSwitch = StructuredExamsRemoteSwitch(reader: NoopStructuredExamsConfigReader()),
+        questionReader: any ExamQuestionReading = EmptyExamQuestionReader()
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -141,6 +144,7 @@ final class AppEnvironment {
         self.locationPicker = locationPicker
         self.captureShield = captureShield
         self.structuredExams = structuredExams
+        self.questionReader = questionReader
         CaptureShield.isSwitchedOn = captureShield.isEnabled
     }
 
@@ -199,8 +203,24 @@ final class AppEnvironment {
             loginDiagnostics: FirebaseLoginDiagnosticsService(),
             notificationEventReporter: FirebaseNotificationEventReporter(),
             captureShield: captureShield,
-            structuredExams: structuredExams
+            structuredExams: structuredExams,
+            questionReader: FirebaseExamQuestionReader()
         )
+    }
+
+    /// The download URL of a question figure: the canonical Storage URL (loaded only through `RemoteFileLoader`).
+    /// Sample data (`-ViFiMockData`, no bucket) falls back to a bundled sample file named by the path.
+    func figureURL(for figure: QuestionFigure) -> URL? {
+        if let url = StorageURL.canonical(storagePath: figure.storagePath, bucket: storageBucket) {
+            return url
+        }
+        #if DEBUG
+        let name = figure.storagePath as NSString
+        return Bundle.main.url(forResource: name.deletingPathExtension, withExtension: name.pathExtension)
+            ?? Bundle.main.url(forResource: name.deletingPathExtension, withExtension: name.pathExtension, subdirectory: "SampleExams")
+        #else
+        return nil
+        #endif
     }
 
     /// `live()`, or bundled sample data when launched with `-ViFiMockData` (UI tests, demos).

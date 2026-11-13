@@ -24,7 +24,12 @@ nonisolated enum FirestoreArchiveParser {
         static let files = "files"
         static let storagePath = "storagePath"
         static let order = "order"
+        static let format = "format"
+        static let questionCount = "questionCount"
     }
+
+    /// `exams/<id>.format` of an exam converted to questions (4.2.0). The original `files` stay on it until Faz 4.
+    static let structuredFormat = "structured"
 
     /// Documents with this status are the published archive shown to users.
     static let publishedStatus = "published"
@@ -54,7 +59,7 @@ nonisolated enum FirestoreArchiveParser {
         guard let kind = examKind(from: data) else { return nil }
         let urls = fileURLs(from: data, bucket: bucket)
         guard !urls.isEmpty else { return nil }
-        return ExamDocument(path: path, kind: kind, fileURLs: urls)
+        return ExamDocument(path: path, kind: kind, fileURLs: urls, questionCount: structuredQuestionCount(from: data))
     }
 
     // MARK: - Helpers
@@ -78,7 +83,15 @@ nonisolated enum FirestoreArchiveParser {
         guard let kind = examKind(from: data) else { return nil }
         let count = fileEntries(from: data).count
         guard count > 0 else { return nil }
-        return ExamSummary(kind: kind, fileCount: count)
+        return ExamSummary(kind: kind, fileCount: count, questionCount: structuredQuestionCount(from: data))
+    }
+
+    /// The question count of a `format == "structured"` exam, `nil` for every other exam. A structured exam that
+    /// claims no questions is treated as a plain file exam, so it never opens an empty question list.
+    static func structuredQuestionCount(from data: [String: Any]) -> Int? {
+        guard data[Field.format] as? String == structuredFormat,
+              let count = data[Field.questionCount] as? Int, count > 0 else { return nil }
+        return count
     }
 
     /// The file entries with a non-empty `storagePath`, in `order` (stable for equal/absent orders).
