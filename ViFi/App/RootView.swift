@@ -156,10 +156,20 @@ struct RootView: View {
             BrowseView(path: path)
         case let .exam(path, .images):
             ExamImagesView(path: path)
+                .safeAreaInset(edge: .bottom) { conversionAdminBar(for: path) }
         case let .exam(path, .pdf):
             PDFExamView(path: path)
+                .safeAreaInset(edge: .bottom) { conversionAdminBar(for: path) }
         case let .questions(path, kind):
             StructuredExamView(path: path, kind: kind)
+        }
+    }
+
+    /// "Yeni yapıya geçir" under a not-yet-structured exam (K12a); the component renders nothing for non-admins.
+    @ViewBuilder
+    private func conversionAdminBar(for path: ArchivePath) -> some View {
+        if let examId = path.components.last {
+            ExamConversionAdminButton(examId: examId)
         }
     }
 

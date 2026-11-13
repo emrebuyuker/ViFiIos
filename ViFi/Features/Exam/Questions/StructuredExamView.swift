@@ -43,7 +43,6 @@ private struct StructuredExamScreen: View {
             .navigationTitle(viewModel.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Faz 2: admin actions hook (track 1D attaches the "Yeni yapıya geçir" / edit toolbar items here).
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         contactRequest = ContactRequest(context: viewModel.supportContext)
@@ -84,11 +83,17 @@ private struct StructuredExamScreen: View {
                 ExamContextHeader(subtitle: viewModel.subtitle, questionCount: questions.count)
 
                 ForEach(questions) { question in
-                    QuestionCardView(
-                        question: question,
-                        isAnswerRevealed: viewModel.isAnswerRevealed(order: question.order),
-                        onToggleAnswer: { viewModel.toggleAnswer(order: question.order) }
-                    )
+                    VStack(alignment: .trailing, spacing: 6) {
+                        // Admin-only (K15): edit or regenerate this published question; hidden for everyone else.
+                        PublishedQuestionAdminActions(question: question) {
+                            Task { await viewModel.load() }
+                        }
+                        QuestionCardView(
+                            question: question,
+                            isAnswerRevealed: viewModel.isAnswerRevealed(order: question.order),
+                            onToggleAnswer: { viewModel.toggleAnswer(order: question.order) }
+                        )
+                    }
                 }
             }
             .frame(maxWidth: Layout.readableWidth)

@@ -44,6 +44,11 @@ struct ExamConversionAdminButton: View {
                             .accessibilityIdentifier("examAdmin.convert.error")
                     }
                 }
+                // Sits in the exam viewer's bottom inset: a bar only when there is something to show.
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.bar)
             }
         }
         .task { isAdmin = await environment.auth.isCurrentUserAdmin() }
