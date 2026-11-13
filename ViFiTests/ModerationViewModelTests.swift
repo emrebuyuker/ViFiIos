@@ -44,6 +44,28 @@ struct ModerationViewModelTests {
         #expect(service.approvedProviders == [.claude])
     }
 
+    @Test("A duplicate submission resolves to the existing exam, a new one to nil")
+    func duplicateWarning() async {
+        let service = StubModerationService(pending: [Fixture.submissionRecord(id: "dup"), Fixture.submissionRecord(id: "new")])
+        service.duplicates = ["dup": "c__x"]
+        let viewModel = ModerationViewModel(service: service)
+
+        #expect(await viewModel.duplicateExamId(for: Fixture.submissionRecord(id: "dup")) == "c__x")
+        #expect(await viewModel.duplicateExamId(for: Fixture.submissionRecord(id: "new")) == nil)
+    }
+
+    @Test("Approving a duplicate reports the existing exam id")
+    func approveDuplicate() async {
+        let service = StubModerationService(pending: [Fixture.submissionRecord(id: "dup")])
+        let result = ApprovalResult(tier: .duplicate, coins: 10, publishedExamId: "c__x")
+        service.approveReplies = [.success(result)]
+        let viewModel = ModerationViewModel(service: service)
+
+        let outcome = await viewModel.approve(Fixture.submissionRecord(id: "dup"), provider: .gemini)
+
+        #expect(outcome == .approved(result))
+    }
+
     @Test("A failed approval keeps the submission in the list")
     func approveFailureKeeps() async {
         let service = StubModerationService(pending: [Fixture.submissionRecord(id: "a")])
@@ -95,6 +117,7 @@ private final class ThrowingModerationService: ModerationServicing {
     func approve(_ record: ExamSubmissionRecord, provider: AIProvider) async throws -> ApprovalResult {
         throw ModerationError.offline
     }
+    func duplicateExamId(of record: ExamSubmissionRecord) async -> String? { nil }
     func reject(_ record: ExamSubmissionRecord, reason: String?) async throws {
         throw ModerationError.offline
     }

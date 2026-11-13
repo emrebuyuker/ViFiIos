@@ -34,9 +34,11 @@ nonisolated struct ArchivePublishPlan: Equatable, Sendable {
     let nodesToCreate: [CatalogNodeWrite]
     /// Ids of existing catalog nodes whose `childCount` should be incremented by one (a new child was added).
     let childCountIncrements: [String]
-    /// The exam document id to create, or `nil` when the submission duplicates an existing exam (nothing new is
-    /// published — only the low-tier reward is granted).
+    /// The exam document id: the one to create, or (for a duplicate, K22) the EXISTING exam whose questions and
+    /// pages the second approval replaces. `nil` only when a duplicate's placement carries no exam id.
     let examId: String?
+    /// `true` when the submission duplicates an existing exam (`publishPlan.mode == "replace"`).
+    let isDuplicate: Bool
     let universityId: String
     let facultyId: String
     let departmentId: String
@@ -86,7 +88,8 @@ nonisolated struct ArchivePublishPlan: Equatable, Sendable {
         return ArchivePublishPlan(
             nodesToCreate: nodes,
             childCountIncrements: increments,
-            examId: isDuplicate ? nil : "\(courseId)__\(Slug.make(record.exam))",
+            examId: isDuplicate ? placement.examId : "\(courseId)__\(Slug.make(record.exam))",
+            isDuplicate: isDuplicate,
             universityId: universityId,
             facultyId: facultyId,
             departmentId: departmentId,
@@ -121,8 +124,9 @@ nonisolated struct ArchivePublishPlan: Equatable, Sendable {
     /// The plan as stored on the approved submission (`publishPlan`, 4.2.0): the second approval
     /// (`publishExamConversion`) executes it on the server. Shape (`firebase/functions/conversions/schema.js`):
     /// `{ examId, universityId, facultyId, departmentId, courseId, nodesToCreate: [{ id, ...fields }],
-    /// childCountIncrements: [id], exam: { ...exam document fields incl. the copied files } }`.
-    /// `nil` for a duplicate (no `examId`): nothing is published for it.
+    /// childCountIncrements: [id], exam: { ...exam document fields incl. the copied files }, mode }`.
+    /// `mode` is `create` for a new exam and `replace` for a duplicate (K22): then `examId` is the existing exam and
+    /// the node lists are empty. `nil` only when there is no exam id to point at.
     func publishPlanDocument(record: ExamSubmissionRecord, files: [SubmissionFileRef]) -> [String: Any]? {
         guard let examId else { return nil }
         return [
@@ -138,6 +142,7 @@ nonisolated struct ArchivePublishPlan: Equatable, Sendable {
             },
             "childCountIncrements": childCountIncrements,
             "exam": examDocument(record: record, files: files),
+            "mode": isDuplicate ? "replace" : "create",
         ]
     }
 }

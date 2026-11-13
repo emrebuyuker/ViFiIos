@@ -59,7 +59,8 @@ final class FirebaseModerationService: ModerationServicing {
         let coins = max(0, await currentRewards()?.coins(for: placement.tier) ?? 0)
         let plan = ArchivePublishPlan.make(record: record, placement: placement)
 
-        // Copy the files into the public archive storage only when a new exam is actually published.
+        // Copy the files into the public archive storage for a new exam and for a duplicate alike (K22: a
+        // duplicate's second approval replaces the existing exam's pages with these copies).
         let publishedFiles = plan.examId == nil ? [] : try await copyFiles(record)
 
         try await ensureStillCreditable(record, coins: coins)
@@ -67,6 +68,13 @@ final class FirebaseModerationService: ModerationServicing {
         try await commit(record, tier: placement.tier, coins: coins, publishPlan: publishPlan, provider: provider)
 
         return ApprovalResult(tier: placement.tier, coins: coins, publishedExamId: plan.examId)
+    }
+
+    func duplicateExamId(of record: ExamSubmissionRecord) async -> String? {
+        guard let placement = try? await resolver.placement(of: record.location), placement.tier == .duplicate else {
+            return nil
+        }
+        return placement.examId
     }
 
     func reject(_ record: ExamSubmissionRecord, reason: String?) async throws {

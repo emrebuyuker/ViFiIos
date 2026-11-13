@@ -403,6 +403,8 @@ final class StubModerationService: ModerationServicing {
         .success(ApprovalResult(tier: .newExam, coins: 60, publishedExamId: "exam-1")),
     ]
     var rejectError: (any Error)?
+    /// Submission id → the existing exam it duplicates.
+    var duplicates: [String: String] = [:]
     var deleteExamError: (any Error)?
     /// When set, every call waits at the gate before it is answered.
     var gate: AsyncGate?
@@ -432,6 +434,10 @@ final class StubModerationService: ModerationServicing {
         let result = try reply.get()
         pending.removeAll { $0.id == record.id }
         return result
+    }
+
+    func duplicateExamId(of record: ExamSubmissionRecord) async -> String? {
+        duplicates[record.id]
     }
 
     func reject(_ record: ExamSubmissionRecord, reason: String?) async throws {

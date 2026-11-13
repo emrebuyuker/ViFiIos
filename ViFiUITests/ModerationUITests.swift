@@ -55,6 +55,32 @@ nonisolated final class ModerationUITests: XCTestCase {
     }
 
     @MainActor
+    func testDuplicateSubmissionShowsWarningAndBothButtons() {
+        let app = launchApp(admin: true)
+
+        tap("toolbar.account", in: app)
+        tap("account.moderation", in: app)
+        tap("moderation.row.sub-dup", in: app)
+
+        XCTAssertTrue(element("moderation.duplicateWarning", in: app).waitForExistence(timeout: Timeout.content),
+                      "The duplicate warning did not appear")
+        XCTAssertTrue(element("moderation.approve.claude", in: app).exists, "The Claude approval button did not appear")
+        XCTAssertTrue(element("moderation.approve.gemini", in: app).exists, "The Gemini approval button did not appear")
+    }
+
+    @MainActor
+    func testNewSubmissionShowsNoDuplicateWarning() {
+        let app = launchApp(admin: true)
+
+        tap("toolbar.account", in: app)
+        tap("account.moderation", in: app)
+        tap("moderation.row.sub-2", in: app)
+
+        XCTAssertTrue(element("moderation.approve.claude", in: app).waitForExistence(timeout: Timeout.transition))
+        XCTAssertFalse(element("moderation.duplicateWarning", in: app).exists, "A new submission showed the warning")
+    }
+
+    @MainActor
     func testAdminReviewsAndPublishesAReadyExam() {
         let app = launchApp(admin: true)
 

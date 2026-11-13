@@ -1,7 +1,8 @@
 import Foundation
 
 /// The result of approving a submission: the tier it was judged at, the coins granted, and the id of the exam
-/// it will publish at the second approval (nil when it duplicated an existing exam; nothing is published yet).
+/// it will publish or, for a duplicate submission (K22), the existing exam it will replace at the second approval.
+/// Nothing is published yet.
 nonisolated struct ApprovalResult: Equatable, Sendable {
     let tier: SubmissionTier
     let coins: Int
@@ -21,6 +22,10 @@ protocol ModerationServicing: AnyObject {
     /// no catalog nodes or exams; the server converts the pages into draft questions and the admin publishes
     /// them at the second approval.
     func approve(_ record: ExamSubmissionRecord, provider: AIProvider) async throws -> ApprovalResult
+
+    /// The id of the existing archive exam this submission duplicates, or `nil` when it is new (or the archive could
+    /// not be resolved). Drives the "already in the archive" warning on the detail screen.
+    func duplicateExamId(of record: ExamSubmissionRecord) async -> String?
 
     /// Rejects a submission, with an optional reason recorded on it.
     func reject(_ record: ExamSubmissionRecord, reason: String?) async throws

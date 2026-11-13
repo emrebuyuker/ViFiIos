@@ -571,6 +571,14 @@ final class MockModerationService: ModerationServicing {
                 SubmissionFileRef(storagePath: "pending/mock-user/sub-1/2.jpg", order: 2),
             ]
         ),
+        // A duplicate of an exam the archive already has (shows the K22 warning).
+        ExamSubmissionRecord(
+            id: "sub-dup", ownerId: "mock-user",
+            university: "Boğaziçi Üniversitesi", faculty: "Mühendislik Fakültesi",
+            department: "Bilgisayar Mühendisliği", lesson: "Ayrık Matematik", exam: "2020 FİNAL",
+            kind: .images, status: "pending", createdAt: Date(timeIntervalSince1970: 1_758_000_000),
+            files: [SubmissionFileRef(storagePath: "pending/mock-user/sub-dup/1.jpg", order: 1)]
+        ),
         ExamSubmissionRecord(
             id: "sub-2", ownerId: "mock-user",
             university: "Sakarya Üniversitesi", faculty: "İşletme Fakültesi",
@@ -588,7 +596,17 @@ final class MockModerationService: ModerationServicing {
     func approve(_ record: ExamSubmissionRecord, provider: AIProvider) async throws -> ApprovalResult {
         try? await Task.sleep(for: latency)
         pending.removeAll { $0.id == record.id }
+        if let existing = Self.duplicateExamIds[record.id] {
+            return ApprovalResult(tier: .duplicate, coins: 25, publishedExamId: existing)
+        }
         return ApprovalResult(tier: .newUniversity, coins: 500, publishedExamId: "pub-\(record.id)")
+    }
+
+    /// Sample submissions that duplicate an existing exam, by submission id.
+    private static let duplicateExamIds = ["sub-dup": "mock-existing-exam"]
+
+    func duplicateExamId(of record: ExamSubmissionRecord) async -> String? {
+        Self.duplicateExamIds[record.id]
     }
 
     func reject(_ record: ExamSubmissionRecord, reason: String?) async throws {

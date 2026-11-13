@@ -56,7 +56,7 @@ struct ArchivePublishPlanTests {
         #expect(plan.examId == "d__\(Slug.make("Ayrık Matematik"))__\(Slug.make("2023 VİZE"))")
     }
 
-    @Test("A duplicate publishes nothing new")
+    @Test("A duplicate creates no nodes and targets the existing exam")
     func duplicatePublishesNothing() {
         let placement = ResolvedPlacement(
             tier: .duplicate, universityId: "u", facultyId: "f", departmentId: "d", courseId: "c", examId: "e"
@@ -65,7 +65,8 @@ struct ArchivePublishPlanTests {
 
         #expect(plan.nodesToCreate.isEmpty)
         #expect(plan.childCountIncrements.isEmpty)
-        #expect(plan.examId == nil)
+        #expect(plan.examId == "e")
+        #expect(plan.isDuplicate)
     }
 
     @Test("The exam document carries the archive schema and the published files")

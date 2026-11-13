@@ -44,6 +44,11 @@ final class ModerationViewModel {
         }
     }
 
+    /// The existing exam `record` duplicates (K22), or `nil`; the detail screen warns when this is set.
+    func duplicateExamId(for record: ExamSubmissionRecord) async -> String? {
+        await service.duplicateExamId(of: record)
+    }
+
     /// Rejects `record` with an optional reason; on success removes it from the queue. Returns the error message
     /// on failure, `nil` on success.
     func reject(_ record: ExamSubmissionRecord, reason: String?) async -> String? {

@@ -180,8 +180,10 @@ struct PublishPlanDocumentTests {
         let document = try #require(plan.publishPlanDocument(record: record, files: files))
 
         #expect(document.keys.sorted() == [
-            "childCountIncrements", "courseId", "departmentId", "exam", "examId", "facultyId", "nodesToCreate", "universityId",
+            "childCountIncrements", "courseId", "departmentId", "exam", "examId", "facultyId", "mode", "nodesToCreate",
+            "universityId",
         ])
+        #expect(document["mode"] as? String == "create")
         #expect(document["examId"] as? String == plan.examId)
         #expect(document["courseId"] as? String == plan.courseId)
         let nodes = try #require(document["nodesToCreate"] as? [[String: Any]])
@@ -208,13 +210,25 @@ struct PublishPlanDocumentTests {
         #expect(document["childCountIncrements"] as? [String] == ["c"])
     }
 
-    @Test("A duplicate has no plan")
-    func duplicate() {
+    @Test("A duplicate serialises as a replace plan for the existing exam")
+    func duplicate() throws {
         let placement = ResolvedPlacement(
             tier: .duplicate, universityId: "u", facultyId: "f", departmentId: "d", courseId: "c", examId: "c__x"
         )
         let plan = ArchivePublishPlan.make(record: record, placement: placement)
 
-        #expect(plan.publishPlanDocument(record: record, files: []) == nil)
+        let document = try #require(plan.publishPlanDocument(record: record, files: files))
+
+        #expect(document["mode"] as? String == "replace")
+        #expect(document["examId"] as? String == "c__x")
+        #expect(document["universityId"] as? String == "u")
+        #expect(document["facultyId"] as? String == "f")
+        #expect(document["departmentId"] as? String == "d")
+        #expect(document["courseId"] as? String == "c")
+        #expect((document["nodesToCreate"] as? [[String: Any]])?.isEmpty == true)
+        #expect((document["childCountIncrements"] as? [String])?.isEmpty == true)
+        let exam = try #require(document["exam"] as? [String: Any])
+        let examFiles = try #require(exam["files"] as? [[String: Any]])
+        #expect(examFiles.map { $0["storagePath"] as? String } == ["imagess/a.jpg", "imagess/b.jpg"])
     }
 }

@@ -14,9 +14,13 @@ struct ModerationDetailView: View {
     @State private var isConfirmingReject = false
     @State private var rejectReason = ""
     @State private var approval: ApprovalResult?
+    @State private var duplicateExamId: String?
 
     var body: some View {
         Form {
+            if duplicateExamId != nil {
+                duplicateWarningSection
+            }
             detailsSection
             filesSection
             actionsSection
@@ -32,6 +36,8 @@ struct ModerationDetailView: View {
         .navigationTitle("Gönderim")
         .navigationBarTitleDisplayMode(.inline)
         .animation(.smooth, value: errorMessage)
+        .animation(.smooth, value: duplicateExamId)
+        .task { duplicateExamId = await viewModel.duplicateExamId(for: record) }
         .interactiveDismissDisabled(isWorking)
         .alert("Reddedilsin mi?", isPresented: $isConfirmingReject) {
             TextField("Sebep (isteğe bağlı)", text: $rejectReason)
@@ -48,6 +54,22 @@ struct ModerationDetailView: View {
     }
 
     // MARK: - Sections
+
+    /// K22: the archive already has this exam; approving replaces its questions and pages at the second approval.
+    private var duplicateWarningSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 4) {
+                Label("Bu sınav arşivde zaten yüklü", systemImage: "exclamationmark.triangle.fill")
+                    .font(.headline)
+                    .foregroundStyle(.orange)
+                Text("İkinci onayda bu sınavın soruları ve sayfaları bu gönderimle değiştirilir.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("moderation.duplicateWarning")
+        }
+    }
 
     private var detailsSection: some View {
         Section("Gönderim") {
