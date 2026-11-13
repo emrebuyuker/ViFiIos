@@ -86,6 +86,21 @@ export const JOB_ID_PATTERN = /^(exam|sub)-[A-Za-z0-9_-]{1,700}$/;
  * with `publishPlan` into job `sub-<id>`; a 4.1.0 approval (has `publishedExamId`, no plan) into job
  * `exam-<publishedExamId>` with `conversionProvider` absent → the job waits as `queued` without a provider until an
  * admin starts it (`regenerateExamConversion`).
+ *
+ * `publishPlan.mode` (owner decision K22, 13 Nov 2026): `'create'` (absent = create) publishes a new exam as above.
+ * `'replace'` is a DUPLICATE submission (the archive already has the exam, `publishPlan.examId` = that existing exam):
+ * the first approval still copies the files (`exam.files` = the copies) and starts job `sub-<id>` with the chosen
+ * provider; `nodesToCreate` / `childCountIncrements` are empty. The second approval (`publishExamConversion`) creates
+ * nothing in the catalog: it turns the EXISTING exam structured (legacy) or replaces its questions (already structured:
+ * old `questions/<examId>-*` beyond the new count are deleted, ids keep their `<examId>-<nnn>` form), REPLACES the
+ * exam's `files` with the submission's copies and deletes the previous files from Storage, updates pools/subjects, and
+ * discards any other active job of that exam (`exam-<examId>`). A duplicate is approved with the same two buttons; the
+ * admin app shows a "Bu sınav arşivde zaten yüklü" warning.
+ *
+ * Discard (K20): `discardExamConversion` on a `sub-` job deletes the files its first approval copied into imagess/ /
+ * pdfs/ (never files an exam document still references). Subject change (K21): publishing with a different
+ * `subjectId` / `newSubjectName` than the course's current one moves ALL of that course's published questions and
+ * their pool entries to the new subject.
  */
 export const CALLABLES = Object.freeze([
   'requestExamConversion',
