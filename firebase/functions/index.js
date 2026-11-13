@@ -325,7 +325,8 @@ export const dispatchScheduledNotifications = onSchedule(
 // Imports are hoisted, so this block's own imports work here; keeping them with the block keeps it self-contained.
 
 import * as functionsV1 from 'firebase-functions/v1';
-import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { onDocumentCreated, onDocumentDeleted, onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { onExamDeletedHandler } from './conversions/publish.js';
 import { getAuth } from 'firebase-admin/auth';
 import { onSubmissionCreatedHandler, onSubmissionModeratedHandler } from './notifications/automatic.js';
 import { deleteAccountData } from './accountCleanup.js';
@@ -343,6 +344,13 @@ Object.defineProperty(notificationDeps, 'auth', { get: () => getAuth(), enumerab
 export const onSubmissionModerated = onDocumentUpdated(
   { document: 'submissions/{id}', database: 'vifi', region: 'europe-west1', timeoutSeconds: 300 },
   (event) => onSubmissionModeratedHandler(notificationDeps, event)
+);
+
+// An exam was deleted (the admin client deletes `exams/<id>` directly): removes its structured questions, pool
+// entries, `questionFigures/` and conversion job. No-op for a plain exam; idempotent. Same eur3/Eventarc deploy check.
+export const onExamDeleted = onDocumentDeleted(
+  { document: 'exams/{examId}', database: 'vifi', region: 'europe-west1', timeoutSeconds: 300 },
+  (event) => onExamDeletedHandler(notificationDeps, event)
 );
 
 // A new pending submission: a notice to every admin.

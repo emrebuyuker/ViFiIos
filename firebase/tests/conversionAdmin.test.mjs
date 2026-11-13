@@ -829,6 +829,31 @@ describe('discard, edit and regenerate published questions, delete', () => {
     assert.equal((await job(jobId).collection('questions').get()).size, 0);
     assert.ok(bucket.deleted.includes(`questionFigures/${jobId}/`));
   });
+
+  test('onExamDeleted: after the exam document is gone it removes questions, pools, figures and the job; plain exam and re-run are no-ops', async () => {
+    await seedCatalog({ course: false });
+    const { examId, jobId } = await seedReadySubmission('s7');
+    await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId }));
+    await seedExam('plain1');
+    const bucket = fakeBucket();
+    const event = (id) => ({ params: { examId: id } });
+
+    await db.collection('exams').doc(examId).delete();
+    const result = await publish.onExamDeletedHandler(depsWith({ bucket }), event(examId));
+    assert.equal(result.questions, 2);
+    assert.ok(result.jobs.includes(jobId));
+    assert.equal((await db.collection('questions').where('examId', '==', examId).get()).size, 0);
+    assert.equal((await db.collection('questionPools').get()).size, 0);
+    assert.equal((await job(jobId).get()).exists, false);
+    assert.ok(bucket.deleted.includes(`questionFigures/${jobId}/`));
+
+    const again = await publish.onExamDeletedHandler(depsWith({ bucket: fakeBucket() }), event(examId));
+    assert.equal(again.questions, 0);
+    const plain = await publish.onExamDeletedHandler(depsWith({ bucket: fakeBucket() }), event('plain1'));
+    assert.equal(plain.questions, 0);
+    assert.equal(await publish.onExamDeletedHandler(depsWith(), event('bad/id')), null);
+    assert.equal(typeof fns.onExamDeleted, 'function');
+  });
 });
 
 describe('job creation: the suggested subject', () => {

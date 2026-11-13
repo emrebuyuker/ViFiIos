@@ -315,7 +315,7 @@ koordinat + place id, adres ardından gelir). Anahtar yoksa seçici
 | `getNotificationAudience`, `previewNotification`, `sendNotification`, `cancelNotification` | callable, yalnız admin |
 | `trackNotificationEvent` | callable, +90 kullanıcı |
 | `dispatchScheduledNotifications` | `onSchedule`, 5 dk, Europe/Istanbul |
-| `onDeviceWritten`, `onSubmissionModerated`, `onSubmissionCreated` | Firestore tetikleyicisi (isimli `vifi` DB) |
+| `onDeviceWritten`, `onSubmissionModerated`, `onSubmissionCreated`, `onExamDeleted` | Firestore tetikleyicisi (isimli `vifi` DB) |
 | `requestExamConversion`, `requestBulkConversion`, `regenerateExamConversion`, `regenerateDraftQuestion`, `publishExamConversion`, `discardExamConversion`, `updatePublishedQuestion`, `regeneratePublishedQuestion` | callable, admin *(4.2.0, henüz yayınlanmadı; bkz. [Soru soru sınavlar](#soru-soru-sınavlar-420))* |
 | `processExamConversion` | Cloud Tasks kuyruk Function'ı (`onTaskDispatched`) *(4.2.0, henüz yayınlanmadı)* |
 | `onAccountDeleted` | v1 Auth silme tetikleyicisi |

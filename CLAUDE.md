@@ -300,8 +300,7 @@ ViFi-iOS/
   tahmin, sonra onay), (c) `firebase/scripts/convert-legacy-exams.mjs`. Betik güvenliği: `--provider` zorunlu, varsayılan **dry-run** (yalnız sayı + tahmini maliyet),
   emulator dışında `--project` + eşleşen `--confirm-project` yoksa reddeder, `--apply` canlı veri yazar ve Vertex parası harcar → **yalnızca sahibin açık
   onayıyla ve aynı kapsamın dry-run'ından sonra**; idempotent (yapılandırılmış / işi olan sınavı atlar); hiçbir şey yayınlamaz, her taslak yine tek tek incelenir.
-- **Açık iş:** sınav silinince sorular + havuz kayıtları + `questionFigures/` + iş temizliği (`deleteStructuredExamData`) yazıldı ama henüz bir callable'a
-  bağlı değil (bugün `deleteExam` istemcide). Bağlanana kadar bir yapılandırılmış sınavı silmek yetim soru bırakır.
+- **Sınav silme temizliği:** admin istemcisi `exams/<id>`'yi doğrudan siler; `onExamDeleted` tetikleyicisi `deleteStructuredExamData` ile sorular + havuz kayıtları + `questionFigures/` + iş temizliğini yapar (düz sınavda no-op, idempotent).
 
 ### Arayüz
 - **Metinler:** Kullanıcıya görünen metinler Türkçe literal (`Text("…")`, `String(localized: "…")`). String Catalog
@@ -486,6 +485,7 @@ Yeni argüman yok (4.2.0): yapılandırılmış sınav `-ViFiMockData` ile örne
 | `onDeviceWritten` | Firestore `onDocumentWritten` `users/{uid}/devices/{id}` (`vifi`) | Aynı token başka hesapta kayıtlıysa eski cihaz dokümanını siler |
 | `onSubmissionModerated` | Firestore `onDocumentUpdated` `submissions/{id}` (`vifi`) | `pending→approved`: sahibine "Sınavın onaylandı" (+coin, ledger'dan); **4.2.0:** onay `publishPlan` taşıyorsa (1. onay) ayrıca dönüştürme işi `sub-<id>` oluşturulup `processExamConversion` kuyruğuna verilir (sağlayıcı = admin'in seçimi; yoksa iş `queued` bekler), bölüm bildirimi 2. onaya (`publishExamConversion`) taşınır, mükerrerde (`mode: replace`) bölüm bildirimi yoktur; 4.1.0 onayı (`publishedExamId`, plan yok) hâlâ doğrudan bölümüne "yeni sınav" yollar ve sağlayıcısız `exam-<id>` işi bırakır. Yeni sınav yayınlandıysa bölümüne "yeni sınav" (`system`, onay süzgecine tabi değil; yükleyen hariç; bölüm başına İstanbul gününde en fazla 1, `notificationThrottle`). `pending→rejected`: sahibine sebepli bildirim |
 | `onSubmissionCreated` | Firestore `onDocumentCreated` `submissions/{id}` (`vifi`) | Tüm admin'lere "Yeni sınav gönderimi" (`admins`: Auth `listUsers` + `admin` claim, örnek-içi 5 dk önbellek); **gönderen başına kayan 1 saatte en çok 3** (`notificationThrottle/submissions__<ownerId>`, kötüye kullanım koruması; gönderimler moderasyon listesine yine düşer) |
+| `onExamDeleted` | Firestore `onDocumentDeleted` `exams/{examId}` (`vifi`) | Yapılandırılmış sınavın `questions/<id>-*`, `questionPools` kayıtları, `questionFigures/` dosyaları ve dönüşüm işini siler (`deleteStructuredExamData`); düz sınavda no-op, idempotent |
 | `onAccountDeleted` | **v1** `auth.user().onDelete` | Hesap silme temizliği (aşağıda); v2'de Auth silme tetikleyicisi olmadığı için 1. nesil, hata olursa yeniden denenir |
 | `requestExamConversion` | callable, admin | `{examId, provider}` → eski sınav için iş `exam-<id>` ("Yeni yapıya geçir"); etkin/yayınlanmış iş olduğu gibi döner |
 | `requestBulkConversion` | callable, admin (300 sn) | `{courseId\|departmentId, provider, dryRun}` → `{examCount, estimatedCostUsd, jobIds}`; yalnız `dryRun: false` iş başlatır; en çok 200 sınav |

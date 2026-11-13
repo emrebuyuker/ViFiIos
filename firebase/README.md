@@ -74,7 +74,7 @@ Eski bir sınavın ya da onaylanan bir gönderimin dosyaları yapay zekâyla sor
 - **Bildirimler:** `conversionReady`, `conversionFailed`, `conversionBudgetExceeded` (admin kitlesi, anında). Deterministik id'ler: `auto-convready-<iş>`,
   `auto-convfailed-<iş>-<deneme>`, `auto-convbudget-<YYYY-MM>`.
 - **Şekiller:** `questionFigures/<iş>/<nnn>-<k>[-r<rev>].jpg`; bir soru yeniden üretilince sürümlü yola (`-r<rev>`) yazılır ve eski dosya silinir.
-- **Açık iş:** `deleteStructuredExamData` (sorular + havuz kayıtları + şekiller + iş temizliği) yazıldı ama henüz bir callable'a bağlı değil.
+- **Sınav silme temizliği:** `onExamDeleted` (Firestore `exams/{id}` silinince) `deleteStructuredExamData` ile soruları, havuz kayıtlarını, `questionFigures/` dosyalarını ve işi siler; düz sınavda no-op, idempotent.
 
 ```bash
 cd firebase

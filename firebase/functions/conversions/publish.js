@@ -804,8 +804,9 @@ function invalid(message) {
 /**
  * Removes an exam's structured data: its published questions (and their pool entries, transactionally), the
  * cropped figures (`questionFigures/<jobId>/`) and the conversion job with its drafts. The exam document and its
- * original files are the caller's (today the admin client deletes the exam). Exported for the server-side exam
- * deletion; not wired to a callable yet.
+ * original files are the caller's (the admin client deletes the exam). Runs from the `onExamDeleted` trigger, i.e.
+ * after the exam document is gone, so the job ids come from the jobs themselves (`publishedExamId`) as well as the
+ * exam document when it still exists. Idempotent; a plain (non-structured) exam is a no-op.
  *
  * @param {{ db: import('firebase-admin/firestore').Firestore, bucket: { deleteFiles: Function } }} deps
  * @param {string} examId
@@ -816,7 +817,8 @@ export async function deleteStructuredExamData(deps, examId, { jobIds = [] } = {
   if (!ID_SEGMENT_PATTERN.test(examId ?? '')) throw new Error('Bad exam id');
   const { db } = deps;
   const exam = await db.collection('exams').doc(examId).get();
-  const jobs = [...new Set([`exam-${examId}`, exam.exists ? exam.get('conversionJobId') : null, ...jobIds])]
+  const linked = await db.collection(JOBS).where('publishedExamId', '==', examId).get();
+  const jobs = [...new Set([`exam-${examId}`, exam.exists ? exam.get('conversionJobId') : null, ...linked.docs.map((doc) => doc.id), ...jobIds])]
     .filter((jobId) => JOB_ID_PATTERN.test(jobId ?? ''));
   const now = Timestamp.fromDate(deps.now?.() ?? new Date());
 
@@ -833,6 +835,13 @@ export async function deleteStructuredExamData(deps, examId, { jobIds = [] } = {
     await db.recursiveDelete(db.collection(JOBS).doc(jobId));
   }
   return { questions, jobs };
+}
+
+/** `onExamDeleted` (Firestore `exams/{examId}` delete): cleans the deleted exam's structured data. */
+export async function onExamDeletedHandler(deps, event) {
+  const examId = event.params?.examId;
+  if (!ID_SEGMENT_PATTERN.test(examId ?? '')) return null;
+  return deleteStructuredExamData(deps, examId);
 }
 
 // MARK: - Input helpers
