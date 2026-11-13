@@ -103,7 +103,8 @@ struct QuestionEditDraft: Equatable {
             ),
             solution: solution.map { trimmed($0.text) }.filter { !$0.isEmpty },
             topics: question.topics, difficulty: question.difficulty, confidence: question.confidence,
-            needsReview: question.needsReview, updatedAt: question.updatedAt
+            needsReview: question.needsReview, updatedAt: question.updatedAt,
+            regeneratingUntil: question.regeneratingUntil, regenerationError: question.regenerationError
         )
     }
 

@@ -42,6 +42,9 @@ final class MockExamConversionService: ExamConversionServicing {
     private var jobs: [ExamConversion]
     private var usage = AIMonthlyUsage(month: AIMonthlyUsage.monthKey(for: .now), costUsd: 12.4)
     private let latency: Duration
+    private var regenerationLeases: [String: Date] = [:]
+
+    private static func leaseKey(_ jobId: String, _ order: Int) -> String { "\(jobId)#\(order)" }
 
     init(jobs: [ExamConversion] = MockExamConversionService.samples, latency: Duration = .milliseconds(300)) {
         self.jobs = jobs
@@ -76,7 +79,11 @@ final class MockExamConversionService: ExamConversionServicing {
 
     func draftQuestions(jobId: String) async throws -> [ExamQuestion] {
         try await Task.sleep(for: latency)
-        return MockExamQuestionReader.sampleQuestions(examId: jobId)
+        return MockExamQuestionReader.sampleQuestions(examId: jobId).map { question in
+            var question = question
+            question.regeneratingUntil = regenerationLeases[Self.leaseKey(jobId, question.order)]
+            return question
+        }
     }
 
     func requestConversion(examId: String, provider: AIProvider) async throws -> ExamConversion {
@@ -101,6 +108,8 @@ final class MockExamConversionService: ExamConversionServicing {
 
     func regenerateQuestion(jobId: String, order: Int, provider: AIProvider) async throws {
         try await Task.sleep(for: latency)
+        // Like the server's lease: the draft shows as regenerating for a few seconds.
+        regenerationLeases[Self.leaseKey(jobId, order)] = Date().addingTimeInterval(6)
     }
 
     func saveDraftQuestion(jobId: String, question: ExamQuestion) async throws {

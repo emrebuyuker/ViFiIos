@@ -298,3 +298,115 @@ struct BulkConversionViewModelTests {
         #expect(viewModel.errorMessage == ExamConversionError.permissionDenied.userMessage)
     }
 }
+
+@MainActor
+@Suite("ConversionReviewViewModel regeneration polling")
+struct ConversionReviewPollingTests {
+    private static let now = Date(timeIntervalSince1970: 1_000)
+    private static let lease = Date(timeIntervalSince1970: 2_000)
+
+    private func question(
+        order: Int = 1, lease: Date? = nil, error: String? = nil, updatedAt: Date? = nil
+    ) -> ExamQuestion {
+        var question = ConversionFixture.question(order: order)
+        question.regeneratingUntil = lease
+        question.regenerationError = error
+        return ExamQuestion(
+            id: question.id, examId: question.examId, order: order, label: question.label, text: question.text,
+            speech: question.speech, choices: question.choices, figures: [], answer: question.answer,
+            solution: [], topics: [], difficulty: 1, confidence: nil, needsReview: false, updatedAt: updatedAt,
+            regeneratingUntil: lease, regenerationError: error
+        )
+    }
+
+    private func makeViewModel(window: Duration = .milliseconds(200)) -> (ConversionReviewViewModel, StubExamConversionService) {
+        let service = StubExamConversionService()
+        let job = ConversionFixture.job()
+        service.draftsByJob[job.id] = [question()]
+        let viewModel = ConversionReviewViewModel(
+            job: job, service: service, now: { Date(timeIntervalSince1970: 1_000) }, pollInterval: .milliseconds(5), pollWindow: window
+        )
+        return (viewModel, service)
+    }
+
+    @Test("A draft is regenerating only while its lease is in the future")
+    func stateMapping() {
+        let (viewModel, _) = makeViewModel()
+
+        #expect(viewModel.isRegenerating(question(lease: Self.lease)))
+        #expect(!viewModel.isRegenerating(question(lease: Self.now.addingTimeInterval(-1))))
+        #expect(!viewModel.isRegenerating(question()))
+    }
+
+    @Test("Polling ends once the lease it saw is gone, and the list shows the new draft")
+    func stopsWhenLeaseGone() async {
+        let (viewModel, service) = makeViewModel()
+        await viewModel.loadIfNeeded()
+        service.draftResponses = [
+            [question(lease: Self.lease)], [question(lease: Self.lease)], [question(updatedAt: Date(timeIntervalSince1970: 5))],
+        ]
+
+        await viewModel.regenerateQuestion(order: 1, provider: .claude)
+        await viewModel.waitForPolling()
+
+        #expect(service.draftCallCount == 1 + 3)
+        #expect(viewModel.drafts.value?.first?.regeneratingUntil == nil)
+        #expect(viewModel.drafts.value?.first?.updatedAt == Date(timeIntervalSince1970: 5))
+    }
+
+    @Test("Polling ends on a new error even when no lease was seen")
+    func stopsOnError() async {
+        let (viewModel, service) = makeViewModel()
+        await viewModel.loadIfNeeded()
+        service.draftResponses = [[question()], [question(error: "Model yanıt vermedi")]]
+
+        await viewModel.regenerateQuestion(order: 1, provider: .claude)
+        await viewModel.waitForPolling()
+
+        #expect(service.draftCallCount == 1 + 2)
+        #expect(viewModel.drafts.value?.first?.regenerationError == "Model yanıt vermedi")
+    }
+
+    @Test("Polling gives up after the window while the lease keeps running")
+    func stopsAtWindow() async {
+        let (viewModel, service) = makeViewModel(window: .milliseconds(40))
+        await viewModel.loadIfNeeded()
+        service.draftsByJob[ConversionFixture.job().id] = [question(lease: Self.lease)]
+
+        await viewModel.regenerateQuestion(order: 1, provider: .claude)
+        await viewModel.waitForPolling()
+
+        #expect(service.draftCallCount == 1 + 8)
+    }
+
+    @Test("Leaving the screen cancels the polling")
+    func cancelStops() async {
+        let (viewModel, service) = makeViewModel(window: .seconds(60))
+        await viewModel.loadIfNeeded()
+        service.draftsByJob[ConversionFixture.job().id] = [question(lease: Self.lease)]
+
+        await viewModel.regenerateQuestion(order: 1, provider: .claude)
+        viewModel.stopPolling()
+        await viewModel.waitForPolling()
+        let callsAfterStop = service.draftCallCount
+        try? await Task.sleep(for: .milliseconds(40))
+
+        #expect(service.draftCallCount == callsAfterStop)
+    }
+
+    @Test("Stop rules: running lease continues; seen-then-gone, new error and a rewritten draft stop")
+    func stopRules() {
+        let baseline = question(updatedAt: Date(timeIntervalSince1970: 1))
+        let stop = ConversionReviewViewModel.pollShouldStop
+
+        #expect(!stop(question(lease: Self.lease), baseline, false, Self.now))
+        #expect(!stop(baseline, baseline, false, Self.now))
+        #expect(stop(baseline, baseline, true, Self.now))
+        #expect(stop(question(error: "x", updatedAt: Date(timeIntervalSince1970: 1)), baseline, false, Self.now))
+        #expect(stop(question(updatedAt: Date(timeIntervalSince1970: 9)), baseline, false, Self.now))
+        #expect(stop(nil, baseline, false, Self.now))
+        // A stale error from an earlier run does not end the next one before the server claims the draft.
+        let stale = question(error: "eski", updatedAt: Date(timeIntervalSince1970: 1))
+        #expect(!stop(stale, stale, false, Self.now))
+    }
+}

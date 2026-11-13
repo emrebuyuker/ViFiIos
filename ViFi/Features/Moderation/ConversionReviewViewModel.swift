@@ -40,10 +40,41 @@ final class ConversionReviewViewModel {
 
     @ObservationIgnored private let service: any ExamConversionServicing
     @ObservationIgnored private var hasLoaded = false
+    @ObservationIgnored private let now: @Sendable () -> Date
+    @ObservationIgnored private let pollInterval: Duration
+    @ObservationIgnored private let pollWindow: Duration
+    @ObservationIgnored private var pollingTask: Task<Void, Never>?
 
-    init(job: ExamConversion, service: any ExamConversionServicing) {
+    /// `pollInterval` / `pollWindow`: after a single-question regeneration the drafts are re-read every interval for at
+    /// most the window (the server's lease is a few minutes; the admin should not have to pull to refresh).
+    init(
+        job: ExamConversion,
+        service: any ExamConversionServicing,
+        now: @escaping @Sendable () -> Date = { Date() },
+        pollInterval: Duration = .seconds(5),
+        pollWindow: Duration = .seconds(120)
+    ) {
         self.job = job
         self.service = service
+        self.now = now
+        self.pollInterval = pollInterval
+        self.pollWindow = pollWindow
+    }
+
+    /// Whether the server is regenerating `question` right now.
+    func isRegenerating(_ question: ExamQuestion) -> Bool {
+        question.isRegenerating(at: now())
+    }
+
+    /// Stops the automatic refresh (the screen went away).
+    func stopPolling() {
+        pollingTask?.cancel()
+        pollingTask = nil
+    }
+
+    /// Waits for the automatic refresh to end (tests).
+    func waitForPolling() async {
+        await pollingTask?.value
     }
 
     /// Draft questions the model was unsure about and nobody edited yet.
@@ -81,8 +112,46 @@ final class ConversionReviewViewModel {
     func regenerateQuestion(order: Int, provider: AIProvider) async {
         await perform {
             try await self.service.regenerateQuestion(jobId: self.job.id, order: order, provider: provider)
-            self.infoMessage = String(localized: "Soru \(order) yeniden üretiliyor; birkaç saniye sonra yenile.")
+            self.infoMessage = String(localized: "Soru \(order) yeniden üretiliyor; liste kendiliğinden yenilenir.")
+            self.startPolling(order: order)
         }
+    }
+
+    /// Whether the automatic refresh after a single-question regeneration can stop. Pure, so the rules are testable:
+    /// a running lease keeps it going; once a lease was seen it ends the run (finished or failed); before any lease
+    /// was seen (the task has not claimed the draft yet) only a new error or a rewritten draft ends it.
+    nonisolated static func pollShouldStop(
+        question: ExamQuestion?, baseline: ExamQuestion?, sawLease: Bool, now: Date
+    ) -> Bool {
+        guard let question else { return true }
+        if question.isRegenerating(at: now) { return false }
+        if sawLease { return true }
+        if question.regenerationError != nil && baseline?.regenerationError == nil { return true }
+        return question.updatedAt != baseline?.updatedAt
+    }
+
+    private func startPolling(order: Int) {
+        pollingTask?.cancel()
+        let baseline = drafts.value?.first { $0.order == order }
+        let attempts = max(1, Int((pollWindow / pollInterval).rounded(.down)))
+        pollingTask = Task { [weak self, pollInterval] in
+            var sawLease = false
+            for _ in 0..<attempts {
+                do { try await Task.sleep(for: pollInterval) } catch { return }
+                guard let self, !Task.isCancelled else { return }
+                await self.reloadQuietly()
+                guard !Task.isCancelled else { return }
+                let question = self.drafts.value?.first { $0.order == order }
+                if question.map({ self.isRegenerating($0) }) == true { sawLease = true }
+                if Self.pollShouldStop(question: question, baseline: baseline, sawLease: sawLease, now: self.now()) { return }
+            }
+        }
+    }
+
+    /// Re-reads the drafts without a loading state; a failed read keeps the list as it is.
+    private func reloadQuietly() async {
+        guard let fresh = try? await service.draftQuestions(jobId: job.id) else { return }
+        drafts = .loaded(fresh)
     }
 
     /// K14: a second-approval rejection — the whole exam is generated again with the picked provider.
@@ -164,7 +233,8 @@ extension ExamQuestion {
         ExamQuestion(
             id: id, examId: examId, order: order, label: label, text: text, speech: speech, choices: choices,
             figures: figures, answer: answer, solution: solution, topics: topics, difficulty: difficulty,
-            confidence: confidence, needsReview: needsReview, updatedAt: updatedAt
+            confidence: confidence, needsReview: needsReview, updatedAt: updatedAt,
+            regeneratingUntil: regeneratingUntil, regenerationError: regenerationError
         )
     }
 }

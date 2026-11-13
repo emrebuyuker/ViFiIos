@@ -45,6 +45,24 @@ struct ExamQuestionParserTests {
         #expect(questions.last?.needsReview == true)
     }
 
+    @Test("Drafts carry the regeneration lease and error; blank errors are ignored")
+    func parsesRegenerationState() throws {
+        let lease = Date(timeIntervalSince1970: 2_000)
+        let running = try #require(ExamQuestionParser.question(
+            id: "001", data: doc("001", ["regenerationLeaseUntil": lease, "regenerationError": "  "]).data, examId: "e1"
+        ))
+        let failed = try #require(ExamQuestionParser.question(
+            id: "001", data: doc("001", ["regenerationError": " Model yanıt vermedi "]).data, examId: "e1"
+        ))
+        let plain = try #require(ExamQuestionParser.question(id: "001", data: doc("001").data, examId: "e1"))
+
+        #expect(running.regeneratingUntil == lease)
+        #expect(running.regenerationError == nil)
+        #expect(failed.regenerationError == "Model yanıt vermedi")
+        #expect(failed.regeneratingUntil == nil)
+        #expect(plain.regeneratingUntil == nil && plain.regenerationError == nil)
+    }
+
     @Test("Unusable documents are skipped: no text, no answer, bad order, newer schema")
     func skipsUnusable() {
         let docs = [

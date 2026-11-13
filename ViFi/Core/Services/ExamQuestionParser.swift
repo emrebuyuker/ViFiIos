@@ -26,6 +26,8 @@ nonisolated enum ExamQuestionParser {
         static let confidence = "confidence"
         static let needsReview = "needsReview"
         static let updatedAt = "updatedAt"
+        static let regenerationLeaseUntil = "regenerationLeaseUntil"
+        static let regenerationError = "regenerationError"
         static let storagePath = "storagePath"
         static let width = "width"
         static let height = "height"
@@ -58,7 +60,9 @@ nonisolated enum ExamQuestionParser {
             difficulty: min(3, max(1, data[Field.difficulty] as? Int ?? 2)),
             confidence: (data[Field.confidence] as? Double).map { min(1, max(0, $0)) },
             needsReview: data[Field.needsReview] as? Bool ?? false,
-            updatedAt: data[Field.updatedAt] as? Date
+            updatedAt: data[Field.updatedAt] as? Date,
+            regeneratingUntil: data[Field.regenerationLeaseUntil] as? Date,
+            regenerationError: nonEmpty(data[Field.regenerationError])
         )
     }
 

@@ -57,6 +57,15 @@ nonisolated struct ExamQuestion: Identifiable, Hashable, Sendable {
     let confidence: Double?
     let needsReview: Bool
     let updatedAt: Date?
+    /// Drafts only: the end of the server's regeneration lease while a single-question regeneration runs.
+    var regeneratingUntil: Date?
+    /// Drafts only: why the last single-question regeneration failed (cleared when a new one starts).
+    var regenerationError: String?
+
+    /// Whether a regeneration is running at `date` (the lease has not expired).
+    func isRegenerating(at date: Date) -> Bool {
+        regeneratingUntil.map { $0 > date } ?? false
+    }
 }
 
 /// The AI provider an admin picks for a conversion action (owner decision K9). No default on the server.

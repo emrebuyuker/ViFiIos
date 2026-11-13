@@ -32,6 +32,7 @@ private struct ConversionReviewScreen: View {
             .navigationBarTitleDisplayMode(.inline)
             .animation(.smooth, value: viewModel.drafts)
             .task { await viewModel.loadIfNeeded() }
+            .onDisappear { viewModel.stopPolling() }
             .sheet(item: $editing) { question in
                 QuestionEditorView(question: question) { edited in
                     await viewModel.save(edited) ? nil : (viewModel.errorMessage ?? "")
@@ -88,6 +89,7 @@ private struct ConversionReviewScreen: View {
                         DraftQuestionRow(
                             question: question,
                             isBusy: viewModel.isWorking,
+                            isRegenerating: viewModel.isRegenerating(question),
                             onEdit: { editing = question },
                             onRegenerate: { regeneratingOrder = question.order }
                         )
@@ -219,6 +221,7 @@ private struct ConversionReviewScreen: View {
 private struct DraftQuestionRow: View {
     let question: ExamQuestion
     let isBusy: Bool
+    let isRegenerating: Bool
     let onEdit: () -> Void
     let onRegenerate: () -> Void
 
@@ -247,6 +250,22 @@ private struct DraftQuestionRow: View {
             }
             Text("Cevap: \(question.answer.choice.map { "\($0) — " } ?? "")\(question.answer.text)")
                 .font(.footnote.weight(.medium))
+            if isRegenerating {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Yeniden üretiliyor…")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("conversion.review.regenerating.\(question.order)")
+            }
+            if let error = question.regenerationError {
+                Label(error, systemImage: "exclamationmark.circle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .accessibilityIdentifier("conversion.review.regenerationError.\(question.order)")
+            }
             HStack {
                 Button("Düzenle", systemImage: "pencil", action: onEdit)
                     .accessibilityIdentifier("conversion.question.edit.\(question.order)")
@@ -255,7 +274,7 @@ private struct DraftQuestionRow: View {
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
-            .disabled(isBusy)
+            .disabled(isBusy || isRegenerating)
         }
         .padding(.vertical, 4)
     }

@@ -112,6 +112,24 @@ nonisolated final class ModerationUITests: XCTestCase {
     }
 
     @MainActor
+    func testRegeneratingAQuestionShowsItsProgress() {
+        let app = launchApp(admin: true)
+
+        tap("toolbar.account", in: app)
+        tap("account.moderation", in: app)
+        tap("moderation.ready", in: app)
+        tap("conversion.row.sub-sub-1", in: app)
+        XCTAssertTrue(element("conversion.review", in: app).waitForExistence(timeout: Timeout.content),
+                      "The review screen did not appear")
+
+        tap("conversion.question.regenerate.1", in: app)
+        tap("ai.provider.claude", in: app)
+
+        XCTAssertTrue(element("conversion.review.regenerating.1", in: app).waitForExistence(timeout: Timeout.content),
+                      "The regenerating state did not appear")
+    }
+
+    @MainActor
     func testModerationIsHiddenFromNonAdmins() {
         let app = launchApp(admin: false)
 

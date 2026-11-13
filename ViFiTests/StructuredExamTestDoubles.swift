@@ -38,6 +38,9 @@ final class StubExamConversionService: ExamConversionServicing {
     var usage = AIMonthlyUsage(month: "2026-11", costUsd: 0)
     var publishResult = PublishedExamResult(examId: "exam-1", questionCount: 2)
     var draftsByJob: [String: [ExamQuestion]] = [:]
+    /// Answers served (first in, first out) before `draftsByJob`, to script a draft that changes between reads.
+    var draftResponses: [[ExamQuestion]] = []
+    private(set) var draftCallCount = 0
     var error: (any Error)?
     var gate: AsyncGate?
     private(set) var calls: [Call] = []
@@ -51,6 +54,8 @@ final class StubExamConversionService: ExamConversionServicing {
     func draftQuestions(jobId: String) async throws -> [ExamQuestion] {
         await gate?.pass()
         if let error { throw error }
+        draftCallCount += 1
+        if !draftResponses.isEmpty { return draftResponses.removeFirst() }
         return draftsByJob[jobId] ?? []
     }
 
