@@ -234,10 +234,10 @@ Function kaydı yazar ve alıcılara teslim eder. İstemci yalnızca okur, cihaz
 Backend ve payload platform-bağımsızdır (Android istemci ayrı depoda yazılacak).
 
 > [!IMPORTANT]
-> **Bu sistemin hiçbir parçası henüz canlıda değil.** Kod ve emulator testleri hazır; canlı `vifi-831a8` projesinde yeni
-> Firestore/Storage kuralları, Cloud Functions, IAM rolü, Cloud Scheduler işi ve Apple App Group yayınlanmadı. Yayın
-> sırası ve önkoşulları için bkz. [Yayın önkoşulları](#yayın-önkoşulları). Yayındaki 4.0.0 istemcisi `all` topic'ine
-> abone olur ve `announcements`'ı okur; genel duyurular ona da ulaşmaya devam eder.
+> **Backend 30 Ekim 2026'dan beri canlıda** (Firestore/Storage kuralları, Cloud Functions, IAM rolü, Cloud Scheduler işi,
+> Apple App Group). Yeni istemci 4.1.0 ile yayına çıkıyor; yayın sırası ve önkoşulları için bkz.
+> [Yayın önkoşulları](#yayın-önkoşulları). 4.0.0 istemcisi `all` topic'ine abone olur ve `announcements`'ı okur; genel
+> duyurular ona da ulaşmaya devam eder.
 
 ```mermaid
 flowchart LR
