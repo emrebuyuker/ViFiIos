@@ -13,7 +13,7 @@
 // - `questionPools/{poolId}`                question-id pools for the future practice mode (server writes).
 // - `subjects/{subjectId}`                  country-wide course identities `{ name, aliases[] }` (server writes).
 // - `aiUsage/{YYYY-MM}`                     monthly AI spend for the $50 cap (server only).
-// Storage: `questionFigures/{jobId}/{nnn}-{k}.jpg` (server writes, +90 users and admins get one file at a time).
+// Storage: `questionFigures/{jobId}/{nnn}-{k}[-r{revision}].jpg` (server writes, +90 users and admins get one file at a time).
 //
 // Pure — no Firebase imports, so everything here is unit-tested without the emulator.
 
@@ -138,13 +138,21 @@ export function publishedQuestionId(examId, order) {
   return `${examId}-${questionOrderKey(order)}`;
 }
 
-/** A cropped figure: `questionFigures/<jobId>/<nnn>-<k>.jpg`, `k` 1-based within the question. */
-export function figureStoragePath(jobId, order, index) {
+/**
+ * A cropped figure: `questionFigures/<jobId>/<nnn>-<k>.jpg`, `k` 1-based within the question. A regenerated question
+ * writes `<nnn>-<k>-r<revision>.jpg` (revision ≥ 2; absent or 1 = no suffix) so URL-keyed client caches never serve
+ * the superseded image.
+ */
+export function figureStoragePath(jobId, order, index, revision) {
   if (!JOB_ID_PATTERN.test(jobId ?? '')) throw new ConversionSchemaError('invalid-job-id', 'Bad job id');
   if (!Number.isInteger(index) || index < 1 || index > LIMITS.figuresPerQuestion) {
     throw new ConversionSchemaError('invalid-figure-index', `Figure index must be 1…${LIMITS.figuresPerQuestion}`);
   }
-  return `questionFigures/${jobId}/${questionOrderKey(order)}-${index}.jpg`;
+  if (revision !== undefined && (!Number.isInteger(revision) || revision < 1)) {
+    throw new ConversionSchemaError('invalid-figure-revision', 'Figure revision must be a positive integer');
+  }
+  const suffix = revision > 1 ? `-r${revision}` : '';
+  return `questionFigures/${jobId}/${questionOrderKey(order)}-${index}${suffix}.jpg`;
 }
 
 /**

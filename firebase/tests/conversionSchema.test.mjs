@@ -37,6 +37,10 @@ describe('conversion schema — ids and paths', () => {
     assert.equal(publishedQuestionId('e1', 1), 'e1-001');
     assert.equal(publishedQuestionId('e1', 42), 'e1-042');
     assert.equal(figureStoragePath('exam-e1', 3, 2), 'questionFigures/exam-e1/003-2.jpg');
+    assert.equal(figureStoragePath('exam-e1', 3, 2, 1), 'questionFigures/exam-e1/003-2.jpg');
+    assert.equal(figureStoragePath('exam-e1', 3, 2, 4), 'questionFigures/exam-e1/003-2-r4.jpg');
+    fails(() => figureStoragePath('exam-e1', 3, 2, 0), 'invalid-figure-revision');
+    fails(() => figureStoragePath('exam-e1', 3, 2, 1.5), 'invalid-figure-revision');
     fails(() => publishedQuestionId('e1', 0), 'invalid-order');
     fails(() => publishedQuestionId('e1', 1000), 'invalid-order');
     fails(() => figureStoragePath('e1', 1, 1), 'invalid-job-id');

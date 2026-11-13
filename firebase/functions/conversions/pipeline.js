@@ -301,7 +301,7 @@ async function solve(deps, jobId, { job, exam, providerName, month, budget, focu
 }
 
 /** One draft question (figures cropped and uploaded) at `order`; `paths` are the figures it references. */
-async function buildDraft(deps, exam, jobId, question, order, { providerName, modelId, now }) {
+async function buildDraft(deps, exam, jobId, question, order, { providerName, modelId, now, revision }) {
   const figures = [];
   const pendingFigures = [];
   const paths = [];
@@ -312,7 +312,7 @@ async function buildDraft(deps, exam, jobId, question, order, { providerName, mo
       pendingFigures.push({ index, page: figure.page, box: figure.box });
       continue;
     }
-    const storagePath = figureStoragePath(jobId, order, index);
+    const storagePath = figureStoragePath(jobId, order, index, revision);
     await deps.bucket.file(storagePath).save(crop.bytes, {
       resumable: false,
       contentType: 'image/jpeg',
@@ -329,6 +329,7 @@ async function buildDraft(deps, exam, jobId, question, order, { providerName, mo
     speech: question.speech,
     choices: question.choices,
     figures,
+    ...(revision > 1 ? { figureRevision: revision } : {}),
     ...(pendingFigures.length > 0 ? { pendingFigures } : {}),
     answer: question.answer,
     solution: question.solution,
@@ -520,8 +521,10 @@ async function runQuestion(deps, jobId, { job, draft: previous, modelId, month, 
   }
 
   if (!(await jobHasStatus(db, jobId, status))) return { outcome: 'abandoned', jobId, order };
+  // A fresh figure path per regeneration: clients cache downloads by URL, so an overwritten path would show the old image.
+  const revision = nextFigureRevision(previous);
   const { draft, paths } = await buildDraft(deps, exam, jobId, question, order, {
-    providerName, modelId, now: clock(deps)(),
+    providerName, modelId, now: clock(deps)(), revision,
   });
 
   const collection = jobRef(db, jobId).collection(DRAFTS_COLLECTION);
@@ -553,6 +556,16 @@ async function runQuestion(deps, jobId, { job, draft: previous, modelId, month, 
   }
   await removeStaleFigures(bucket, `questionFigures/${jobId}/${questionOrderKey(order)}-`, new Set(paths));
   return { outcome: target === 'published' ? 'published' : 'ready', jobId, order, provider: providerName, usage, questionId: published };
+}
+
+/** Previous highest figure revision (counter on the draft, or parsed from its figure paths) + 1; the first one is 2. */
+function nextFigureRevision(previous) {
+  let highest = Number.isInteger(previous.figureRevision) ? previous.figureRevision : 1;
+  for (const figure of Array.isArray(previous.figures) ? previous.figures : []) {
+    const match = /-r(\d+)\.jpg$/.exec(figure?.storagePath ?? '');
+    if (match) highest = Math.max(highest, Number(match[1]));
+  }
+  return highest + 1;
 }
 
 /** Drops the draft's regeneration lease (a retry follows) or, after the last attempt, records the error on it. */

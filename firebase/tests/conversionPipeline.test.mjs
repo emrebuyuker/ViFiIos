@@ -832,8 +832,10 @@ describe('processExamConversion — one question (K8 draft, K15 published)', () 
     assert.equal(second.needsReview, false);
     assert.equal(second.editedBy, undefined, 'the new draft replaces the edited one');
     assert.equal(second.regenerationLeaseUntil, undefined);
-    assert.deepEqual(second.figures.map((figure) => figure.storagePath), [`questionFigures/${jobId}/002-1.jpg`]);
-    assert.deepEqual(await figureNames(jobId), [`questionFigures/${jobId}/001-1.jpg`, `questionFigures/${jobId}/002-1.jpg`]);
+    // A fresh path (never an overwrite): URL-keyed client caches must not show the old image. The superseded one is gone.
+    assert.deepEqual(second.figures.map((figure) => figure.storagePath), [`questionFigures/${jobId}/002-1-r2.jpg`]);
+    assert.equal(second.figureRevision, 2);
+    assert.deepEqual(await figureNames(jobId), [`questionFigures/${jobId}/001-1.jpg`, `questionFigures/${jobId}/002-1-r2.jpg`]);
 
     const job = await jobDoc(jobId);
     assert.equal(job.status, 'ready');
@@ -863,7 +865,8 @@ describe('processExamConversion — one question (K8 draft, K15 published)', () 
     assert.match(live.text, /^Yeni soru 2/);
     assert.equal(live.subjectId, 'mat', 'the query keys (and so the pools) are kept');
     assert.equal(live.year, 2019);
-    assert.deepEqual(live.figures.map((figure) => figure.storagePath), [`questionFigures/${jobId}/002-1.jpg`]);
+    assert.deepEqual(live.figures.map((figure) => figure.storagePath), [`questionFigures/${jobId}/002-1-r2.jpg`]);
+    assert.deepEqual(await figureNames(jobId), [`questionFigures/${jobId}/001-1.jpg`, `questionFigures/${jobId}/002-1-r2.jpg`]);
     assert.equal((await jobDoc(jobId)).status, 'published');
   });
 
