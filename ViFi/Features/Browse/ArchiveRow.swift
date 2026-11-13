@@ -8,6 +8,8 @@ struct ArchiveRow: View {
     let item: ArchiveItem
     /// A locked exam shows a lock badge with the unlock cost instead of its format badge.
     var isLocked = false
+    /// Whether structured exams open as questions (the remote switch); then their row says "N soru" / "Sorular".
+    var structuredEnabled = true
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .headline) private var iconSize: CGFloat = 40
@@ -53,8 +55,14 @@ struct ArchiveRow: View {
         if isLocked {
             LockBadge(cost: ExamLock.unlockCost)
         } else {
-            ExamKindBadge(kind: exam.kind)
+            ExamKindBadge(text: questionCount(of: exam) == nil ? exam.kind.badge : String(localized: "Sorular"))
         }
+    }
+
+    /// The question count of an exam that opens as questions, or `nil` for one that opens its pages.
+    private func questionCount(of exam: ExamSummary) -> Int? {
+        guard structuredEnabled, let count = exam.questionCount, count > 0 else { return nil }
+        return count
     }
 
     /// An exam node that exists but has no files to open.
@@ -68,11 +76,14 @@ struct ArchiveRow: View {
     }
 
     private var symbolName: String {
-        item.exam?.kind.symbolName ?? item.level.symbolName
+        guard let exam = item.exam else { return item.level.symbolName }
+        return questionCount(of: exam) == nil ? exam.kind.symbolName : "list.number"
     }
 
     private var subtitle: String {
-        if let exam = item.exam {
+        if let exam = item.exam, let count = questionCount(of: exam) {
+            String(localized: "\(count) soru")
+        } else if let exam = item.exam {
             exam.kind.contentText(fileCount: exam.fileCount)
         } else if item.level == .exam {
             String(localized: "Dosya bulunamadı")
@@ -96,12 +107,12 @@ struct ArchiveNavigationRow: View {
         Group {
             if isLocked {
                 Button(action: onLockedTap) {
-                    ArchiveRow(item: item, isLocked: true)
+                    ArchiveRow(item: item, isLocked: true, structuredEnabled: environment.structuredExams.isEnabled)
                 }
                 .accessibilityHint("Kilitli; açmak için dokun")
             } else if let route = item.route(structuredEnabled: environment.structuredExams.isEnabled) {
                 NavigationLink(value: route) {
-                    ArchiveRow(item: item)
+                    ArchiveRow(item: item, structuredEnabled: environment.structuredExams.isEnabled)
                 }
             } else {
                 // A disabled button (rather than plain content) tells VoiceOver and UI tests
@@ -149,12 +160,20 @@ extension ArchiveItem {
     }
 }
 
-/// Small capsule naming an exam's format ("Görsel", "PDF").
+/// Small capsule naming an exam's format ("Görsel", "PDF", or "Sorular" for a structured exam).
 struct ExamKindBadge: View {
-    let kind: ExamKind
+    let text: String
+
+    init(text: String) {
+        self.text = text
+    }
+
+    init(kind: ExamKind) {
+        text = kind.badge
+    }
 
     var body: some View {
-        Text(kind.badge)
+        Text(text)
             .font(.caption2.weight(.semibold))
             .foregroundStyle(.secondary)
             .padding(.horizontal, 8)

@@ -53,6 +53,22 @@ nonisolated final class StructuredExamUITests: XCTestCase {
     }
 
     @MainActor
+    func testStructuredExamRowShowsItsQuestionCount() {
+        let app = launch()
+        open(Self.lesson, in: app)
+
+        let structuredRow = element(app, "row.\(Self.structuredExam)")
+        XCTAssertTrue(structuredRow.waitForExistence(timeout: Timeout.content))
+        XCTAssertTrue(structuredRow.label.contains("3 soru"), "Row label was \(structuredRow.label)")
+        XCTAssertTrue(structuredRow.label.contains("Sorular"), "Row label was \(structuredRow.label)")
+
+        let plainRow = element(app, "row.\(Self.plainExam)")
+        XCTAssertTrue(plainRow.waitForExistence(timeout: Timeout.content))
+        XCTAssertTrue(plainRow.label.contains("sayfa"), "Row label was \(plainRow.label)")
+        XCTAssertFalse(plainRow.label.contains("soru"), "Row label was \(plainRow.label)")
+    }
+
+    @MainActor
     func testPlainExamKeepsTheFileViewer() {
         let app = launch()
         open(Self.lesson + [Self.plainExam], in: app)
