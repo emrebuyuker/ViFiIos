@@ -82,7 +82,8 @@ nonisolated enum AIProvider: String, CaseIterable, Codable, Sendable {
     }
 }
 
-/// Canonical exam types: the `ExamNameCatalog` ids (pinned by `ExamTitleParserTests`).
+/// Canonical exam types, parsed from archive titles (`ExamTitleParser`) and mapped from every `ExamNameCatalog` entry.
+/// Mirrors `EXAM_TYPES` in `firebase/functions/conversions/schema.js`.
 nonisolated enum ExamType: String, CaseIterable, Codable, Sendable {
     case vize
     case final
@@ -91,4 +92,24 @@ nonisolated enum ExamType: String, CaseIterable, Codable, Sendable {
     case kisaSinav = "kisa-sinav"
     case yazOkulu = "yaz-okulu"
     case araSinav = "ara-sinav"
+    case tekDers = "tek-ders"
+    case ekSinav = "ek-sinav"
+    case muafiyet
+    case seviyeTespit = "seviye-tespit"
+    case uygulama
+    case laboratuvar
+    case odev
+    case proje
+    case calismaSorulari = "calisma-sorulari"
+    case cozumluSorular = "cozumlu-sorular"
+
+    /// Whether the type is a real exam for the future practice mode ("Sınava gir"). Study materials (lab, homework,
+    /// project, study and solved questions) stay in the archive but get no `questionPools` entries (owner decision
+    /// K27). Mirrors `PRACTICE_EXAM_TYPES` in `schema.js`.
+    var isPracticeEligible: Bool {
+        switch self {
+        case .laboratuvar, .odev, .proje, .calismaSorulari, .cozumluSorular: false
+        default: true
+        }
+    }
 }

@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {
   ConversionSchemaError,
   EXAM_TYPES,
+  PRACTICE_EXAM_TYPES,
   PROVIDERS,
   conversionJobId,
   figureStoragePath,
@@ -62,7 +63,20 @@ describe('conversion schema — ids and paths', () => {
 
   test('providers and exam types are the agreed sets', () => {
     assert.deepEqual([...PROVIDERS], ['claude', 'gemini']);
-    assert.deepEqual([...EXAM_TYPES], ['vize', 'final', 'butunleme', 'mazeret', 'kisa-sinav', 'yaz-okulu', 'ara-sinav']);
+    assert.deepEqual([...EXAM_TYPES], [
+      'vize', 'final', 'butunleme', 'mazeret', 'kisa-sinav', 'yaz-okulu', 'ara-sinav',
+      'tek-ders', 'ek-sinav', 'muafiyet', 'seviye-tespit', 'uygulama',
+      'laboratuvar', 'odev', 'proje', 'calisma-sorulari', 'cozumlu-sorular',
+    ]);
+  });
+
+  test('study materials are not practice exam types and get no pool id (K27)', () => {
+    const materials = ['laboratuvar', 'odev', 'proje', 'calisma-sorulari', 'cozumlu-sorular'];
+    assert.deepEqual([...PRACTICE_EXAM_TYPES], EXAM_TYPES.filter((type) => !materials.includes(type)));
+    for (const examType of materials) {
+      fails(() => questionPoolId({ subjectId: 's', examType, scope: 'tr' }), 'invalid-pool');
+    }
+    assert.equal(questionPoolId({ subjectId: 's', examType: 'tek-ders', scope: 'tr' }), 's__tek-ders__tr');
   });
 });
 
@@ -82,7 +96,26 @@ describe('conversion schema — exam title parser (same cases as ExamTitleParser
     ['2023 YAZ OKULU', 'yaz-okulu', 2023],
     ['FİNAL', 'final', null],
     ['DERS NOTU', null, null],
-    ['2019 TEK DERS', null, 2019],
+    ['2019 TEK DERS', 'tek-ders', 2019],
+    ['2020 EK SINAV', 'ek-sinav', 2020],
+    ['2020 YEDEK SINAV', null, 2020],
+    ['2021 YAZ OKULU VİZE', 'vize', 2021],
+    ['2021 YAZ OKULU ARA SINAV', 'ara-sinav', 2021],
+    ['2021 YAZ OKULU FİNAL', 'final', 2021],
+    ['QUIZ', 'kisa-sinav', null],
+    ['2018 QUIZ 2', 'kisa-sinav', 2018],
+    ['2022 MUAFİYET SINAVI', 'muafiyet', 2022],
+    ['2022 SEVİYE TESPİT SINAVI', 'seviye-tespit', 2022],
+    ['2022 UYGULAMA SINAVI', 'uygulama', 2022],
+    ['2022 UYGULAMA', null, 2022],
+    ['2018 LABORATUVAR', 'laboratuvar', 2018],
+    ['2018 ÖDEV', 'odev', 2018],
+    ['2018 PROJE', 'proje', 2018],
+    ['2018 ÇALIŞMA SORULARI', 'calisma-sorulari', 2018],
+    ['2018 ÇÖZÜMLÜ SORULAR', 'cozumlu-sorular', 2018],
+    ['FİNAL ÇALIŞMA SORULARI', 'calisma-sorulari', null],
+    ['2019 VİZE ÇÖZÜMLÜ SORULAR', 'cozumlu-sorular', 2019],
+    ['2019 VİZE CEVAPLI', 'vize', 2019],
     ['', null, null],
   ];
   for (const [title, examType, year] of cases) {

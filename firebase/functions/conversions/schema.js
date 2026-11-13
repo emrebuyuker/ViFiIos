@@ -32,10 +32,24 @@ export const CONVERSION_STATUSES = Object.freeze(['queued', 'processing', 'ready
 export const CONVERSION_SOURCES = Object.freeze(['legacy', 'submission']);
 
 /**
- * Canonical exam types — the ids of the app's `ExamNameCatalog` (Add Exam's fixed exam-name list). A title that
- * matches none of them parses to `examType: null` (it stays viewable, it just joins no typed pool).
+ * Canonical exam types, parsed from archive titles (`parseExamTitle`); every Add Exam list entry (`ExamNameCatalog`
+ * in the app) maps to one of them. A title that matches none parses to `examType: null` (it stays viewable, it just
+ * joins no typed pool). Mirrors `ExamType` in the app.
  */
-export const EXAM_TYPES = Object.freeze(['vize', 'final', 'butunleme', 'mazeret', 'kisa-sinav', 'yaz-okulu', 'ara-sinav']);
+export const EXAM_TYPES = Object.freeze([
+  'vize', 'final', 'butunleme', 'mazeret', 'kisa-sinav', 'yaz-okulu', 'ara-sinav',
+  'tek-ders', 'ek-sinav', 'muafiyet', 'seviye-tespit', 'uygulama',
+  'laboratuvar', 'odev', 'proje', 'calisma-sorulari', 'cozumlu-sorular',
+]);
+
+/** Study materials: archived and published with their `examType`, but never in a practice pool (owner decision K27). */
+const NON_PRACTICE_EXAM_TYPES = new Set(['laboratuvar', 'odev', 'proje', 'calisma-sorulari', 'cozumlu-sorular']);
+
+/**
+ * The exam types that count for the future practice mode ("Sınava gir") and get `questionPools` entries — the single
+ * source of truth on the server. Mirrors `ExamType.isPracticeEligible` in the app.
+ */
+export const PRACTICE_EXAM_TYPES = Object.freeze(EXAM_TYPES.filter((type) => !NON_PRACTICE_EXAM_TYPES.has(type)));
 
 /** Practice-pool scopes (TODO-4.2.0 Ek C): country-wide, one university, one course. */
 export const POOL_SCOPES = Object.freeze(['tr', 'university', 'course']);
@@ -157,11 +171,12 @@ export function figureStoragePath(jobId, order, index, revision) {
 
 /**
  * `questionPools/<subjectId>__<examType>__<scope>`, scope `tr` | `u-<universityId>` | `c-<courseId>`. A pool past
- * ~15k ids is continued in a `__p2` (… `__pN`) document; `part` 1 has no suffix.
+ * ~15k ids is continued in a `__p2` (… `__pN`) document; `part` 1 has no suffix. Only practice-eligible exam types
+ * (`PRACTICE_EXAM_TYPES`) have pools.
  */
 export function questionPoolId({ subjectId, examType, scope, universityId, courseId, part = 1 }) {
   if (!ID_SEGMENT_PATTERN.test(subjectId ?? '')) throw new ConversionSchemaError('invalid-pool', 'Bad subject id');
-  if (!EXAM_TYPES.includes(examType)) throw new ConversionSchemaError('invalid-pool', 'Bad exam type');
+  if (!PRACTICE_EXAM_TYPES.includes(examType)) throw new ConversionSchemaError('invalid-pool', 'Bad exam type');
   let scopeKey;
   if (scope === 'tr') scopeKey = 'tr';
   else if (scope === 'university' && ID_SEGMENT_PATTERN.test(universityId ?? '')) scopeKey = `u-${universityId}`;
@@ -179,10 +194,22 @@ export function usageMonthKey(date) {
 
 // MARK: - Exam title → type + year
 
-// Checked in this order; the first hit wins (so "2019 YAZ OKULU FİNAL" is a final, "MAZERET VİZE" a make-up).
+// Checked in this order; the first hit wins, needles match whole slug words only. Study materials come first
+// ("FİNAL ÇALIŞMA SORULARI" is study material), then the specific exam kinds, then vize/final (so "2019 YAZ OKULU
+// FİNAL" is a final, "MAZERET VİZE" a make-up) and plain "YAZ OKULU" last.
 const TYPE_KEYS = Object.freeze([
+  ['calisma-sorulari', ['calisma-sorulari']],
+  ['cozumlu-sorular', ['cozumlu-sorular']],
+  ['laboratuvar', ['laboratuvar', 'laboratuar', 'lab']],
+  ['odev', ['odev', 'odevi', 'odevler']],
+  ['proje', ['proje', 'projesi']],
   ['butunleme', ['butunleme']],
   ['mazeret', ['mazeret']],
+  ['tek-ders', ['tek-ders']],
+  ['ek-sinav', ['ek-sinav', 'ek-sinavi']],
+  ['muafiyet', ['muafiyet']],
+  ['seviye-tespit', ['seviye-tespit']],
+  ['uygulama', ['uygulama-sinavi', 'uygulama-sinav']],
   ['kisa-sinav', ['kisa-sinav', 'kisa-sinavlari', 'quiz']],
   ['ara-sinav', ['ara-sinav', 'arasinav']],
   ['vize', ['vize']],

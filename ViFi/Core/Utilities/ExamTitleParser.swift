@@ -4,8 +4,9 @@ import Foundation
 ///
 /// A Swift port of `parseExamTitle` in `firebase/functions/conversions/schema.js`; both run the same cases
 /// (`ExamTitleParserTests`, `conversionSchema.test.mjs`). The year is the first 19xx/20xx number (an academic-year
-/// range keeps its first year). Types are matched on the title's slug in priority order, so "2019 YAZ OKULU FİNAL" is
-/// a final and "YAZ OKULU" alone is a summer-school exam.
+/// range keeps its first year). Types are matched on the title's slug in priority order: study materials first
+/// ("FİNAL ÇALIŞMA SORULARI" is study material), then the specific exam kinds, then vize/final, so "2019 YAZ OKULU
+/// FİNAL" is a final and "YAZ OKULU" alone is a summer-school exam. Needles match whole slug words only.
 nonisolated enum ExamTitleParser {
     struct Result: Equatable, Sendable {
         let examType: ExamType?
@@ -14,8 +15,18 @@ nonisolated enum ExamTitleParser {
 
     /// Checked in order; the first hit wins.
     private static let typeKeys: [(ExamType, [String])] = [
+        (.calismaSorulari, ["calisma-sorulari"]),
+        (.cozumluSorular, ["cozumlu-sorular"]),
+        (.laboratuvar, ["laboratuvar", "laboratuar", "lab"]),
+        (.odev, ["odev", "odevi", "odevler"]),
+        (.proje, ["proje", "projesi"]),
         (.butunleme, ["butunleme"]),
         (.mazeret, ["mazeret"]),
+        (.tekDers, ["tek-ders"]),
+        (.ekSinav, ["ek-sinav", "ek-sinavi"]),
+        (.muafiyet, ["muafiyet"]),
+        (.seviyeTespit, ["seviye-tespit"]),
+        (.uygulama, ["uygulama-sinavi", "uygulama-sinav"]),
         (.kisaSinav, ["kisa-sinav", "kisa-sinavlari", "quiz"]),
         (.araSinav, ["ara-sinav", "arasinav"]),
         (.vize, ["vize"]),

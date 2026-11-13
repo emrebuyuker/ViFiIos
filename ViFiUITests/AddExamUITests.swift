@@ -28,6 +28,16 @@ nonisolated final class AddExamUITests: XCTestCase {
         examOption.tap()
         XCTAssertEqual(element("addExam.examName", in: app).value as? String, "VİZE")
 
+        // A study-material entry from the extended list (K27) is selectable too (found via the list's search).
+        tap("addExam.examName", in: app)
+        tap("addExam.examName.search", in: app)
+        element("addExam.examName.search", in: app).typeText("cozumlu")
+        let materialOption = app.buttons.matching(identifier: "addExam.examName.option")
+            .matching(NSPredicate(format: "label CONTAINS %@", "ÇÖZÜMLÜ SORULAR")).firstMatch
+        XCTAssertTrue(materialOption.waitForExistence(timeout: Timeout.content), "ÇÖZÜMLÜ SORULAR is not in the list")
+        materialOption.tap()
+        XCTAssertEqual(element("addExam.examName", in: app).value as? String, "ÇÖZÜMLÜ SORULAR")
+
         // The course picker opens and offers the "add a different course" fallback.
         tap("addExam.lesson", in: app)
         XCTAssertTrue(element("lessonPicker.addCustom", in: app).waitForExistence(timeout: Timeout.content),

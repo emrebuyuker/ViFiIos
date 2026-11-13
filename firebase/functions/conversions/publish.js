@@ -33,10 +33,10 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import * as logger from 'firebase-functions/logger';
 import {
-  EXAM_TYPES,
   ID_SEGMENT_PATTERN,
   JOB_ID_PATTERN,
   LIMITS,
+  PRACTICE_EXAM_TYPES,
   QUESTION_SCHEMA_VERSION,
   parseExamTitle,
   plainSpeech,
@@ -508,9 +508,12 @@ function writeSubject(transaction, db, subject, target, now) {
 
 // MARK: - Question pools (Ek C)
 
-/** The pool part-1 ids a published question belongs to (none without a subject or a known exam type). */
+/**
+ * The pool part-1 ids a published question belongs to: none without a subject or a practice-eligible exam type
+ * (study materials keep their `examType` on the question but join no pool, owner decision K27).
+ */
 export function poolBases(keys) {
-  if (!ID_SEGMENT_PATTERN.test(keys?.subjectId ?? '') || !EXAM_TYPES.includes(keys?.examType)) return [];
+  if (!ID_SEGMENT_PATTERN.test(keys?.subjectId ?? '') || !PRACTICE_EXAM_TYPES.includes(keys?.examType)) return [];
   const common = { subjectId: keys.subjectId, examType: keys.examType };
   const specs = [{ ...common, scope: 'tr' }];
   if (ID_SEGMENT_PATTERN.test(keys.universityId ?? '')) specs.push({ ...common, scope: 'university', universityId: keys.universityId });

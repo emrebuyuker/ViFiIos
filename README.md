@@ -577,7 +577,7 @@ swiftlint --fix
   `notificationSchedule`, `notificationAutomatic`, `notificationStats`, `accountCleanup`. Yapılandırılmış sınav hattı: `conversionSchema`
   (sözleşme + sınav adı ayrıştırıcı), `conversionPipeline` (sahte model istemcisiyle), `conversionAdmin` (callable'lar, 2. onay, mükerrer, iptal),
   `convertLegacyExams` (geçiş betiği), `firestore.rules` / `storage.rules` (yeni koleksiyonlar).
-- **4.2.0 iOS testleri** — `StructuredExamParserTests`, `ExamTitleParserTests` (sunucuyla aynı 16 vaka), `MathTextTokenizerTests`,
+- **4.2.0 iOS testleri** — `StructuredExamParserTests`, `ExamTitleParserTests` (sunucuyla aynı 35 vaka), `MathTextTokenizerTests`,
   `FormulaRenderingTests` (SwiftMath, kalkan içinde yerleşim), `QuestionContentViewTests`, `StructuredExamViewModelTests`, `ExamRoutingTests`,
   `ConversionAdminViewModelTests`, `ExamConversionCallsTests`; arayüz: `StructuredExamUITests`, `ModerationUITests`.
 - **SwiftLint** her derlemede çalışır. `print` yerine `Logger`, Combine yerine Observation kullanımı gibi proje

@@ -143,20 +143,24 @@ async function seedDrafts(jobId, count, overrides = () => ({})) {
 }
 
 /** An approved 4.2.0 submission whose job is `ready` with `count` drafts. */
-async function seedReadySubmission(id, { count = 2, nodesToCreate = [{ id: COURSE, level: 'course', name: NAMES.course, parentId: DEPARTMENT, childCount: 1 }] } = {}) {
+async function seedReadySubmission(id, {
+  count = 2,
+  nodesToCreate = [{ id: COURSE, level: 'course', name: NAMES.course, parentId: DEPARTMENT, childCount: 1 }],
+  title = '2024 FİNAL',
+} = {}) {
   const examId = `${COURSE}__2024-final`;
   await db.collection('submissions').doc(id).set({
     ownerId: 'ayse', university: NAMES.university, faculty: NAMES.faculty, department: NAMES.department,
-    lesson: NAMES.course, exam: '2024 FİNAL', kind: 'PDF', status: 'approved', createdAt: DAY,
+    lesson: NAMES.course, exam: title, kind: 'PDF', status: 'approved', createdAt: DAY,
     files: [{ storagePath: `pending/ayse/${id}/0.pdf`, order: 0 }], conversionProvider: 'gemini',
     publishPlan: {
       examId, universityId: EGE, facultyId: FACULTY, departmentId: DEPARTMENT, courseId: COURSE,
       nodesToCreate, childCountIncrements: [DEPARTMENT],
       exam: {
-        title: '2024 FİNAL', universityId: EGE, facultyId: FACULTY, departmentId: DEPARTMENT, courseId: COURSE,
+        title, universityId: EGE, facultyId: FACULTY, departmentId: DEPARTMENT, courseId: COURSE,
         universityName: NAMES.university, facultyName: NAMES.faculty, departmentName: NAMES.department, courseName: NAMES.course,
         kind: 'PDF', files: [{ storagePath: 'pdfs/copied.pdf', order: 0 }], status: 'published', source: 'submission',
-        isLocked: false, coinCost: 0, counts: { views: 0, downloads: 0, unlocks: 0 }, sortKey: '2024 FİNAL',
+        isLocked: false, coinCost: 0, counts: { views: 0, downloads: 0, unlocks: 0 }, sortKey: title,
       },
     },
   });
@@ -463,6 +467,17 @@ describe('publishExamConversion: submission (second approval)', () => {
     assert.equal((await getData(db.collection('catalogNodes').doc(DEPARTMENT))).childCount, 3);
   });
 
+  test('study material is published with its exam type but joins no practice pool (K27)', async () => {
+    await seedCatalog({ course: false });
+    const { examId, jobId } = await seedReadySubmission('s-material', { title: '2024 ÇALIŞMA SORULARI' });
+
+    assert.deepEqual(await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId })), { examId, questionCount: 2 });
+    const first = await getData(db.collection('questions').doc(`${examId}-001`));
+    assert.equal(first.examType, 'calisma-sorulari');
+    assert.equal(first.year, 2024);
+    assert.equal((await db.collection('questionPools').get()).size, 0);
+  });
+
   test('a plan made stale by another publish still keeps childCount right', async () => {
     // The plan wanted to create the course, but it exists now: the course is bumped instead of the department.
     await seedCatalog({ course: true });
@@ -751,6 +766,9 @@ describe('question pools: parts', () => {
     assert.deepEqual(writes, [['delete', 'fizik__vize__tr__p2']]);
 
     assert.deepEqual(publish.poolBases({ subjectId: 'fizik', examType: null, courseId: 'c' }), []);
+    // Study materials keep their exam type on the question but join no practice pool (K27).
+    assert.deepEqual(publish.poolBases({ subjectId: 'fizik', examType: 'calisma-sorulari', universityId: 'u', courseId: 'c' }), []);
+    assert.equal(publish.poolBases({ subjectId: 'fizik', examType: 'ek-sinav', universityId: 'u', courseId: 'c' }).length, 3);
   });
 });
 
