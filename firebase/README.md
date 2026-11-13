@@ -10,8 +10,9 @@ ayrıntılı açıklama için kök [README.md](../README.md) içindeki *Firebase
 | `firebase.json`, `.firebaserc` | Emülatör portları ve varsayılan proje (`vifi-831a8`) |
 | `scripts/revoke-download-tokens.mjs` | Storage indirme belirteçlerini yedekler, iptal eder, geri yükler |
 | `scripts/convert-legacy-exams.mjs` | Eski sınavları tek seferlik yeni yapıya geçirme işlerini başlatır (4.2.0, K12c) |
-| `functions/` | Cloud Functions (europe-west1): `unlockExam`, `recordLoginDiagnostic`, `purchaseExamUnlock` |
-| `tests/` | Kural testleri (emülatör), satın alma doğrulama testleri ve betik testleri |
+| `firestore.rules`, `firestore.indexes.json` | Cloud Firestore (`vifi` DB) kuralları ve bileşik indeksleri |
+| `functions/` | Cloud Functions (europe-west1): `unlockExam`, `recordLoginDiagnostic`, `purchaseExamUnlock`, bildirimler (`notifications/`), hesap silme temizliği ve 4.2.0 yapılandırılmış sınav hattı (`conversions/`, aşağıda) |
+| `tests/` | Kural testleri (emülatör), Function handler testleri (bildirim + dönüştürme), satın alma doğrulama testleri ve betik testleri |
 
 ## Gereksinimler
 
@@ -26,7 +27,8 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21 npm test      # auth + database + storage
 npm run test:script                                  # yalnızca betik testleri (emülatör gerekmez)
 ```
 
-Testler yalnızca yerel emülatöre ve bellek içi bir Storage sahtesine bağlanır; gerçek projeye dokunmaz.
+Testler yalnızca yerel emülatöre ve bellek içi bir Storage sahtesine bağlanır; gerçek projeye dokunmaz. Yapay zekâ hattı testleri
+(`conversionPipeline`, `conversionAdmin`) **sahte model sağlayıcısı**, sahte PDF çizici ve sahte bucket ile çalışır: Vertex AI'ya çıkmaz, para harcamaz.
 
 ## Yayınlama
 
@@ -36,6 +38,49 @@ Testler yalnızca yerel emülatöre ve bellek içi bir Storage sahtesine bağlan
 ```bash
 cd firebase
 firebase deploy --only database,storage --project vifi-831a8 --account <sahip hesabı>
+```
+
+## Yapılandırılmış sınavlar (4.2.0)
+
+> [!WARNING]
+> **Aşağıdakilerin hiçbiri canlıda değil.** Yeni Firestore/Storage kuralları, indeksler, 8 callable, `processExamConversion` kuyruğu ve Vertex AI
+> etkinleştirmesi yalnızca proje sahibinin açık onayıyla, 4.1.0 canlıya çıktıktan sonra yayınlanır. Sözleşmenin yetkili kaynağı
+> `functions/conversions/schema.js`'tir; iOS modelleri onu aynalar.
+
+Eski bir sınavın ya da onaylanan bir gönderimin dosyaları yapay zekâyla sorulara çevrilir; admin inceleyip yayınlar. Ürün tarafı: kök
+[README.md](../README.md) › *Soru soru sınavlar*.
+
+| Function | Tür | Ne yapar |
+|---|---|---|
+| `requestExamConversion` | callable, admin | Eski sınav için iş `exam-<id>` açar (`{examId, provider}`) |
+| `requestBulkConversion` | callable, admin | Ders/bölüm için toplu iş (`dryRun` tahmin döner; en çok 200 sınav) |
+| `regenerateExamConversion` | callable, admin | Tümünü yeniden üret / başarısız işi yeniden başlat / sağlayıcı bekleyen işi başlat |
+| `regenerateDraftQuestion` | callable, admin | İncelemedeki taslağın tek sorusunu yeniden üretir |
+| `publishExamConversion` | callable, admin | 2. onay: taslağı `questions`'a yayınlar (tek transaction), havuz + ders kimliği günceller |
+| `discardExamConversion` | callable, admin | "Sınavı iptal et"; gönderim işinde 1. onayın kopyaladığı dosyaları siler |
+| `updatePublishedQuestion` | callable, admin | Yayındaki soruyu düzenler (anında yayında, id değişmez) |
+| `regeneratePublishedQuestion` | callable, admin | Yayındaki tek soruyu yeniden üretip aynı id altında yayına alır |
+| `processExamConversion` | `onTaskDispatched` (Cloud Tasks; 1800 sn, 2 GiB, 3 deneme, en çok 3 eşzamanlı) | Yapay zekâ hattı: dosyalar → Vertex AI (Claude ya da Gemini) → doğrulama → şekil kırpma → taslaklar → `ready` |
+| `onSubmissionModerated` (değişti) | Firestore tetikleyicisi | 1. onay (`publishPlan`) → iş `sub-<id>` + kuyruk; bölüm bildirimi 2. onaya taşındı; 4.1.0 onayı → sağlayıcısız `exam-<id>` işi |
+
+- **Model seçimi:** her yapay zekâ işleminde `provider: 'claude' | 'gemini'` zorunludur, sunucuda varsayılan yoktur. Model kimliği, bölge (`global`), fiyat ve
+  üretim ayarı yalnızca `functions/conversions/providers/config.js`'tedir; `VERIFY` işaretli değerler ilk canlı çağrıdan önce Vertex Model Garden ve fiyat
+  sayfasından doğrulanır. Kimlik Functions servis hesabıdır (ADC); API anahtarı yoktur.
+- **Önkoşullar (canlı, sahibin onayıyla):** `vifi-831a8`'de Vertex AI API açık, Model Garden'da Claude Opus 5.5 etkin (Anthropic koşulları), Gemini Pro erişimi,
+  Functions servis hesabına Vertex AI kullanıcı rolü, Cloud Tasks kuyruğu (`processExamConversion` yayınıyla oluşur), Google Cloud bütçe uyarısı. Yeni npm
+  bağımlılıkları: `@anthropic-ai/vertex-sdk`, `@google/genai`, `sharp`, `pdfjs-dist`, `@napi-rs/canvas` (`npm --prefix functions ci`).
+- **Aylık sınır:** `aiUsage/<YYYY-MM>` (Europe/Istanbul ayı) aylık 50 $'ı aşarsa yeni işler `queued` bekler, ay başında devam eder; ayda bir
+  `conversionBudgetExceeded` bildirimi gider. `budget: 'oneTime'` işler (betik) sayaca girmez, `oneTime` altında ayrı toplanır.
+- **Bildirimler:** `conversionReady`, `conversionFailed`, `conversionBudgetExceeded` (admin kitlesi, anında). Deterministik id'ler: `auto-convready-<iş>`,
+  `auto-convfailed-<iş>-<deneme>`, `auto-convbudget-<YYYY-MM>`.
+- **Şekiller:** `questionFigures/<iş>/<nnn>-<k>[-r<rev>].jpg`; bir soru yeniden üretilince sürümlü yola (`-r<rev>`) yazılır ve eski dosya silinir.
+- **Açık iş:** `deleteStructuredExamData` (sorular + havuz kayıtları + şekiller + iş temizliği) yazıldı ama henüz bir callable'a bağlı değil.
+
+```bash
+cd firebase
+JAVA_HOME=/opt/homebrew/opt/openjdk@21 npm test          # conversionSchema / conversionPipeline / conversionAdmin / convertLegacyExams dahil
+# Yayın (YALNIZCA sahip onayıyla; 4.1.0 canlıya çıktıktan sonra):
+firebase deploy --only firestore,storage,functions --project vifi-831a8 --account <sahip hesabı>
 ```
 
 ## Parayla sınav açma (`purchaseExamUnlock`)
@@ -146,4 +191,10 @@ node scripts/convert-legacy-exams.mjs --provider gemini --project vifi-831a8 --c
   `processExamConversion` kuyruğuna verir; taslaklar yine admin incelemesinden tek tek geçer, betik hiçbir şey yayınlamaz.
 - Yerel emülatör dışındaki her çalıştırma `--project` ve aynı değerle `--confirm-project` ister; yoksa reddeder (çıkış kodu 2).
 - Tekrar çalıştırmak güvenlidir: yeni yapıdaki, işi kuyrukta/işlenmekte/incelemede olan, işi başarısız/iptal/yayınlanmış
-  sınavlar atlanır.
+  sınavlar atlanır; yalnızca işi olmayan ya da sağlayıcı bekleyen (4.1.0 onayından kalan) / kuyruğa verilememiş sınavlar başlatılır.
+- Önce `npm --prefix functions ci` çalıştırın (betik, Admin SDK'yı ve iş yardımcılarını `functions/` içinden kullanır).
+- Emulator'de (`FIRESTORE_EMULATOR_HOST`) işler yalnızca açılır ve `queued` kalır; `CLOUD_TASKS_EMULATOR_HOST` verilmedikçe kuyruğa gönderilmez. Canlıda işler,
+  `gcloud auth application-default login` ile proje sahibinin kimliğiyle `processExamConversion` kuyruğuna verilir; kuyruk, Function yayınlanmadan yoktur.
+- Çıkış kodları: 0 başarılı, 1 en az bir sınav başlatılamadı, 2 kullanım hatası ya da reddedildi. Testi: `tests/convertLegacyExams.test.mjs`.
+- Betik yalnızca iş açar; hiçbir şey yayınlamaz. Maliyet tahmini kabadır (`ESTIMATED_COST_PER_PAGE_USD`, sayfa başına); gerçek harcama işlerin `usage`'ında ve
+  `aiUsage/<ay>.oneTime` altında görünür.

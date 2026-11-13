@@ -23,6 +23,7 @@
 - [Ekran Görüntüleri](#ekran-görüntüleri)
 - [Mimari](#mimari)
 - [Bildirimler](#bildirimler)
+- [Soru soru sınavlar (4.2.0)](#soru-soru-sınavlar-420)
 - [Klasör Yapısı](#klasör-yapısı)
 - [Gereksinimler](#gereksinimler)
 - [Kurulum](#kurulum)
@@ -44,6 +45,7 @@ geliştirilmiş bir sınav arşividir. Arşiv beş seviyeden oluşur:
 
 Her sınav ya sayfa sayfa görsellerden (JPG) ya da bir PDF belgesinden oluşur. Arşiv Cloud Firestore'da,
 sınav dosyaları ise Firebase Storage'da tutulur. (Kullanıcı profili ve güncelleme politikası Realtime Database'de kalır.)
+4.2.0 ile bir sınav, sayfaların yanında **soru soru** da açılabilir (aşağıda *Soru soru sınav*).
 
 ## Özellikler
 
@@ -65,6 +67,8 @@ sınav dosyaları ise Firebase Storage'da tutulur. (Kullanıcı profili ve günc
 | **Bildirim ayarları** | Hesap › Bildirim Ayarları: sistem izni durumu ve ayrı **Kampanya ve fırsat bildirimleri** anahtarı. Varsayılan kapalıdır; kapalıyken kampanya ne push ne sayfa olarak gelir. Gece 22:00–09:00 arası kampanya gönderilmez. |
 | **Bildirim yönetimi (admin)** | Yönetici hesaplar Hesap › Bildirim Gönder ile duyuru ya da kampanya yollar: kitle (herkes ya da üniversite › fakülte › bölüm + cinsiyet), görsel, aksiyon (sınav / konum / Premium / Sınav Ekle / bağlantı), ileri tarih + geçerlilik süresi, kesin kitle sayısıyla onay, "bana test gönder"; geçmişte durum, sayılar (gönderilen / açılan / dokunulan) ve zamanlanmışı iptal. |
 | **Sınav içeriği koruması** | Sınav sayfaları (liste, tam ekran sayfalayıcı, PDF, moderasyon önizlemesi) ekran görüntüsü ve ekran kaydında sayfa yerine "Sınav içeriği korumalıdır" kartı olarak çıkacak şekilde işaretlenir; kayıt ya da yansıtma algılanınca gerekirse içerik örtülür, uygulama değiştiricide uygulama logosu görünür, PDF'te metin seçimi ve kopyalama kapalıdır. En iyi çaba (best-effort) korumadır: iPhone Yansıtma ve başka bir cihazla fotoğraf çekmek engellenemez. |
+| **Soru soru sınav (4.2.0)** | Yapılandırılmış bir sınav sayfa görseli yerine sorular tek tek açılır: soru metni (formüller matematik gösterimiyle), şıklar, orijinal sayfadan kırpılmış şekil, her sorunun altında **Cevabı Göster** (cevap + adım adım çözüm, altında "Bu çözüm yapay zekâ ile hazırlanmış ve incelenmiştir." notu). Dynamic Type ve VoiceOver (formüller sesli okunacak düz metinle) desteklenir; sınavın kilit kuralı (coin / Premium) aynen geçerlidir. Sorular da sınav içeriği koruması içinde çizilir. Henüz dönüştürülmemiş sınavlar bugünkü sayfa görünümüyle açılmaya devam eder. Ayrıntı: [Soru soru sınavlar](#soru-soru-sınavlar-420). |
+| **Sınav dönüştürme (admin)** | Yönetici hesaplar yapay zekâ dönüştürmesini yönetir (Hesap › Moderasyon): gönderimde iki düğmeli 1. onay ("Onayla · Claude ile ilerle" / "Onayla · Gemini ile ilerle"), hazır taslakları orijinal sayfayla yan yana inceleme (düzenle, tek soruyu yeniden üret, yayınla ya da iptal et), arşivdeki eski bir sınav için "Yeni yapıya geçir", ders/bölüm için toplu kuyruk (önce tahmini maliyet), başarısız işler, bu ayın yapay zekâ harcaması (aylık 50 $ sınır) ve yayındaki bir soruyu doğrudan düzeltme. |
 | **Gizlilik** | Reklam yok, reklam kimliği (IDFA) yok, takip izni istenmez. Kampanya bildirimleri yalnızca açık onayınla gönderilir. |
 
 ## Ekran Görüntüleri
@@ -112,7 +116,7 @@ flowchart LR
 - **Swift 6 ve MainActor varsayılanı.** Proje `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` ile derlenir; görsel
   çözme, dosya ve JSON işlemleri gibi ağır işler `nonisolated` fonksiyonlarla ana iş parçacığının dışında yapılır.
 - **Protokol arkasındaki servisler.** Veri katmanı `ArchiveRepository`, `RemoteFileLoading`, `AppUpdateChecking`,
-  `AnalyticsTracking`, `AuthServicing` ve `RequestAuthorizing` (bildirim tarafında `InboxReading`, `DeviceRegistering`,
+  `AnalyticsTracking`, `AuthServicing` ve `RequestAuthorizing` (yapılandırılmış sınavda `ExamQuestionReading`, `ExamConversionServicing`; bildirim tarafında `InboxReading`, `DeviceRegistering`,
   `NotificationSettingsServicing`, `NotificationAdminServicing`, `NotificationEventReporting`, `LocationPicking`) protokolleri
   üzerinden kullanılır. Böylece Firebase, App Store ve ağ erişimi testlerde ve
   önizlemelerde örnek implementasyonlarla değiştirilebilir.
@@ -133,6 +137,9 @@ flowchart LR
   | `NotificationAdminServicing` | `FirebaseNotificationAdminService` | `MockNotificationAdminService` |
   | `NotificationEventReporting` | `FirebaseNotificationEventReporter` | `MockNotificationEventReporter` |
   | `LocationPicking` | `GoogleLocationPicker` (Google Maps + Places) | `MockLocationPicker` |
+  | `ExamQuestionReading` | `FirebaseExamQuestionReader` | `MockExamQuestionReader` (örnek soru JSON'u) |
+  | `ExamConversionServicing` | `FirebaseExamConversionService` (callable'lar + Firestore okuma) | `MockExamConversionService` |
+  | `StructuredExamsConfigReading` | `FirebaseStructuredExamsConfigReader` | `NoopStructuredExamsConfigReader` |
 
 - **Giriş zorunlu.** Uygulamanın tamamı telefon numarasıyla (SMS kodu, yalnızca +90) giriş gerektirir. `SessionStore`
   oturum durumunu (`unknown` / `signedOut` / `signedIn`) tutar; `RootView` buna göre `LoginView` ya da arşivi
@@ -181,6 +188,18 @@ Cloud Firestore (isimli `vifi` veritabanı) — arşiv ve bildirimler:
   users/<uid>/settings/inbox        { readAt }                                                      # okunmamış = createdAt > readAt
   notificationThrottle/<üniv>__<fak>__<böl>  { lastSentAt, notificationId }   # yalnız sunucu ("yeni sınav" günlük sınırı)
 
+  # 4.2.0 yapılandırılmış sınavlar (sözleşme: firebase/functions/conversions/schema.js):
+  exams/<id>  + { format: structured, questionCount, structuredAt, conversionJobId }          # `files` korunur
+  questions/<examId>-<nnn>   { schemaVersion, examId, order, label, text, speech, choices[], figures[{storagePath,width,height}],
+                               answer{text,choice?,speech?}, solution[], topics[], difficulty, hasFigure, subjectId, courseId,
+                               universityId, facultyId, departmentId, examType, year, updatedAt }   # yayınlanmış, yalnız sunucu yazar
+  questionPools/<subjectId>__<examType>__<tr|u-<üniv>|c-<ders>>[__pN]  { ids[], count, updatedAt }  # ileride "Sınava gir" için
+  subjects/<subjectId>       { name, aliases[] }                                                    # ülke geneli ders kimliği
+  examConversions/<jobId>    { source, placement, files, kind, status, attempts, model{provider,id}, usage, … }  # yalnız admin okur
+    └ questions/<nnn>        taslak soru (+ confidence, needsReview, editedBy/At, regenerationLeaseUntil/Error)
+  aiUsage/<YYYY-MM>          { costUsd, inputTokens, outputTokens, runs, oneTime{…}, byProvider{…} }  # aylık harcama, yalnız sunucu
+  Storage: questionFigures/<jobId>/<nnn>-<k>[-r<rev>].jpg                                           # şekil kırpıntıları
+
 Realtime Database — profil + güncelleme politikası (Firestore'a taşınmadı):
   users/<uid>/profile/{ name, surname,
                         university, universityId, universityIsCustom,
@@ -188,6 +207,7 @@ Realtime Database — profil + güncelleme politikası (Firestore'a taşınmadı
                         department, departmentId, departmentIsCustom,
                         gender, phoneNumber, updatedAt }
   config/appUpdate/ios/{ minimumVersion, latestVersion, storeURL, message }
+  config/structuredExams/ios/{ enabled }   # 4.2.0 uzaktan anahtar; sonraki açılışta uygulanır
 ```
 
 Bir seviye `catalogNodes` içinde `where(parentId == <üst id>, status == published)`, bir dersin sınavları `exams`
@@ -283,12 +303,12 @@ koordinat + place id, adres ardından gelir). Anahtar yoksa seçici
 | Kampanya onayı (Apple 4.5.4) | `promo` yalnızca `settings/notifications.marketing == true` olanlara gider; sunucu `fanout` öncesi süzer. Onay ayrıdır, varsayılan kapalıdır, atlanamaz. Konumlu bildirim her zaman kampanyadır. |
 | Sessiz saatler | 22:00–09:00 (Europe/Istanbul) arası kampanya ve otomatik "yeni sınav" 09:00'a ertelenir. Kişisel sistem bildirimleri, admin'e giden bildirimler ve test anında gider. |
 | Zamanlama | Gelecekteki `scheduledAt` (ya da ertelenen) kayıt `scheduled` olur; `dispatchScheduledNotifications` 5 dakikada bir teslim eder, süresi dolanı iptal eder, 15 dk'dan uzun `sending`'de takılanı bir kez yeniden dener. `cancelNotification` yalnız `scheduled`'ı iptal eder. |
-| Otomatik bildirimler | Sınav gönderimi **onaylanınca** sahibine "Sınavın onaylandı (+coin)" ve (yeni sınav yayınlandıysa) bölümüne "yeni sınav" (bölüm başına günde en fazla 1, yükleyen hariç); **reddedilince** sahibine sebepli bildirim; yeni gönderim gelince tüm admin'lere bildirim. `exams` yazımı değil, moderasyon sonucu tetikler. |
+| Otomatik bildirimler | Sınav gönderimi **onaylanınca** sahibine "Sınavın onaylandı (+coin)" ve (yeni sınav yayınlandıysa) bölümüne "yeni sınav" (bölüm başına günde en fazla 1, yükleyen hariç); **reddedilince** sahibine sebepli bildirim; yeni gönderim gelince tüm admin'lere bildirim. `exams` yazımı değil, moderasyon sonucu tetikler. **4.2.0:** 1. onayda sınav henüz yayınlanmaz (sahibe yalnız coin bildirimi), bölüm bildirimi 2. onayda (`publishExamConversion`) gider; adminlere ayrıca "Sınav taslağı hazır" (`conversionReady`), "Sınav dönüştürülemedi" (`conversionFailed`) ve ayda bir "Yapay zekâ bütçesi doldu" (`conversionBudgetExceeded`) bildirimi gider. |
 | İstatistik | İstemci `opened` / `actionTapped` olaylarını `trackNotificationEvent` ile bildirir; kullanıcı başı tek sayılır, yalnız teslim kopyası olan alıcı sayılır. |
 | Push görseli | Firestore'a yalnız `image.storagePath` yazılır (`notificationImages/<id>.jpg`, bir kez yüklenir, değiştirilemez). Push için sunucu gönderim anında 7 günlük V4 imzalı URL üretir ve yalnızca FCM payload'ına koyar. |
 | Hesap silme | `onAccountDeleted` silinen hesabın Firestore `users/<uid>` altını (kilitler, inbox, cihazlar, ayarlar), cüzdan + ledger'ı, aboneliği, onay bekleyen gönderimleri + `pending/<uid>/` dosyalarını, RTDB profilini ve bildirim istatistiğindeki kişi başı işaretleri (`notifications/<id>/events/<uid>_*`) siler. Arşive eklenmiş sınavlar, incelenmiş gönderim kayıtları ve bildirimlerin anonim sayaçları kalır; `purchasedTransactions` kaydı kalır ama hesaptan koparılır. |
 
-**Cloud Functions** (`firebase/functions/`, europe-west1; mantık `notifications/` altında, `index.js` yalnızca bağlar):
+**Cloud Functions** (`firebase/functions/`, europe-west1; mantık `notifications/` altında, 4.2.0 dönüştürme işleri `conversions/` altında, `index.js` yalnızca bağlar):
 
 | Function | Tür |
 |---|---|
@@ -296,6 +316,8 @@ koordinat + place id, adres ardından gelir). Anahtar yoksa seçici
 | `trackNotificationEvent` | callable, +90 kullanıcı |
 | `dispatchScheduledNotifications` | `onSchedule`, 5 dk, Europe/Istanbul |
 | `onDeviceWritten`, `onSubmissionModerated`, `onSubmissionCreated` | Firestore tetikleyicisi (isimli `vifi` DB) |
+| `requestExamConversion`, `requestBulkConversion`, `regenerateExamConversion`, `regenerateDraftQuestion`, `publishExamConversion`, `discardExamConversion`, `updatePublishedQuestion`, `regeneratePublishedQuestion` | callable, admin *(4.2.0, henüz yayınlanmadı; bkz. [Soru soru sınavlar](#soru-soru-sınavlar-420))* |
+| `processExamConversion` | Cloud Tasks kuyruk Function'ı (`onTaskDispatched`) *(4.2.0, henüz yayınlanmadı)* |
 | `onAccountDeleted` | v1 Auth silme tetikleyicisi |
 
 Sözleşmenin (türler, aksiyon tipleri, limitler, alan adları) tek yetkili kaynağı `notifications/schema.js`'tir; iOS
@@ -324,6 +346,56 @@ incelemesine gönderildi. Aşağıdaki liste yayın sırasının kaydıdır:
    Advertising or Marketing" amacı, Product Interaction'a "App Functionality" amacı). Konum etikete girmez: cihaz konumu
    yalnızca admin harita seçicisini odaklar, saklanmaz ve gönderilmez (App Review notunda belirtilir).
 
+## Soru soru sınavlar (4.2.0)
+
+Bir sınavın sayfa görselleri (JPG) ya da PDF'i yapay zekâyla **sorulara** çevrilir; uygulama bu sorulara ayrı bir ekranda,
+tek tek ve "Cevabı Göster" ile açar. Orijinal dosyalar silinmez: yapılandırılmış sınavda `exams/<id>.files` korunur, böylece
+4.1.0 ve Android sayfa görünümünü göstermeye devam eder.
+
+> [!IMPORTANT]
+> **Bu özelliğin sunucu tarafı henüz canlıda değil.** Kod, kural taslakları ve emulator testleri `v-4.2.0` dalında hazırdır;
+> `vifi-831a8`'de yeni Firestore/Storage kuralları, indeksler, 8 callable, `processExamConversion` kuyruğu ve Vertex AI
+> etkinleştirmesi yayınlanmadı. Sıra: 4.1.0 canlıda olsun → proje sahibinin onayıyla yayın → uçtan uca deneme → Android ile aynı anda
+> sürüm. Yayın dışı kalan her şey yok sayılırsa uygulama bugünkü gibi çalışır (yapılandırılmış sınav yok, soru ekranı hiç açılmaz).
+
+```mermaid
+flowchart LR
+    SUB["Gönderim (kullanıcı)"] --> A1["1. onay (admin, istemci)<br/>coin + dosya kopyası<br/>+ model seçimi"]
+    OLD["Arşivdeki eski sınav"] -->|"Yeni yapıya geçir /<br/>toplu / betik"| JOB
+    A1 -->|"onSubmissionModerated"| JOB[("examConversions/‹jobId›")]
+    JOB --> Q["processExamConversion<br/>(Cloud Tasks)"]
+    Q -->|"Vertex AI: Claude ya da Gemini"| DR["taslak sorular + kırpılmış şekiller"]
+    DR -->|"conversionReady"| REV["Admin incelemesi<br/>(düzenle / yeniden üret)"]
+    REV -->|"2. onay: publishExamConversion"| PUB[("questions/‹examId›-‹nnn›<br/>exams.format = structured")]
+    PUB --> APP["Soru ekranı<br/>(StructuredExamView)"]
+```
+
+### Nasıl çalışır
+
+- **İki onaylı akış.** Kullanıcı gönderimini admin 1. onayda coin verir ve dosyaları arşiv depolamasına kopyalar; sınav **henüz
+  yayınlanmaz**, seçilen modelle (Claude Opus 5.5 ya da Gemini Pro, Vertex AI üzerinden) dönüştürme başlar. Taslak hazır olunca adminlere
+  bildirim gider; admin taslağı orijinal sayfayla yan yana inceler, gerekirse düzenler ya da tek soruyu yeniden ürettirir ve 2. onayla
+  yayınlar. Red "tekrar dene"dir (tüm sınavı yeniden üret); kalıcı vazgeçme ayrı "Sınavı iptal et" düğmesidir. Gönderene yalnızca 1. onayda
+  (coin) bildirim gider.
+- **Model seçimi her işlemdedir.** Varsayılan model yoktur; 1. onay, "Yeni yapıya geçir", toplu kuyruk, tümünü/tek soruyu yeniden üretme
+  her seferinde Claude ya da Gemini sorar (`provider`). Seçim işe `model` olarak kaydedilir.
+- **Eski sınavlar** üç yoldan geçirilir: sınav başına "Yeni yapıya geçir", Moderasyon'dan ders/bölüm toplu kuyruğu (önce tahmini maliyet) ve tek
+  seferlik betik (`firebase/scripts/convert-legacy-exams.mjs`, [firebase/README.md](firebase/README.md)). Her yolda taslaklar tek tek admin
+  incelemesinden geçer.
+- **Mükerrer gönderim** arşivdeki sınavı değiştirir: moderasyon sayfası "Bu sınav arşivde zaten yüklü" uyarısı verir; 2. onay mevcut sınavın
+  sorularını ve sayfa dosyalarını gönderimin kopyalarıyla değiştirir, eski dosyaları siler; ikinci kopya eklenmez.
+- **Aylık 50 $ sınır.** Yapay zekâ harcaması `aiUsage/<YYYY-MM>` altında toplanır; sınır aşılırsa yeni işler ay sonuna kadar kuyrukta bekler ve
+  adminlere bildirim gider. Betiğin tek seferlik işleri sınıra girmez, ayrı toplanır.
+- **Veri tasarrufu.** Sınav açılınca yalnızca o sınavın soruları (`where examId == X order by order`, ~10–30 okuma) iner; şekiller ekrana
+  gelince, kimlikli indirme ve disk önbelleğiyle. `ArchivePrefetcher` soruları önceden çekmez.
+- **Uzaktan anahtar.** `config/structuredExams/ios = {enabled: false}` soru ekranını kapatır, sınavlar dosya görünümüyle açılır. Değer bir
+  sonraki açılışta uygulanır.
+- **Gelecek:** soru havuzları (`questionPools`), ülke geneli ders kimliği (`subjects`) ve konu/zorluk etiketleri "Sınava gir" pratik modu
+  (ROADMAP #4) için şimdiden üretilir; bu mod 4.2.0'da geliştirilmez.
+
+Android için sözleşme (veri modeli, ayrıştırma ve çizim kuralları, yayın sırası) yerel `STRUCTURED-EXAMS.md` dosyasındadır; platform
+sözleşmesinin yetkili kaynağı `firebase/functions/conversions/schema.js`'tir.
+
 ## Klasör Yapısı
 
 ```
@@ -331,14 +403,14 @@ ViFi-iOS/
 ├── project.yml              # XcodeGen tanımı — Xcode projesinin tek kaynağı
 ├── .swiftlint.yml           # Lint kuralları
 ├── Config/                  # Base.xcconfig (commit'li), Secrets.example.xcconfig (şablon); Secrets.xcconfig git-dışı (Google Maps anahtarı)
-├── firebase/                # Güvenlik kuralları, kural testleri, Cloud Functions (functions/, bildirimler: functions/notifications/), belirteç iptal betiği (bkz. firebase/README.md)
+├── firebase/                # Güvenlik kuralları, kural testleri, Cloud Functions (functions/, bildirimler: functions/notifications/, yapılandırılmış sınav hattı: functions/conversions/), belirteç iptal ve eski sınav geçiş betikleri (bkz. firebase/README.md)
 ├── ViFiNotificationService/ # Notification Service Extension: push'ta ikon rozeti +1 ve kampanya görseli
 ├── ViFi/
 │   ├── App/                 # Uygulama girişi, AppDelegate, RootView, Router, AppEnvironment, NotificationRouter, NotificationPromptCoordinator
 │   ├── Core/
-│   │   ├── Models/          # ArchivePath, ArchiveItem, ExamDocument, PhoneNumber, UserProfile (+ Gender), AppNotification, NotificationAdmin, NotificationConsent
-│   │   ├── Services/        # Servis protokolleri, ArchiveParser, UserProfileParser, Firebase / App Store servisleri, AuthServicing, SessionStore, ProfileServicing, ProfileStore, UniversityCatalog, App Check, RecentExamsStore; bildirim: NotificationPayloadParser, InboxStore, DeviceRegistrationStore, NotificationSettingsStore, NotificationPromptHistory, NotificationEventTracker, NotificationAdminServicing, GoogleMapsConfiguration
-│   │   └── Utilities/       # Loadable, Logger, FirstOutcome, NotificationBadgeCounter (App Group rozet sayacı; uygulama + extension)
+│   │   ├── Models/          # ArchivePath, ArchiveItem, ExamDocument, PhoneNumber, UserProfile (+ Gender), AppNotification, NotificationAdmin, NotificationConsent, ExamQuestion, ExamConversion, ExamConversionAdmin
+│   │   ├── Services/        # Servis protokolleri, ArchiveParser, UserProfileParser, Firebase / App Store servisleri, AuthServicing, SessionStore, ProfileServicing, ProfileStore, UniversityCatalog, App Check, RecentExamsStore; bildirim: NotificationPayloadParser, InboxStore, DeviceRegistrationStore, NotificationSettingsStore, NotificationPromptHistory, NotificationEventTracker, NotificationAdminServicing, GoogleMapsConfiguration; yapılandırılmış sınav: StructuredExamServicing, FirebaseExamQuestionReader, FirebaseExamConversionService, ExamQuestionParser, ExamConversionParser, StructuredExamsRemoteSwitch
+│   │   └── Utilities/       # Loadable, Logger, FirstOutcome, ExamTitleParser, MathTextTokenizer, NotificationBadgeCounter (App Group rozet sayacı; uygulama + extension)
 │   ├── DesignSystem/        # IconBadge, durum görünümleri, seviye stilleri
 │   ├── Features/
 │   │   ├── Auth/            # Telefon numarasıyla giriş (SMS kodu)
@@ -346,13 +418,15 @@ ViFi-iOS/
 │   │   ├── Account/         # Hesap: profil düzenle, Bildirim Ayarları, çıkış ve hesap silme
 │   │   ├── Notifications/   # Bildirim sayfası (inbox), aksiyonlar, "Konuma Git", izin / kampanya onayı akışı
 │   │   ├── NotificationComposer/ # Admin "Bildirim Gönder", geçmiş ve istatistik; LocationPicker/ (Google Maps + Places)
+│   │   ├── Moderation/      # Admin: gönderim moderasyonu (iki düğmeli 1. onay) + yapay zekâ dönüştürme ekranları (inceleme, başarısızlar, toplu kuyruk, "Yeni yapıya geçir")
 │   │   ├── Home/            # Ana sayfa, son görüntülenenler, Hakkında
 │   │   ├── Browse/          # Fakülte → sınav listeleri, breadcrumb
 │   │   └── Exam/            # Görsel ve PDF sınav görüntüleyicileri + ekran koruması (CaptureShield, CaptureShieldedView, kayıt / app switcher örtüleri)
+│   │       └── Questions/   # 4.2.0 soru ekranı: StructuredExamView, QuestionCardView, QuestionContentView (kalkan içi), FormulaText (SwiftMath)
 │   ├── Resources/           # Assets, Info.plist, GoogleService-Info.plist, turkish-universities/-faculties/-departments.json
 │   └── Preview Content/     # Önizleme ve örnek veri dosyaları (yalnızca geliştirme)
 ├── ViFiTests/               # Birim testleri
-└── ViFiUITests/             # Arayüz testleri (örnek veriyle çalışır; Inbox, NotificationComposer, NotificationPermission, LocationCampaign dahil)
+└── ViFiUITests/             # Arayüz testleri (örnek veriyle çalışır; Inbox, NotificationComposer, NotificationPermission, LocationCampaign, StructuredExam dahil)
 ```
 
 > **Not:** 2.x sürümünün UIKit/Storyboard kaynakları, `Podfile` ve `ViFi.xcworkspace` 3.0 ile kaldırıldı; git
@@ -370,11 +444,11 @@ ViFi-iOS/
 Bağımlılıklar Swift Package Manager ile yönetilir: Firebase iOS SDK 12 (`FirebaseFirestore`, `FirebaseDatabase`,
 `FirebaseAnalyticsCore`, `FirebaseAuth`, `FirebaseAppCheck`, `FirebaseStorage`, `FirebaseFunctions`, `FirebaseMessaging`) ve
 Google Maps iOS SDK + Places iOS SDK 11.2.0 (yalnızca admin konum seçicisi) ve reCAPTCHA Enterprise iOS SDK 18.9.1
-(`RecaptchaEnterprise`; telefon girişi SMS Defense, yalnızca uygulama hedefinde). CocoaPods kullanılmaz. Paket sürümleri
+(`RecaptchaEnterprise`; telefon girişi SMS Defense, yalnızca uygulama hedefinde) ve SwiftMath 1.7.3 (formül gösterimi; `exactVersion`, yalnızca uygulama hedefinde). CocoaPods kullanılmaz. Paket sürümleri
 depodaki `Package.resolved` ile sabitlenir (Firebase 12.19.2, Google Maps / Places 11.2.0); güncellemek için Xcode'da
 *File › Packages › Update to Latest Package Versions*. reCAPTCHA SDK'sını Firebase Auth çalışma zamanında bulur (kod değişikliği
 yok); hiçbir yerde referans verilmediği için statik kütüphaneden ayıklanmasın diye `project.yml`'de `-ObjC` linker bayrağı şarttır
-(yoksa Firebase boş reCAPTCHA belirteci yollar). Cloud Functions için ayrıca Node.js 22 gerekir (`firebase/functions`).
+(yoksa Firebase boş reCAPTCHA belirteci yollar). Cloud Functions için ayrıca Node.js 22 gerekir (`firebase/functions`; 4.2.0 yapay zekâ hattı `@anthropic-ai/vertex-sdk`, `@google/genai`, `sharp`, `pdfjs-dist` ve `@napi-rs/canvas` kullanır, `npm --prefix firebase/functions ci` ile kurulur).
 
 ## Kurulum
 
@@ -476,6 +550,7 @@ sınav gibi uç durumları içerir. SwiftUI önizlemeleri de aynı veriyi `AppEn
 | `-ViFiNotificationsReask` | `-ViFiMockData` ile birlikte: izin adımı 31 gün önce reddedilmiş, izin "provisional"; sonraki sınav gönderiminden sonra tek seferlik tekrar sorulur. |
 | `-ViFiConsentReask` | `-ViFiMockData` ile birlikte: kampanya onayı 31 gün önce reddedilmiş, kampanyalar kapalı; bildirim sayfası açılınca onay bir kez daha sorulur. |
 | `-ViFiOpenNotification <id>` | `-ViFiMockData` ile birlikte: `<id>` bir sonraki argümandır; o push'a dokunulmuş gibi başlar, kapılardan sonra bildirim sayfası açılır ve `<id>` vurgulanır. |
+| _(argüman yok)_ | Yapılandırılmış sınav örneği (4.2.0): `-ViFiMockData` ile `KOCAELİ ÜNİVERSİTESİ › MÜHENDİSLİK FAKÜLTESİ › MATEMATİK BÖLÜMÜ › TOPOLOJİ 1 › 2003 FİNAL` soru ekranıyla (3 örnek soru) açılır; diğer sınavlar sayfa görünümünde kalır. Admin dönüştürme ekranları `-ViFiAdmin` ile görünür. |
 | `-ViFiCaptureShieldOff` | Canlı ya da örnek veriyle: ekran koruma kalkanı bu açılışta kapalı. App Store ve README ekran görüntüleri bununla alınır (aksi hâlde sayfalar boş çıkar). |
 | `-ViFiCaptureShieldSelfTest` | Her korumalı sayfa ekrana gelince ölçülür; sonuç `exam.shield.selfTest` öğesinde `verified` / `unverified` / `off`. Cihaz denemesinden önce ilk adım. |
 | `-ViFiCaptureLog` | Ekran kaydı / yansıtma sinyallerini zaman damgasıyla OSLog'a yazar (Console.app'te `[CaptureLog` ile süzün). |
@@ -502,7 +577,12 @@ swiftlint --fix
   yapılan bir sözleşmedir, değiştirilmemelidir.
 - **firebase/tests** — Kural testlerinin yanında bildirim Function'larının handler'ları emulator'e karşı (sahte FCM ve
   imzalayıcıyla) ve `schema.js` saf birim testleriyle doğrulanır: `notificationSchema`, `notificationFunctions`,
-  `notificationSchedule`, `notificationAutomatic`, `notificationStats`, `accountCleanup`.
+  `notificationSchedule`, `notificationAutomatic`, `notificationStats`, `accountCleanup`. Yapılandırılmış sınav hattı: `conversionSchema`
+  (sözleşme + sınav adı ayrıştırıcı), `conversionPipeline` (sahte model istemcisiyle), `conversionAdmin` (callable'lar, 2. onay, mükerrer, iptal),
+  `convertLegacyExams` (geçiş betiği), `firestore.rules` / `storage.rules` (yeni koleksiyonlar).
+- **4.2.0 iOS testleri** — `StructuredExamParserTests`, `ExamTitleParserTests` (sunucuyla aynı 16 vaka), `MathTextTokenizerTests`,
+  `FormulaRenderingTests` (SwiftMath, kalkan içinde yerleşim), `QuestionContentViewTests`, `StructuredExamViewModelTests`, `ExamRoutingTests`,
+  `StructuredExamsRemoteSwitchTests`, `ConversionAdminViewModelTests`, `ExamConversionCallsTests`; arayüz: `StructuredExamUITests`, `ModerationUITests`.
 - **SwiftLint** her derlemede çalışır. `print` yerine `Logger`, Combine yerine Observation kullanımı gibi proje
   kuralları da lint ile denetlenir.
 
@@ -521,12 +601,15 @@ Varsayılan her şey kapalıdır; aşağıdaki izinler dışında kimse hiçbir 
 | Firestore `users/<uid>/devices/<kurulumId>` | Sahibi (+90) okur, oluşturur / günceller ve siler; yalnızca `{token, platform, appVersion, updatedAt}` (`updatedAt` sunucu zamanı), kimlik `^[A-Za-z0-9_-]{1,128}$`. |
 | Firestore `users/<uid>/settings/notifications` | Sahibi okur ve yazar: yalnızca `{marketing, source: prompt\|settings, version, updatedAt}`; silinemez. |
 | Firestore `users/<uid>/settings/inbox` | Sahibi okur; yalnızca `{readAt}` (sunucu zamanı) yazar; silinemez. |
+| Firestore `questions`, `questionPools`, `subjects` *(4.2.0, henüz yayınlanmadı)* | +90 telefonla girişli kullanıcılar ve yöneticiler okur; kimse yazamaz (yalnız Cloud Functions, Admin SDK). Sınav dosyaları (`exams.files`) bu sürümde de aynen korunur. |
+| Firestore `examConversions` (+ `questions` alt koleksiyonu), `aiUsage` *(4.2.0, henüz yayınlanmadı)* | Yalnızca yönetici okur. İstemci yazamaz; tek istisna yöneticinin taslak sorunun içerik alanlarını (`text`, `speech`, `choices`, `answer`, `solution`, `needsReview`) + `editedBy`/`editedAt` (sunucu zamanı) güncellemesidir; sıra, şekil ve işin kendisi değiştirilemez. |
 | Realtime DB `/Universitiess` (rollback) | +90 telefonla girişli kullanıcılar ve yöneticiler okur; yalnızca yönetici yazar. Arşiv Firestore'a taşındı; bu kopya rollback için duruyor. |
 | Realtime DB `/pendingExams/<uid>` | Kullanıcı yalnızca kendi kaydını okur; yeni gönderim oluşturur, kendi `pending` gönderimini siler, var olanı değiştiremez. Yönetici hepsini okur ve yazar. Alanlar sıkı doğrulanır. |
 | Realtime DB `/users/<uid>/profile` | Sahibi (+90) yalnızca kendi profilini okur ve yazar; yönetici tüm profilleri okur (yazamaz). Alanlar sıkı doğrulanır: `gender` yalnızca `female`/`male`, `phoneNumber` token'daki numarayla aynı, `updatedAt` sunucu zaman damgası. |
 | Realtime DB diğer tüm düğümler | Kimseye açık değil (yönetici dahil). |
 | Storage `imagess/`, `pdfs/` | Tek dosya okuma: +90 kullanıcı ve yönetici. Listeleme kimseye açık değil; yalnızca yönetici yazar. |
 | Storage `pending/<uid>/<gönderim>/` | Yalnızca sahibi yeni JPEG/PDF (1 bayt – 15 MiB) yükler, üzerine yazamaz; sahibi ve yönetici okur ve siler. |
+| Storage `questionFigures/<iş>/<dosya>` *(4.2.0, henüz yayınlanmadı)* | Tek dosya okuma: +90 kullanıcı ve yönetici. Yazma hiçbir istemciye açık değil (yalnız Admin SDK, yani dönüştürme hattı). |
 | Storage `notificationImages/<bildirimId>.jpg` | Tek dosya okuma: +90 kullanıcı ve yönetici. Yalnızca yönetici **oluşturur** (JPEG, 1 bayt – 1 MiB); güncelleme, silme ve üzerine yazma yönetici dahil hiçbir istemciye açık değil. *(30 Ekim 2026'da yayınlandı.)* |
 
 Yönetici, `admin: true` özel talebi (custom claim) taşıyan hesaptır: `setCustomUserClaims(uid, { admin: true })`.
@@ -554,6 +637,12 @@ onayıyla, [Bildirimler › Yayın önkoşulları](#yayın-önkoşulları) tamam
 cd firebase
 firebase deploy --only functions --project vifi-831a8 --account <sahip hesabı>
 ```
+
+**4.2.0 yapılandırılmış sınavlar:** yeni kurallar + indeksler (`questions (examId, order)`, `examConversions (status, createdAt desc)`), 8 callable
+ve `processExamConversion` kuyruk Function'ı aynı komutlarla yayınlanır; ek önkoşul Vertex AI API'nin açılması ve Model Garden'da Claude'un
+etkinleştirilmesidir. **Hiçbiri yayınlanmadı**; yalnızca proje sahibinin açık onayıyla, 4.1.0 canlıya çıktıktan sonra. Eski sınavların toplu
+geçişi için `firebase/scripts/convert-legacy-exams.mjs` ([firebase/README.md](firebase/README.md)): varsayılan dry-run, `--apply` canlı veri
+yazar ve para harcar, yalnızca sahibin onayıyla.
 
 Yayından önce konsoldan gereksiz kök düğümleri (`poc`, `2DfjkeJxHJTkdhz5VNVwFJzAeuD`, `Announcements`) silin.
 
@@ -627,6 +716,9 @@ aynı isimli bir dosya olmadığını kontrol edin.
   kapsayan test eklenir ve `cd firebase && npm test` ile çalıştırılır. Cloud Function handler'ları bağımlılık
   enjeksiyonludur (`db`, `rtdb`, `messaging`, `bucket`, `signImageUrl`, `auth`, `now`): testler onları emulator Firestore/RTDB
   ve sahte FCM ile doğrudan çağırır, Functions emulator'ü gerekmez.
+- **Yapılandırılmış sınav testleri:** iOS tarafında `StructuredExamTestDoubles.swift` (`StubExamQuestionReader`, dönüştürme servisi sahtesi); örnek soru verisi
+  `SampleExams/sample-questions.json` (yalnız Debug). Sunucu tarafında yapay zekâ **sahte sağlayıcıyla** test edilir (`conversionPipeline.test.mjs`: `getProvider`
+  bir sahte döndürür, `pdf` ve `bucket` enjekte edilir); testler Vertex'e, gerçek modele ya da internete çıkmaz ve para harcamaz.
 
 ### Proje ayarı veya bağımlılık değiştirmek
 
@@ -688,6 +780,34 @@ Sınav pikseli gösteren her yüzey ekran koruma kabından geçer; ayrıntılı 
 5. **Acil durumda kapatmak:** Realtime Database `config/captureProtection/ios = {enabled: false}` kalkanı kapatır,
    `{coverMode: "always"}` her kayıtta örtü gösterir. Değer bir sonraki açılışta uygulanır; Console'a yazım proje sahibinin onayıyla.
 
+### Yapılandırılmış sınavları değiştirmek (4.2.0)
+
+Sözleşme üç yerde aynı olmalıdır: `firebase/functions/conversions/schema.js` (yetkili), iOS modelleri (`ExamQuestion.swift`, `ExamConversion.swift`) ile
+ayrıştırıcıları (`ExamQuestionParser`, `ExamConversionParser`, `ExamTitleParser`) ve yerel `STRUCTURED-EXAMS.md` (Android).
+
+1. **Alan, limit, durum ya da id biçimi değişirse:** önce `schema.js` (+ `conversionSchema.test.mjs`), sonra iOS modeli/ayrıştırıcı
+   (+ `StructuredExamParserTests`; sınav adı ayrıştırıcıda `ExamTitleParserTests` ile sunucudaki **aynı** vakalar), sonra gerekiyorsa
+   `firestore.rules` taslak-düzenleme kuralı + testi, sonra `STRUCTURED-EXAMS.md`. Yayınlanmış sorunun şekli değişiyorsa `QUESTION_SCHEMA_VERSION`
+   ve `ExamQuestionParser.supportedSchemaVersion` birlikte yükseltilir (bilinmeyen sürümü okuyan istemci o soruyu atlar).
+2. **Soru ekranında içerik göstermek:** her piksel `QuestionContentView` (UIKit) içinde çizilir ve o da `QuestionContentRepresentable` ile
+   `CaptureShieldedView`'a konur; SwiftUI `Text`/`Image` ile soru ya da cevap çizmeyin. Yeni bir yüzey için ayrıca
+   [Sınav ekranında içerik göstermek](#sınav-ekranında-içerik-göstermek-ekran-koruması) adımları geçerlidir. Formül yalnızca `FormulaText` üzerinden,
+   kalkanın içinde çizilir; `MathTextTokenizer` kuralları (Pandoc `$`) değişirse `MathTextTokenizerTests` ve `STRUCTURED-EXAMS.md` güncellenir. SwiftMath
+   `exactVersion`'dır: sürümü yükseltmek yerleşimi değiştirir, `FormulaRenderingTests` + gerçek cihazda görsel kontrol gerekir.
+3. **Yeni sınav açma yolu:** karar `ExamRouting`'dedir (`format == structured` + `questionCount > 0` + uzaktan anahtar). Yeni bir giriş noktası ekliyorsanız
+   (liste, arama, bildirim, son görüntülenenler gibi) bu karardan geçin ve kilit kuralını (`ExamAccessResolver`) atlamayın. Soruları önceden çekmeyin
+   (`ArchivePrefetcher` dokunmaz).
+4. **Yeni yapay zekâ işlemi ya da callable:** işlem `provider` almalı, varsayılan model eklenmemelidir (K9). Aylık sınır yalnızca `usage.js`'ten geçmelidir; yeni bir
+   koşu yolu açıyorsanız `claimJob`/`addUsage` akışını kullanın ve `exams`'e yazan başka bir yayın yolu eklemeyin (tek yol `publishExamConversion`).
+   Callable'ı `conversions/admin.js`'e yazıp `index.js`'te bağlayın, `schema.js` `CALLABLES` listesini ve `FirebaseExamConversionService`/`ExamConversionCalls`'ı güncelleyin.
+5. **Model kimliği, bölge, fiyat:** yalnızca `providers/config.js`; istem (`prompt.js`) değişirse `PROMPT_VERSION` artırılır.
+6. **Yerelde denemek:** `cd firebase && JAVA_HOME=/opt/homebrew/opt/openjdk@21 npm test` tüm hattı (sahte sağlayıcıyla) çalıştırır. Sınav ekranını görmek için
+   `-ViFiMockData` (admin ekranları için `-ViFiAdmin`) ile `TOPOLOJİ 1 › 2003 FİNAL` açılır. Geçiş betiğini emulator'de denemek: emulator'ü başlatıp
+   `FIRESTORE_EMULATOR_HOST` ayarlı bir kabukta `node scripts/convert-legacy-exams.mjs --provider claude --course <ders-id>` (varsayılan dry-run; emulator'de iş
+   kuyruğa verilmez).
+7. **Canlı işlem yasağı:** kural/Function yayını, Vertex etkinleştirme, `--apply` ile betik, Console'dan `config/structuredExams` yazımı yalnızca proje sahibinin açık
+   onayıyla yapılır; `--apply` gerçek para harcar.
+
 ### Sürüm öncesi kontrol listesi
 
 - [ ] `project.yml` içinde `MARKETING_VERSION` ve `CURRENT_PROJECT_VERSION` güncellendi.
@@ -719,6 +839,11 @@ Sınav pikseli gösteren her yüzey ekran koruma kabından geçer; ayrıntılı 
   `config/rewards`, `config/captureProtection`) ve hata gibi görünebilecek davranışlar (ekran koruması kartı, PDF seçim kilidi, bildirim izin
   akışı) açıklandı. What's New bu derlemenin bütün görünür değişikliklerini kesin iddia kullanmadan içeriyor. Göndermeden önce admin
   hesabıyla giriş yapılıp iki admin girişinin göründüğü doğrulandı.
+- [ ] **4.2.0 (yapılandırılmış sınavlar):** Android ile **aynı anda** yayın (iOS, Android hazır olana kadar incelemeye gönderilmez); backend (kurallar + indeksler,
+  8 callable + kuyruk, Vertex AI + Model Garden'da Claude) yeni istemciden **önce** ve yalnızca sahibin onayıyla yayınlandı; `providers/config.js`'teki `VERIFY`
+  değerleri canlı Vertex'te doğrulandı; 1 eski sınavla uçtan uca (geçir → bildirim → incele → yayınla) ve 1 test gönderimiyle iki onaylı akış denendi;
+  soru ekranının ekran koruması gerçek cihazda denendi; Google Cloud bütçe uyarısı (Vertex) kuruldu; gizlilik politikasına üçüncü taraf işleyici (Vertex AI)
+  notu eklendi, gizlilik manifesti/etiketi gerekiyorsa güncellendi; App Review notunda yapay zekâ içeriği ve admin dönüştürme ekranları anlatıldı (iki demo hesap).
 - [ ] [Sürüm Notları](#sürüm-notları) güncellendi.
 
 ### Commit kuralları
@@ -728,6 +853,35 @@ Test numaraları, debug token'ları, kişisel e-postalar, servis hesabı anahtar
 commit'lenmez; depo herkese açıktır.
 
 ## Sürüm Notları
+
+### 4.2.0
+
+Sınavlar artık soru soru açılabiliyor.
+
+> Bu sürüm geliştirme aşamasındadır; backend ve Android sürümü hazır olmadan yayınlanmaz. Aşağıdaki notlar yayın metni taslağıdır.
+
+**Yeni**
+
+- Soruları tek tek gör: bazı sınavlar sayfa görseli yerine soru soru açılır. Soru metni, şıklar ve sorunun şekli ayrı ayrı okunur; formüller matematik
+  gösterimiyle çizilir.
+- **Cevabı Göster:** istediğin soruda cevabı ve adım adım çözümü aç, istemezsen kapalı bırak. Çözümlerin altında bunların yapay zekâ ile hazırlandığını
+  belirten bir not yer alır; yapay zekâ hata yapabilir.
+- Sınavın kilit kuralı (coin / Premium) değişmedi: soru ekranı da sınavı açabildiğin sürece açılır.
+- Yazı boyutuna (Dynamic Type) uyum ve VoiceOver desteği; formüller sesli okunacak düz metinle okunur.
+- Soru içeriği de sınav içeriği korumasının kapsamındadır (ekran görüntüsü / kayıtta sayfa yerine koruma kartı); bu en iyi çaba korumasıdır.
+- Henüz soru soru hazırlanmamış sınavlar bugünkü gibi sayfa görünümüyle açılmaya devam eder.
+
+**Yönetici araçları**
+
+- Gönderimleri onaylarken yapay zekâ modelini (Claude ya da Gemini) seç; hazır taslağı orijinal sayfayla yan yana incele, düzenle, soruyu yeniden ürettir ve yayınla.
+- Eski sınavları "Yeni yapıya geçir" ile ya da ders/bölüm için toplu olarak soru soru yapıya aktar; bu ayın yapay zekâ harcamasını (aylık 50 $ sınır) gör.
+- Yayındaki bir sorudaki hatayı doğrudan düzelt ya da soruyu yeniden ürettir.
+
+**Değişen**
+
+- Aynı sınavı yeniden yükleyen bir gönderim, sınavı ikinci kopya eklemek yerine yenisiyle değiştirir.
+- Yeni bağımlılık: SwiftMath 1.7.3 (formül gösterimi). Sunucuda yapay zekâ hattı Vertex AI üzerinden çalışır (üçüncü taraf işleyici olarak gizlilik
+  politikasında belirtilir).
 
 ### 4.1.0
 
@@ -847,6 +1001,12 @@ yanlış alt görünümüne gömülüydü. Yeni yapı gerçek cihazda doğruland
 > **Eski sürümler çalışmaz.** Sıkı güvenlik kuralları yayınlandığında giriş ve App Check içermeyen eski uygulama
 > sürümleri arşive erişemez; bu bilinçli bir karardır. Kuralları ve belirteç iptalini yalnızca yeni sürüm
 > yayınlandıktan sonra devreye alın.
+
+> [!NOTE]
+> **4.2.0 yapılandırılmış sınavlar henüz canlıda değil (13 Kasım 2026).** Yeni Firestore/Storage kuralları, indeksler, 8 callable, `processExamConversion`
+> kuyruğu ve Vertex AI etkinleştirmesi yayınlanmadı; 4.2.0 Android hazır olana kadar incelemeye gönderilmez. Yapay zekâ çıktısı her taslakta admin
+> incelemesinden geçer ve yine de hata içerebilir; soru ekranında bu yüzden kısa bir not gösterilir. Sınav silme, yapılandırılmış verinin
+> (sorular, havuzlar, şekiller, iş) sunucuda temizliğine henüz bağlı değildir (açık iş).
 
 > [!NOTE]
 > **Bildirim backend'i yeni istemciden önce yayınlandı (30 Ekim 2026).** Firestore/Storage kuralları ve 13 Cloud
