@@ -48,6 +48,59 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // 4.2.0 structured exams (contract: functions/conversions/schema.js). Published questions, practice pools and
+    // the country-wide subject ids are archive content: readable like `exams`, written only by the conversion
+    // Cloud Functions (Admin SDK). The legacy `exams/<id>.files` stay untouched on a structured exam, so 4.1.0 and
+    // Android keep showing the original pages (TODO-4.2.0 0.9).
+    match /questions/{questionId} {
+      allow read: if canReadArchive();
+      allow write: if false;
+    }
+
+    match /questionPools/{poolId} {
+      allow read: if canReadArchive();
+      allow write: if false;
+    }
+
+    match /subjects/{subjectId} {
+      allow read: if canReadArchive();
+      allow write: if false;
+    }
+
+    // AI conversion jobs: admins follow them in the app; only the pipeline writes them. Admins may edit a draft
+    // question's content fields directly (K8) — never its order, figures, review metadata of others or the job.
+    match /examConversions/{jobId} {
+      allow read: if isAdmin();
+      allow write: if false;
+
+      match /questions/{order} {
+        function isValidDraftEdit() {
+          let data = request.resource.data;
+          return data.diff(resource.data).affectedKeys()
+              .hasOnly(['text', 'speech', 'choices', 'answer', 'solution', 'needsReview', 'editedBy', 'editedAt'])
+            && data.text is string && data.text.size() >= 1 && data.text.size() <= 8000
+            && data.speech is string && data.speech.size() <= 8000
+            && data.choices is list && data.choices.size() <= 10
+            && data.answer is map && data.answer.keys().hasOnly(['text', 'choice', 'speech'])
+            && data.answer.text is string && data.answer.text.size() >= 1 && data.answer.text.size() <= 4000
+            && data.solution is list && data.solution.size() <= 30
+            && data.needsReview is bool
+            && data.editedBy == request.auth.uid
+            && data.editedAt == request.time;
+        }
+
+        allow read: if isAdmin();
+        allow update: if isAdmin() && isValidDraftEdit();
+        allow create, delete: if false;
+      }
+    }
+
+    // Monthly AI spend for the $50 cap (K11): server-only, admins read the gauge.
+    match /aiUsage/{month} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Public announcements shown in the in-app notification inbox (#11 v1): readable by every signed-in (+90)
     // user, written only server-side / from the Firebase Console (the Admin SDK bypasses rules). The client
     // never writes them; read state is tracked locally on the device.

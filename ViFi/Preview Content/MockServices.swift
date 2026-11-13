@@ -63,7 +63,8 @@ extension AppEnvironment {
                 reader: NoopCaptureShieldConfigReader(),
                 defaults: .mockSuite,
                 forcedOff: isCaptureShieldForcedOff(arguments: arguments)
-            )
+            ),
+            structuredExams: StructuredExamsRemoteSwitch(reader: NoopStructuredExamsConfigReader(), defaults: .mockSuite)
         )
         // `-ViFiOpenNotification <id>` starts as if the push of that notification had been tapped.
         if let tapped = openedNotificationId(arguments: arguments) {

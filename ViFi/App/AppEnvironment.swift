@@ -64,6 +64,8 @@ final class AppEnvironment {
     @ObservationIgnored let locationPicker: any LocationPicking
     /// The screen-capture shield's remote switch, applied for this launch (`isEnabled`, `coverMode`).
     @ObservationIgnored let captureShield: CaptureShieldRemoteSwitch
+    /// The 4.2.0 structured-exam screen's remote switch, applied for this launch (`isEnabled`).
+    @ObservationIgnored let structuredExams: StructuredExamsRemoteSwitch
 
     init(
         repository: any ArchiveRepository,
@@ -96,7 +98,8 @@ final class AppEnvironment {
         locationPicker: any LocationPicking = GoogleLocationPicker(),
         notificationEventReporter: any NotificationEventReporting = NoopNotificationEventReporter(),
         notificationEventDefaults: UserDefaults = .standard,
-        captureShield: CaptureShieldRemoteSwitch = CaptureShieldRemoteSwitch(reader: NoopCaptureShieldConfigReader())
+        captureShield: CaptureShieldRemoteSwitch = CaptureShieldRemoteSwitch(reader: NoopCaptureShieldConfigReader()),
+        structuredExams: StructuredExamsRemoteSwitch = StructuredExamsRemoteSwitch(reader: NoopStructuredExamsConfigReader())
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -137,6 +140,7 @@ final class AppEnvironment {
         self.loginDiagnostics = loginDiagnostics
         self.locationPicker = locationPicker
         self.captureShield = captureShield
+        self.structuredExams = structuredExams
         CaptureShield.isSwitchedOn = captureShield.isEnabled
     }
 
@@ -167,6 +171,8 @@ final class AppEnvironment {
             forcedOff: isCaptureShieldForcedOff(arguments: arguments)
         )
         captureShield.start()
+        let structuredExams = StructuredExamsRemoteSwitch(reader: FirebaseStructuredExamsConfigReader())
+        structuredExams.start()
         return AppEnvironment(
             repository: repository,
             fileLoader: RemoteFileLoader(authorizer: authorizer),
@@ -192,7 +198,8 @@ final class AppEnvironment {
             notificationSettingsService: FirebaseNotificationSettingsService(),
             loginDiagnostics: FirebaseLoginDiagnosticsService(),
             notificationEventReporter: FirebaseNotificationEventReporter(),
-            captureShield: captureShield
+            captureShield: captureShield,
+            structuredExams: structuredExams
         )
     }
 

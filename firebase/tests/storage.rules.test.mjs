@@ -241,6 +241,35 @@ describe('notificationImages/{notificationId}.jpg', () => {
   });
 });
 
+describe('questionFigures/{jobId}/{file} (4.2.0)', () => {
+  const FIGURE = 'questionFigures/exam-e1/001-1.jpg';
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (context) => {
+      await context.storage().ref(FIGURE).put(bytes(), JPEG);
+    });
+  });
+
+  test('+90 users and admins read single figures; others cannot; nobody lists', async () => {
+    await assertSucceeds(storage(users.alice).ref(FIGURE).getMetadata());
+    await assertSucceeds(storage(users.admin).ref(FIGURE).getMetadata());
+    for (const user of [null, users.usPhone, users.emailOnly, users.shortTrPhone]) {
+      await assertFails(storage(user).ref(FIGURE).getMetadata());
+    }
+    for (const user of [users.alice, users.admin]) {
+      await assertFails(storage(user).ref('questionFigures/exam-e1').listAll());
+    }
+  });
+
+  test('no client writes, replaces or deletes a figure — admins included', async () => {
+    for (const user of [users.alice, users.admin, users.fakeAdmin]) {
+      await assertFails(upload(user, 'questionFigures/exam-e1/002-1.jpg', bytes(), JPEG));
+      await assertFails(upload(user, FIGURE, bytes(32), JPEG));
+      await assertFails(storage(user).ref(FIGURE).delete());
+    }
+  });
+});
+
 describe('any other path', () => {
   test('is denied for everyone, admins included', async () => {
     for (const user of [users.alice, users.admin]) {

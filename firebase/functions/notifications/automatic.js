@@ -17,6 +17,7 @@
 // Handlers take their dependencies (`db`, `rtdb`, `messaging`, `auth`, `now`) as the first argument, like the
 // composer's (`admin.js`); `index.js` wires the live ones.
 
+import { createHash } from 'node:crypto';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import {
@@ -38,7 +39,22 @@ export const TRIGGERS = Object.freeze({
   submissionRejected: 'submissionRejected',
   newExam: 'newExam',
   newSubmission: 'newSubmission',
+  // 4.2.0 structured exams (conversions/schema.js): a draft is ready for review / a job failed after its retries.
+  // Admin-only (`admins` audience), sent now, never consent-filtered. Wired by the conversion pipeline (Faz 1B).
+  conversionReady: 'conversionReady',
+  conversionFailed: 'conversionFailed',
 });
+
+/**
+ * Deterministic ids for the conversion notices: one "ready" per job, one "failed" per failed attempt series (the
+ * attempt counter keeps a re-run that fails again from being swallowed as a duplicate).
+ */
+export const conversionNotificationIds = (jobId, attempts = 0) => {
+  // Legacy job ids embed composite archive ids that can exceed NOTIFICATION_ID_PATTERN's 128 characters; those are
+  // replaced by a stable hash so the id stays deterministic and valid.
+  const key = jobId.length <= 80 ? jobId : `h${createHash('sha256').update(jobId).digest('hex').slice(0, 40)}`;
+  return { ready: `auto-convready-${key}`, failed: `auto-convfailed-${key}-${attempts}` };
+};
 
 /** Server-only "new exam" daily limit per department (NOTIFICATIONS.md §3.6): `{ lastSentAt, notificationId }`. */
 export const THROTTLE_COLLECTION = 'notificationThrottle';

@@ -51,6 +51,13 @@ service firebase.storage {
       allow create, update, delete: if isAdmin();
     }
 
+    // 4.2.0 figures cropped from the original pages by the conversion pipeline (Admin SDK): read one file at a time
+    // like the archive, never written from a client (not even an admin).
+    match /questionFigures/{jobId}/{fileName} {
+      allow get: if canReadArchive();
+      allow write: if false;
+    }
+
     match /notificationImages/{fileName} {
       allow get: if canReadArchive();
       // Create-only: `update`/`delete` are never granted and `resource == null` also rejects an overwrite evaluated

@@ -477,3 +477,97 @@ describe('Firestore rules — login diagnostics (admin-read, server-write only)'
     }
   });
 });
+
+describe('Firestore rules — structured exams (4.2.0: questions, pools, subjects, conversions, aiUsage)', () => {
+  const draft = {
+    order: 1, label: '1', text: 'Soru', speech: 'Soru', choices: [], figures: [],
+    answer: { text: '4' }, solution: ['adım'], topics: [], difficulty: 2, confidence: 0.5, needsReview: true,
+  };
+
+  beforeEach(async () => {
+    await env.clearFirestore();
+    await env.withSecurityRulesDisabled(async (context) => {
+      const seed = context.firestore();
+      await seed.collection('questions').doc('e1-001').set({ examId: 'e1', order: 1, text: 'Soru', answer: { text: '4' } });
+      await seed.collection('questionPools').doc('mat__final__tr').set({ ids: ['e1-001'], count: 1 });
+      await seed.collection('subjects').doc('mat').set({ name: 'Matematik', aliases: [] });
+      await seed.collection('examConversions').doc('exam-e1').set({ status: 'ready', kind: 'JPG' });
+      await seed.collection('examConversions').doc('exam-e1').collection('questions').doc('001').set(draft);
+      await seed.collection('aiUsage').doc('2026-11').set({ costUsd: 1.5 });
+    });
+  });
+
+  const edit = (overrides = {}) => ({
+    text: 'Düzeltilmiş soru', speech: 'Düzeltilmiş soru', answer: { text: '5', choice: 'B' },
+    editedBy: users.admin.uid, editedAt: serverTimestamp(), needsReview: false, ...overrides,
+  });
+
+  test('+90 users and admins read published questions, pools and subjects; nobody writes them', async () => {
+    for (const user of [users.alice, users.admin]) {
+      const fs = db(user);
+      await assertSucceeds(fs.collection('questions').doc('e1-001').get());
+      await assertSucceeds(fs.collection('questions').where('examId', '==', 'e1').get());
+      await assertSucceeds(fs.collection('questionPools').doc('mat__final__tr').get());
+      await assertSucceeds(fs.collection('subjects').doc('mat').get());
+      await assertFails(fs.collection('questions').doc('e1-002').set({ examId: 'e1' }));
+      await assertFails(fs.collection('questions').doc('e1-001').update({ text: 'x' }));
+      await assertFails(fs.collection('questionPools').doc('mat__final__tr').update({ count: 2 }));
+      await assertFails(fs.collection('subjects').doc('new').set({ name: 'X', aliases: [] }));
+    }
+  });
+
+  test('non-+90 and anonymous users cannot read questions, pools or subjects', async () => {
+    for (const user of [users.usPhone, users.emailOnly, users.shortTrPhone, null]) {
+      await assertFails(db(user).collection('questions').doc('e1-001').get());
+      await assertFails(db(user).collection('questionPools').doc('mat__final__tr').get());
+      await assertFails(db(user).collection('subjects').doc('mat').get());
+    }
+  });
+
+  test('conversion jobs, drafts and AI usage are admin-read only', async () => {
+    const admin = db(users.admin);
+    await assertSucceeds(admin.collection('examConversions').doc('exam-e1').get());
+    await assertSucceeds(admin.collection('examConversions').where('status', '==', 'ready').get());
+    await assertSucceeds(admin.collection('examConversions').doc('exam-e1').collection('questions').get());
+    await assertSucceeds(admin.collection('aiUsage').doc('2026-11').get());
+    for (const user of [users.alice, users.fakeAdmin, null]) {
+      await assertFails(db(user).collection('examConversions').doc('exam-e1').get());
+      await assertFails(db(user).collection('examConversions').doc('exam-e1').collection('questions').doc('001').get());
+      await assertFails(db(user).collection('aiUsage').doc('2026-11').get());
+    }
+  });
+
+  test('nobody writes a job or AI usage from a client — not even an admin', async () => {
+    const admin = db(users.admin);
+    await assertFails(admin.collection('examConversions').doc('exam-e1').update({ status: 'published' }));
+    await assertFails(admin.collection('examConversions').doc('exam-e2').set({ status: 'queued' }));
+    await assertFails(admin.collection('examConversions').doc('exam-e1').delete());
+    await assertFails(admin.collection('aiUsage').doc('2026-11').update({ costUsd: 0 }));
+  });
+
+  test('an admin edits a draft question\'s content with their uid and server time', async () => {
+    const ref = db(users.admin).collection('examConversions').doc('exam-e1').collection('questions').doc('001');
+    await assertSucceeds(ref.update(edit()));
+    await assertSucceeds(ref.update(edit({ choices: [{ label: 'A', text: '1' }], solution: [] })));
+  });
+
+  test('draft edits outside the content fields, malformed, unsigned or by non-admins are rejected', async () => {
+    const path = (user) => db(user).collection('examConversions').doc('exam-e1').collection('questions').doc('001');
+    const ref = path(users.admin);
+    await assertFails(ref.update(edit({ order: 2 })));
+    await assertFails(ref.update(edit({ figures: [{ storagePath: 'x' }] })));
+    await assertFails(ref.update(edit({ confidence: 1 })));
+    await assertFails(ref.update(edit({ text: '' })));
+    await assertFails(ref.update(edit({ text: 'x'.repeat(8001) })));
+    await assertFails(ref.update(edit({ answer: { text: '' } })));
+    await assertFails(ref.update(edit({ answer: { text: '1', extra: true } })));
+    await assertFails(ref.update(edit({ solution: Array(31).fill('a') })));
+    await assertFails(ref.update(edit({ editedBy: 'someone-else' })));
+    await assertFails(ref.update(edit({ editedAt: new Date() })));
+    await assertFails(ref.delete());
+    await assertFails(db(users.admin).collection('examConversions').doc('exam-e1').collection('questions').doc('099').set(draft));
+    for (const user of [users.alice, users.fakeAdmin]) {
+      await assertFails(path(user).update(edit({ editedBy: user.uid })));
+    }
+  });
+});
