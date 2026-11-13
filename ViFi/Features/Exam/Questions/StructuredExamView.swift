@@ -83,7 +83,7 @@ private struct StructuredExamScreen: View {
                 ExamContextHeader(subtitle: viewModel.subtitle, questionCount: questions.count)
 
                 ForEach(questions) { question in
-                    VStack(alignment: .trailing, spacing: 6) {
+                    VStack(alignment: .trailing, spacing: 0) {
                         // Admin-only (K15): edit or regenerate this published question; hidden for everyone else.
                         PublishedQuestionAdminActions(question: question) {
                             Task { await viewModel.load() }

@@ -49,6 +49,10 @@ struct ExamConversionAdminButton: View {
                 .padding(.vertical, 10)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(.bar)
+            } else {
+                // A zero-size placeholder: an empty Group never appears, so its `.task` (the admin check) would
+                // never run and the component would stay hidden even for admins.
+                Color.clear.frame(width: 0, height: 0).accessibilityHidden(true)
             }
         }
         .task { isAdmin = await environment.auth.isCurrentUserAdmin() }

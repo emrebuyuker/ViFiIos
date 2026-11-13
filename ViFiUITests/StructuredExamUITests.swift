@@ -29,6 +29,30 @@ nonisolated final class StructuredExamUITests: XCTestCase {
     }
 
     @MainActor
+    func testAdminSeesQuestionActionsAndOthersDoNot() {
+        let admin = launch(admin: true)
+        open(Self.lesson + [Self.structuredExam], in: admin)
+        XCTAssertTrue(element(admin, "questions.card.1").waitForExistence(timeout: Timeout.content))
+        XCTAssertTrue(element(admin, "questionAdmin.menu").waitForExistence(timeout: Timeout.content),
+                      "The admin question menu must appear for an admin")
+        admin.terminate()
+
+        let user = launch()
+        open(Self.lesson + [Self.structuredExam], in: user)
+        XCTAssertTrue(element(user, "questions.card.1").waitForExistence(timeout: Timeout.content))
+        XCTAssertFalse(element(user, "questionAdmin.menu").exists, "Non-admins must not see the admin menu")
+    }
+
+    @MainActor
+    func testAdminSeesConvertActionOnAPlainExam() {
+        let app = launch(admin: true)
+        open(Self.lesson + [Self.plainExam], in: app)
+        XCTAssertTrue(element(app, "exam.images").waitForExistence(timeout: Timeout.content))
+        XCTAssertTrue(element(app, "examAdmin.convert").waitForExistence(timeout: Timeout.content),
+                      "\"Yeni yapıya geçir\" must appear for an admin")
+    }
+
+    @MainActor
     func testPlainExamKeepsTheFileViewer() {
         let app = launch()
         open(Self.lesson + [Self.plainExam], in: app)
@@ -59,10 +83,10 @@ nonisolated final class StructuredExamUITests: XCTestCase {
     // MARK: - Helpers
 
     @MainActor
-    private func launch(selfTest: Bool = false) -> XCUIApplication {
+    private func launch(selfTest: Bool = false, admin: Bool = false) -> XCUIApplication {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-ViFiMockData"] + (selfTest ? ["-ViFiCaptureShieldSelfTest"] : [])
+        app.launchArguments = ["-ViFiMockData"] + (selfTest ? ["-ViFiCaptureShieldSelfTest"] : []) + (admin ? ["-ViFiAdmin"] : [])
         app.launch()
         XCTAssertTrue(element(app, "home.list").waitForExistence(timeout: Timeout.content), "The home list did not appear")
         return app

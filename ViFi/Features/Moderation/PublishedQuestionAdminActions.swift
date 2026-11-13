@@ -32,6 +32,7 @@ struct PublishedQuestionAdminActions: View {
                 }
                 .disabled(isWorking)
                 .accessibilityIdentifier("questionAdmin.menu")
+                .padding(.bottom, 6)
                 .sheet(isPresented: $isEditing) {
                     QuestionEditorView(question: question) { edited in
                         do {
@@ -51,6 +52,10 @@ struct PublishedQuestionAdminActions: View {
                 } message: {
                     Text(message ?? "")
                 }
+            } else {
+                // A zero-size placeholder: an empty Group never appears, so its `.task` (the admin check) would
+                // never run and the component would stay hidden even for admins.
+                Color.clear.frame(width: 0, height: 0).accessibilityHidden(true)
             }
         }
         .task { isAdmin = await environment.auth.isCurrentUserAdmin() }
