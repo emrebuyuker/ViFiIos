@@ -14,8 +14,7 @@ struct ExamImagesView: View {
                 path: path,
                 repository: environment.repository,
                 recents: environment.recents,
-                analytics: environment.analytics,
-                structuredEnabled: environment.structuredExams.isEnabled
+                analytics: environment.analytics
             )
         )
     }

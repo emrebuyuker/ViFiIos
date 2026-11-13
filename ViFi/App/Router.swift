@@ -37,9 +37,9 @@ final class Router {
     ///
     /// Callers that only know the exam's file kind (recents, notifications) open the file viewer; it replaces
     /// itself with the question screen once it sees the exam is structured (`ExamRouting.redirect`).
-    func openExam(at examPath: ArchivePath, kind: ExamKind, questionCount: Int? = nil, structuredEnabled: Bool = false) {
+    func openExam(at examPath: ArchivePath, kind: ExamKind, questionCount: Int? = nil) {
         let ancestors = (1..<examPath.depth).map { Route.browse(examPath.prefix($0)) }
-        let route = ExamRouting.route(for: examPath, kind: kind, questionCount: questionCount, structuredEnabled: structuredEnabled)
+        let route = ExamRouting.route(for: examPath, kind: kind, questionCount: questionCount)
         path = ancestors + [route]
     }
 }

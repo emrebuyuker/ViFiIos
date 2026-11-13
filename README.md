@@ -139,7 +139,6 @@ flowchart LR
   | `LocationPicking` | `GoogleLocationPicker` (Google Maps + Places) | `MockLocationPicker` |
   | `ExamQuestionReading` | `FirebaseExamQuestionReader` | `MockExamQuestionReader` (örnek soru JSON'u) |
   | `ExamConversionServicing` | `FirebaseExamConversionService` (callable'lar + Firestore okuma) | `MockExamConversionService` |
-  | `StructuredExamsConfigReading` | `FirebaseStructuredExamsConfigReader` | `NoopStructuredExamsConfigReader` |
 
 - **Giriş zorunlu.** Uygulamanın tamamı telefon numarasıyla (SMS kodu, yalnızca +90) giriş gerektirir. `SessionStore`
   oturum durumunu (`unknown` / `signedOut` / `signedIn`) tutar; `RootView` buna göre `LoginView` ya da arşivi
@@ -207,7 +206,6 @@ Realtime Database — profil + güncelleme politikası (Firestore'a taşınmadı
                         department, departmentId, departmentIsCustom,
                         gender, phoneNumber, updatedAt }
   config/appUpdate/ios/{ minimumVersion, latestVersion, storeURL, message }
-  config/structuredExams/ios/{ enabled }   # 4.2.0 uzaktan anahtar; sonraki açılışta uygulanır
 ```
 
 Bir seviye `catalogNodes` içinde `where(parentId == <üst id>, status == published)`, bir dersin sınavları `exams`
@@ -388,8 +386,7 @@ flowchart LR
   adminlere bildirim gider. Betiğin tek seferlik işleri sınıra girmez, ayrı toplanır.
 - **Veri tasarrufu.** Sınav açılınca yalnızca o sınavın soruları (`where examId == X order by order`, ~10–30 okuma) iner; şekiller ekrana
   gelince, kimlikli indirme ve disk önbelleğiyle. `ArchivePrefetcher` soruları önceden çekmez.
-- **Uzaktan anahtar.** `config/structuredExams/ios = {enabled: false}` soru ekranını kapatır, sınavlar dosya görünümüyle açılır. Değer bir
-  sonraki açılışta uygulanır.
+- **Uzaktan anahtar yok.** Yapılandırılmış sınav her zaman soru ekranında açılır; davranış uzak bayrakla değişmez (Apple App Review riski).
 - **Gelecek:** soru havuzları (`questionPools`), ülke geneli ders kimliği (`subjects`) ve konu/zorluk etiketleri "Sınava gir" pratik modu
   (ROADMAP #4) için şimdiden üretilir; bu mod 4.2.0'da geliştirilmez.
 
@@ -409,7 +406,7 @@ ViFi-iOS/
 │   ├── App/                 # Uygulama girişi, AppDelegate, RootView, Router, AppEnvironment, NotificationRouter, NotificationPromptCoordinator
 │   ├── Core/
 │   │   ├── Models/          # ArchivePath, ArchiveItem, ExamDocument, PhoneNumber, UserProfile (+ Gender), AppNotification, NotificationAdmin, NotificationConsent, ExamQuestion, ExamConversion, ExamConversionAdmin
-│   │   ├── Services/        # Servis protokolleri, ArchiveParser, UserProfileParser, Firebase / App Store servisleri, AuthServicing, SessionStore, ProfileServicing, ProfileStore, UniversityCatalog, App Check, RecentExamsStore; bildirim: NotificationPayloadParser, InboxStore, DeviceRegistrationStore, NotificationSettingsStore, NotificationPromptHistory, NotificationEventTracker, NotificationAdminServicing, GoogleMapsConfiguration; yapılandırılmış sınav: StructuredExamServicing, FirebaseExamQuestionReader, FirebaseExamConversionService, ExamQuestionParser, ExamConversionParser, StructuredExamsRemoteSwitch
+│   │   ├── Services/        # Servis protokolleri, ArchiveParser, UserProfileParser, Firebase / App Store servisleri, AuthServicing, SessionStore, ProfileServicing, ProfileStore, UniversityCatalog, App Check, RecentExamsStore; bildirim: NotificationPayloadParser, InboxStore, DeviceRegistrationStore, NotificationSettingsStore, NotificationPromptHistory, NotificationEventTracker, NotificationAdminServicing, GoogleMapsConfiguration; yapılandırılmış sınav: StructuredExamServicing, FirebaseExamQuestionReader, FirebaseExamConversionService, ExamQuestionParser, ExamConversionParser
 │   │   └── Utilities/       # Loadable, Logger, FirstOutcome, ExamTitleParser, MathTextTokenizer, NotificationBadgeCounter (App Group rozet sayacı; uygulama + extension)
 │   ├── DesignSystem/        # IconBadge, durum görünümleri, seviye stilleri
 │   ├── Features/
@@ -582,7 +579,7 @@ swiftlint --fix
   `convertLegacyExams` (geçiş betiği), `firestore.rules` / `storage.rules` (yeni koleksiyonlar).
 - **4.2.0 iOS testleri** — `StructuredExamParserTests`, `ExamTitleParserTests` (sunucuyla aynı 16 vaka), `MathTextTokenizerTests`,
   `FormulaRenderingTests` (SwiftMath, kalkan içinde yerleşim), `QuestionContentViewTests`, `StructuredExamViewModelTests`, `ExamRoutingTests`,
-  `StructuredExamsRemoteSwitchTests`, `ConversionAdminViewModelTests`, `ExamConversionCallsTests`; arayüz: `StructuredExamUITests`, `ModerationUITests`.
+  `ConversionAdminViewModelTests`, `ExamConversionCallsTests`; arayüz: `StructuredExamUITests`, `ModerationUITests`.
 - **SwiftLint** her derlemede çalışır. `print` yerine `Logger`, Combine yerine Observation kullanımı gibi proje
   kuralları da lint ile denetlenir.
 
@@ -805,7 +802,7 @@ ayrıştırıcıları (`ExamQuestionParser`, `ExamConversionParser`, `ExamTitleP
    `-ViFiMockData` (admin ekranları için `-ViFiAdmin`) ile `TOPOLOJİ 1 › 2003 FİNAL` açılır. Geçiş betiğini emulator'de denemek: emulator'ü başlatıp
    `FIRESTORE_EMULATOR_HOST` ayarlı bir kabukta `node scripts/convert-legacy-exams.mjs --provider claude --course <ders-id>` (varsayılan dry-run; emulator'de iş
    kuyruğa verilmez).
-7. **Canlı işlem yasağı:** kural/Function yayını, Vertex etkinleştirme, `--apply` ile betik, Console'dan `config/structuredExams` yazımı yalnızca proje sahibinin açık
+7. **Canlı işlem yasağı:** kural/Function yayını, Vertex etkinleştirme, `--apply` ile betik, yalnızca proje sahibinin açık
    onayıyla yapılır; `--apply` gerçek para harcar.
 
 ### Sürüm öncesi kontrol listesi

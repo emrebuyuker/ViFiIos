@@ -64,7 +64,6 @@ extension AppEnvironment {
                 defaults: .mockSuite,
                 forcedOff: isCaptureShieldForcedOff(arguments: arguments)
             ),
-            structuredExams: StructuredExamsRemoteSwitch(reader: NoopStructuredExamsConfigReader(), defaults: .mockSuite),
             questionReader: MockExamQuestionReader(),
             conversionService: MockExamConversionService()
         )

@@ -64,8 +64,6 @@ final class AppEnvironment {
     @ObservationIgnored let locationPicker: any LocationPicking
     /// The screen-capture shield's remote switch, applied for this launch (`isEnabled`, `coverMode`).
     @ObservationIgnored let captureShield: CaptureShieldRemoteSwitch
-    /// The 4.2.0 structured-exam screen's remote switch, applied for this launch (`isEnabled`).
-    @ObservationIgnored let structuredExams: StructuredExamsRemoteSwitch
     /// Reads a structured exam's questions when its screen opens (never prefetched).
     @ObservationIgnored let questionReader: any ExamQuestionReading
     /// Admin-only AI conversion workflow of the 4.2.0 structured exams (review, publish, bulk, K15 edits).
@@ -103,7 +101,6 @@ final class AppEnvironment {
         notificationEventReporter: any NotificationEventReporting = NoopNotificationEventReporter(),
         notificationEventDefaults: UserDefaults = .standard,
         captureShield: CaptureShieldRemoteSwitch = CaptureShieldRemoteSwitch(reader: NoopCaptureShieldConfigReader()),
-        structuredExams: StructuredExamsRemoteSwitch = StructuredExamsRemoteSwitch(reader: NoopStructuredExamsConfigReader()),
         questionReader: any ExamQuestionReading = EmptyExamQuestionReader(),
         conversionService: any ExamConversionServicing = UnavailableExamConversionService()
     ) {
@@ -146,7 +143,6 @@ final class AppEnvironment {
         self.loginDiagnostics = loginDiagnostics
         self.locationPicker = locationPicker
         self.captureShield = captureShield
-        self.structuredExams = structuredExams
         self.questionReader = questionReader
         self.conversionService = conversionService
         CaptureShield.isSwitchedOn = captureShield.isEnabled
@@ -179,8 +175,6 @@ final class AppEnvironment {
             forcedOff: isCaptureShieldForcedOff(arguments: arguments)
         )
         captureShield.start()
-        let structuredExams = StructuredExamsRemoteSwitch(reader: FirebaseStructuredExamsConfigReader())
-        structuredExams.start()
         return AppEnvironment(
             repository: repository,
             fileLoader: RemoteFileLoader(authorizer: authorizer),
@@ -207,7 +201,6 @@ final class AppEnvironment {
             loginDiagnostics: FirebaseLoginDiagnosticsService(),
             notificationEventReporter: FirebaseNotificationEventReporter(),
             captureShield: captureShield,
-            structuredExams: structuredExams,
             questionReader: FirebaseExamQuestionReader(),
             conversionService: FirebaseExamConversionService(auth: auth)
         )

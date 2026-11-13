@@ -8,8 +8,6 @@ struct ArchiveRow: View {
     let item: ArchiveItem
     /// A locked exam shows a lock badge with the unlock cost instead of its format badge.
     var isLocked = false
-    /// Whether structured exams open as questions (the remote switch); then their row says "N soru" / "Sorular".
-    var structuredEnabled = true
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .headline) private var iconSize: CGFloat = 40
@@ -61,7 +59,7 @@ struct ArchiveRow: View {
 
     /// The question count of an exam that opens as questions, or `nil` for one that opens its pages.
     private func questionCount(of exam: ExamSummary) -> Int? {
-        guard structuredEnabled, let count = exam.questionCount, count > 0 else { return nil }
+        guard let count = exam.questionCount, count > 0 else { return nil }
         return count
     }
 
@@ -97,7 +95,6 @@ struct ArchiveRow: View {
 ///
 /// Carries the `row.<name>` accessibility identifier used by UI tests.
 struct ArchiveNavigationRow: View {
-    @Environment(AppEnvironment.self) private var environment
     let item: ArchiveItem
     /// A locked exam does not navigate; tapping it runs `onLockedTap` (to offer unlocking).
     var isLocked = false
@@ -107,12 +104,12 @@ struct ArchiveNavigationRow: View {
         Group {
             if isLocked {
                 Button(action: onLockedTap) {
-                    ArchiveRow(item: item, isLocked: true, structuredEnabled: environment.structuredExams.isEnabled)
+                    ArchiveRow(item: item, isLocked: true)
                 }
                 .accessibilityHint("Kilitli; açmak için dokun")
-            } else if let route = item.route(structuredEnabled: environment.structuredExams.isEnabled) {
+            } else if let route = item.route() {
                 NavigationLink(value: route) {
-                    ArchiveRow(item: item, structuredEnabled: environment.structuredExams.isEnabled)
+                    ArchiveRow(item: item)
                 }
             } else {
                 // A disabled button (rather than plain content) tells VoiceOver and UI tests
@@ -151,11 +148,11 @@ struct LockBadge: View {
 
 extension ArchiveItem {
     /// Where tapping the entry leads; `nil` for an exam without files. A structured exam opens the question
-    /// screen while its remote switch is on (`ExamRouting`).
-    func route(structuredEnabled: Bool) -> Route? {
+    /// screen (`ExamRouting`).
+    func route() -> Route? {
         guard level == .exam else { return .browse(path) }
         return exam.map {
-            ExamRouting.route(for: path, kind: $0.kind, questionCount: $0.questionCount, structuredEnabled: structuredEnabled)
+            ExamRouting.route(for: path, kind: $0.kind, questionCount: $0.questionCount)
         }
     }
 }
