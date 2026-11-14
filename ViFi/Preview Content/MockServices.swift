@@ -66,7 +66,8 @@ extension AppEnvironment {
             ),
             questionReader: MockExamQuestionReader(),
             conversionService: MockExamConversionService(),
-            submitterReader: MockSubmitterProfileReader()
+            submitterReader: MockSubmitterProfileReader(),
+            subjectMappingService: MockSubjectMappingService()
         )
         // `-ViFiOpenNotification <id>` starts as if the push of that notification had been tapped.
         if let tapped = openedNotificationId(arguments: arguments) {

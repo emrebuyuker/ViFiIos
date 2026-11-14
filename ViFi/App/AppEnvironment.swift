@@ -70,6 +70,8 @@ final class AppEnvironment {
     @ObservationIgnored let questionReader: any ExamQuestionReading
     /// Admin-only AI conversion workflow of the 4.2.0 structured exams (review, publish, bulk, K15 edits).
     @ObservationIgnored let conversionService: any ExamConversionServicing
+    /// Admin-only subject mapping (P5): review and fix which country-wide subject each course belongs to.
+    @ObservationIgnored let subjectMappingService: any SubjectMappingServicing
 
     init(
         repository: any ArchiveRepository,
@@ -105,7 +107,8 @@ final class AppEnvironment {
         captureShield: CaptureShieldRemoteSwitch = CaptureShieldRemoteSwitch(reader: NoopCaptureShieldConfigReader()),
         questionReader: any ExamQuestionReading = EmptyExamQuestionReader(),
         conversionService: any ExamConversionServicing = UnavailableExamConversionService(),
-        submitterReader: any SubmitterProfileReading = NoopSubmitterProfileReader()
+        submitterReader: any SubmitterProfileReading = NoopSubmitterProfileReader(),
+        subjectMappingService: any SubjectMappingServicing = UnavailableSubjectMappingService()
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -148,6 +151,7 @@ final class AppEnvironment {
         self.captureShield = captureShield
         self.questionReader = questionReader
         self.conversionService = conversionService
+        self.subjectMappingService = subjectMappingService
         self.submitterReader = submitterReader
         CaptureShield.isSwitchedOn = captureShield.isEnabled
     }
@@ -207,7 +211,8 @@ final class AppEnvironment {
             captureShield: captureShield,
             questionReader: FirebaseExamQuestionReader(),
             conversionService: FirebaseExamConversionService(auth: auth),
-            submitterReader: FirebaseSubmitterProfileReader()
+            submitterReader: FirebaseSubmitterProfileReader(),
+            subjectMappingService: FirebaseSubjectMappingService()
         )
     }
 

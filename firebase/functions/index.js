@@ -394,6 +394,12 @@ import {
   requestExamConversionHandler,
   updatePublishedQuestionHandler,
 } from './conversions/admin.js';
+import {
+  listSubjectsHandler,
+  mergeSubjectsHandler,
+  renameSubjectHandler,
+  setCourseSubjectHandler,
+} from './conversions/subjectsAdmin.js';
 
 /** The Cloud Tasks queue of the AI pipeline's task function (`processExamConversion`, europe-west1). */
 const CONVERSION_QUEUE = 'locations/europe-west1/functions/processExamConversion';
@@ -461,4 +467,21 @@ export const updatePublishedQuestion = onCall({ region: 'europe-west1' }, (reque
 
 export const regeneratePublishedQuestion = onCall({ region: 'europe-west1' }, (request) =>
   regeneratePublishedQuestionHandler(notificationDeps, request)
+);
+
+// Admin subject mapping (P5; conversions/subjectsAdmin.js).
+export const listSubjects = onCall({ region: 'europe-west1', timeoutSeconds: 120 }, (request) =>
+  listSubjectsHandler(notificationDeps, request)
+);
+
+export const setCourseSubject = onCall({ region: 'europe-west1', timeoutSeconds: 300 }, (request) =>
+  setCourseSubjectHandler(notificationDeps, request)
+);
+
+export const renameSubject = onCall({ region: 'europe-west1' }, (request) =>
+  renameSubjectHandler(notificationDeps, request)
+);
+
+export const mergeSubjects = onCall({ region: 'europe-west1', timeoutSeconds: 540 }, (request) =>
+  mergeSubjectsHandler(notificationDeps, request)
 );

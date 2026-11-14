@@ -154,6 +154,15 @@ export const JOB_ID_PATTERN = /^(exam|sub)-[A-Za-z0-9_-]{1,700}$/;
  * pdfs/ (never files an exam document still references). Subject change (K21): publishing with a different
  * `subjectId` / `newSubjectName` than the course's current one moves ALL of that course's published questions and
  * their pool entries to the new subject.
+ *
+ * Subject mapping admin (P5, `conversions/subjectsAdmin.js`; all admin-only, idempotent, reuse `moveCourseSubject`):
+ * - listSubjects {} → { subjects: [{ id, name, aliases, courseCount, questionCount, courses: [{ id, name, universityId,
+ *     universityName, facultyName, departmentName, questionCount }] }], truncated } — reads `subjects` (≤ 2000) and the
+ *     course nodes that carry a `subjectId` (≤ 5000); `truncated` is true when either limit was hit.
+ * - setCourseSubject { courseId, subjectId | newSubjectName } → { subjectId, subjectName, moved }
+ * - renameSubject { subjectId, name } → { subjectId, name } (the old name stays matchable as an alias)
+ * - mergeSubjects { fromSubjectId, intoSubjectId } → { moved: <courses>, merged } (every course of `from` moves into
+ *     `into`, `from`'s id / name / aliases become `into`'s aliases, `from` is deleted; a repeat is a no-op).
  */
 export const CALLABLES = Object.freeze([
   'requestExamConversion',
@@ -164,6 +173,10 @@ export const CALLABLES = Object.freeze([
   'discardExamConversion',
   'updatePublishedQuestion',
   'regeneratePublishedQuestion',
+  'listSubjects',
+  'setCourseSubject',
+  'renameSubject',
+  'mergeSubjects',
 ]);
 
 /**
