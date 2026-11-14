@@ -12,11 +12,11 @@ struct PracticeSessionViewModelTests {
 
     // MARK: - Start and prefetch
 
-    @Test("Starting shows the first question, prefetches the next and reports the start once")
+    @Test("Starting shows the first question, prefetches the next (Premium) and reports the start once")
     func startAndPrefetch() async {
         let service = StubPracticeService(results: [
-            .batch(PracticeFixture.batch(ids: ["e1-001"], remaining: 4)),
-            .batch(PracticeFixture.batch(ids: ["e1-002"], remaining: 3)),
+            .batch(PracticeFixture.batch(ids: ["e1-001"], remaining: nil)),
+            .batch(PracticeFixture.batch(ids: ["e1-002"], remaining: nil)),
         ])
         let viewModel = makeViewModel(service)
 
@@ -36,9 +36,9 @@ struct PracticeSessionViewModelTests {
     @Test("The next question is the prefetched one and the following request excludes everything seen")
     func nextUsesThePrefetch() async {
         let service = StubPracticeService(results: [
-            .batch(PracticeFixture.batch(ids: ["e1-001"], remaining: 4)),
-            .batch(PracticeFixture.batch(ids: ["e1-002"], remaining: 3)),
-            .batch(PracticeFixture.batch(ids: ["e1-003"], remaining: 2)),
+            .batch(PracticeFixture.batch(ids: ["e1-001"], remaining: nil)),
+            .batch(PracticeFixture.batch(ids: ["e1-002"], remaining: nil)),
+            .batch(PracticeFixture.batch(ids: ["e1-003"], remaining: nil)),
         ])
         let viewModel = makeViewModel(service)
         await viewModel.start()
@@ -74,8 +74,8 @@ struct PracticeSessionViewModelTests {
 
     // MARK: - Free limit and Premium
 
-    @Test("Free users see the remaining count including the prefetched question")
-    func remainingCounter() async {
+    @Test("Free users never prefetch, so leaving a session cannot spend a question they did not see")
+    func freeUsersDoNotPrefetch() async {
         let service = StubPracticeService(results: [
             .batch(PracticeFixture.batch(ids: ["e1-001"], remaining: 4)),
             .batch(PracticeFixture.batch(ids: ["e1-002"], remaining: 3)),
@@ -83,11 +83,18 @@ struct PracticeSessionViewModelTests {
         let viewModel = makeViewModel(service)
 
         await viewModel.start()
-        await waitForRequests(service, count: 2)
         await settleTasks()
+        try? await Task.sleep(for: .milliseconds(50))
 
-        // 5 free per day: one on screen, one prefetched, so 4 are left from the user's point of view.
+        #expect(service.requests.count == 1)
+        // 5 free per day, one on screen: 4 left.
         #expect(viewModel.remainingToday == 4)
+
+        await viewModel.next()
+        #expect(viewModel.current?.id == "e1-002")
+        #expect(viewModel.remainingToday == 3)
+        #expect(service.requests.count == 2)
+        #expect(service.requests[1].exclude == ["e1-001"])
     }
 
     @Test("Premium has no counter")
@@ -108,7 +115,6 @@ struct PracticeSessionViewModelTests {
         ])
         let viewModel = makeViewModel(service)
         await viewModel.start()
-        await waitForRequests(service, count: 2)
 
         await viewModel.next()
         #expect(viewModel.current?.id == "e1-002")

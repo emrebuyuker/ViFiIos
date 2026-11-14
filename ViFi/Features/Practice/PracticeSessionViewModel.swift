@@ -2,12 +2,13 @@ import Foundation
 import Observation
 import OSLog
 
-/// One practice session: questions one at a time from the server, with the next one fetched ahead so the callable's
-/// latency stays hidden. No right/wrong tracking and no end summary (owner decisions P2, P3).
+/// One practice session: questions one at a time from the server. No right/wrong tracking and no end summary (owner
+/// decisions P2, P3).
 ///
-/// The server counts the free daily limit when it *delivers* a question, so the prefetched next question is already
-/// counted: the "Bugün kalan" figure adds it back until the user reaches it. `exclude` carries the session's seen
-/// ids (newest 300), so nothing repeats until the pool is exhausted and the user starts over.
+/// Premium fetches the next question ahead so the callable's latency stays hidden. Free users do not: the server counts
+/// the daily limit when it *delivers* a question, so a prefetched question the user never reaches (they leave the
+/// session) would spend one of their 5 daily questions for nothing. `exclude` carries the session's seen ids (newest
+/// 300), so nothing repeats until the pool is exhausted and the user starts over.
 @Observable
 final class PracticeSessionViewModel {
     enum Phase: Equatable {
@@ -30,7 +31,7 @@ final class PracticeSessionViewModel {
 
     @ObservationIgnored private let service: any PracticeServicing
     @ObservationIgnored private let analytics: any AnalyticsTracking
-    /// Delivered but not yet shown (at most the one prefetched question).
+    /// Delivered but not yet shown (at most the one prefetched question; Premium only).
     @ObservationIgnored private var queue: [PracticeQuestion] = []
     @ObservationIgnored private var seenIds: [String] = []
     /// The free questions left today as the server last reported it; `nil` for Premium or before the first answer.
@@ -53,7 +54,8 @@ final class PracticeSessionViewModel {
         poolSize = selection.poolCount
     }
 
-    /// The free questions the user still has today, counting the prefetched one; `nil` for Premium (no counter).
+    /// The free questions the user still has today; `nil` for Premium (no counter). Free users never hold a
+    /// prefetched question, so `queue` is empty for them; it is added for safety.
     var remainingToday: Int? {
         serverRemaining.map { $0 + queue.count }
     }
@@ -151,8 +153,9 @@ final class PracticeSessionViewModel {
         analytics.track(.practiceLimitReached)
     }
 
+    /// Premium only: after the first answer `serverRemaining` is `nil` for Premium and a number for free users.
     private func startPrefetch() {
-        guard prefetchTask == nil, queue.isEmpty, !isLimitHit, !isPoolDone else { return }
+        guard serverRemaining == nil, prefetchTask == nil, queue.isEmpty, !isLimitHit, !isPoolDone else { return }
         prefetchTask = Task { [weak self] in
             await self?.fetchOne()
             self?.prefetchTask = nil
