@@ -10,8 +10,9 @@
 // - `examConversions/{jobId}`               admin read, server write — one AI job per exam (legacy) or submission.
 // - `examConversions/{jobId}/questions/{n}` the draft questions; admins read and edit the editable fields.
 // - `questions/{examId}-{nnn}`              the published, flat questions (+90 users and admins read; server writes).
-// - `questionPools/{poolId}`                question-id pools for the future practice mode (server writes).
+// - `questionPools/{poolId}`                question-id pools for the practice mode (server writes).
 // - `subjects/{subjectId}`                  country-wide course identities `{ name, aliases[] }` (server writes).
+// - `questionPoolIndex/{subjectId}`         practice-mode pool counts per type and scope (server writes; PRACTICE MODE).
 // - `aiUsage/{YYYY-MM}`                     monthly AI spend for the $50 cap (server only).
 // Storage: `questionFigures/{jobId}/{nnn}-{k}[-r{revision}].jpg` (server writes, +90 users and admins get one file at a time).
 //
@@ -173,26 +174,36 @@ export const CALLABLES = Object.freeze([
  * `questionPoolIndex/<subjectId>` = `{ subjectId, name, types: { <practice examType>: { tr: n, "u-<universityId>": n,
  * "c-<courseId>": n } }, updatedAt }` (1 read) to show the "Sınava gir" button (only when the course has ≥1 question in
  * any scope — data-driven, no remote switch) and the per-type / per-scope counts. Written by the server in the same
- * transaction as the pools (publish, K21 subject move, exam deletion cleanup); +90 users and admins read it.
+ * transaction as the pools (publish, K21 subject move, exam deletion cleanup; `conversions/poolIndex.js`); +90 users
+ * and admins read it. Only scopes with n ≥ 1 are listed, a type without any is left out, and a subject without any
+ * practice question has NO index document. `scripts/rebuild-pool-index.mjs` builds it once for earlier pools.
  * All scopes are shown even with a single question (P4).
  *
- * Questions are handed out by a callable so the free daily limit cannot be bypassed:
+ * Questions are handed out by a callable so the free daily limit cannot be bypassed (europe-west1, signed-in +90
+ * users; App Check as the other callables):
  * - nextPracticeQuestions { subjectId, examType, scope: 'course'|'university'|'tr', courseId?, universityId?,
- *     exclude: [questionId ≤ 300], count: 1…10, subscriptionProof? }
- *   → { questions: [published question shape, Ek A, ids `<examId>-<nnn>` + `examTitle`, `universityName`],
- *       poolSize, remainingToday: number | null (null = Premium, unlimited), limitReached: bool }
- *   Random questions from the pool minus `exclude` (the session's seen ids); an exhausted pool returns [] (the app
- *   starts over by clearing `exclude`). Free users: PRACTICE_FREE_DAILY_LIMIT questions per Istanbul calendar day,
- *   counted per account in `users/<uid>/practice/daily` = `{ day: 'YYYY-MM-DD', count }` (server-only write, owner read),
- *   decremented per question delivered (a re-delivered id within the same day is not counted twice — keep
- *   `seenToday: [ids]` ≤ 50 on the doc). Premium: no counter. Unlimited session length (P2); no right/wrong tracking (P3).
+ *     exclude: [questionId ≤ 300], count: 1…10 (default 1), subscriptionProof? }
+ *   → { questions: [published question shape, Ek A, + `id` (`<examId>-<nnn>`), `examTitle`, `universityName` (both
+ *       string | null); `updatedAt` as epoch ms], poolSize, remainingToday: number | null (null = Premium, unlimited),
+ *       limitReached: bool }
+ *   `courseId` is required for scope `course`, `universityId` for `university`; a non-practice `examType` (study
+ *   materials, K27) or any other bad input is `invalid-argument`; a caller without a +90 number `permission-denied`.
+ *   Random questions from the pool (all `__pN` parts; a missing pool = `poolSize: 0`) minus `exclude` (the session's
+ *   seen ids); an exhausted pool returns [] (the app starts over by clearing `exclude`). Free users:
+ *   PRACTICE_FREE_DAILY_LIMIT questions per Istanbul calendar day (00:00 Europe/Istanbul), counted per account in
+ *   `users/<uid>/practice/daily` = `{ day: 'YYYY-MM-DD', count, seenToday: [ids], updatedAt }` (server-only write,
+ *   owner read), counted per question delivered; a re-delivered id within the same day is not counted twice
+ *   (`seenToday`, the day's last ≤ 50 ids) and is still delivered after the allowance is used up.
+ *   `limitReached` = `remainingToday === 0` (no NEW question today → the app shows the paywall when it needs more).
+ *   Premium: no counter. Unlimited session length (P2); no right/wrong tracking (P3).
  * - Premium proof: the subscription lives in StoreKit / Play, so the client sends `subscriptionProof`
  *   (`{ platform: 'ios', jws }` = the current StoreKit 2 entitlement's signed transaction; Android later
- *   `{ platform: 'android', purchaseToken, productId }`). The server verifies it (appStore.js / googlePlay.js helpers),
- *   checks product ∈ subscription products, not revoked, `expiresDate` > now, and caches the result in
- *   `subscriptions/<uid>` = `{ platform, productId, originalTransactionId, expiresAt, verifiedAt }` so later calls skip
- *   re-verification until `expiresAt`. No proof / invalid proof → free rules.
- * Account deletion removes `users/<uid>/practice/*` (and `subscriptions/<uid>` already).
+ *   `{ platform: 'android', purchaseToken, productId }`). The server verifies it (appStore.js
+ *   `verifySubscriptionTransaction`; Android is not verified yet and counts as free), checks product ∈ subscription
+ *   products, not revoked, `expiresDate` > now, and caches the result in `subscriptions/<uid>` = `{ platform,
+ *   productId, originalTransactionId, expiresAt, verifiedAt }` so later calls skip re-verification (and the proof)
+ *   until `expiresAt`. No proof / invalid proof / store error → free rules (never an error).
+ * Account deletion removes `users/<uid>/practice/*` (with `users/<uid>`) and `subscriptions/<uid>`.
  */
 export const PRACTICE_FREE_DAILY_LIMIT = 5;
 export const PRACTICE_MAX_BATCH = 10;

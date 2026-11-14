@@ -4,7 +4,7 @@
 //
 // Deleted ("Hemen silinir" / "En geç 30 gün içinde silinir"):
 // - Firestore `users/{uid}` with every subcollection: unlocked exams ("açılan sınav kayıtları"), notification
-//   inbox, registered devices, notification settings.
+//   inbox, registered devices, notification settings, the practice-mode daily allowance (`practice/daily`, 4.2.0).
 // - `wallets/{uid}` with its `ledger` ("Coin bakiyesi").
 // - `subscriptions/{uid}` (entitlement state keyed by the account).
 // - The user's still-pending submissions ("Onay bekleyen sınav gönderimleri") and every file under

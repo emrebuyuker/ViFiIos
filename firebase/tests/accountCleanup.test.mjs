@@ -1,8 +1,8 @@
 // The account-deletion cleanup (`functions/accountCleanup.js`) against the Firestore, Realtime Database and Storage
 // emulators: what a deleted account loses (per-user Firestore data, wallet + ledger, subscription, pending
-// submissions and their uploads, the RTDB profile, notification statistics markers), what is kept (published archive,
-// reviewed submissions, anonymous notification counters, other users) or only unlinked (consumed purchase
-// transactions), idempotent re-runs, partial failures and the uid guard.
+// submissions and their uploads, the RTDB profile, notification statistics markers, the practice-mode daily
+// allowance), what is kept (published archive, reviewed submissions, anonymous notification counters, other users) or
+// only unlinked (consumed purchase transactions), idempotent re-runs, partial failures and the uid guard.
 
 import { test, before, after, beforeEach, describe, mock } from 'node:test';
 import assert from 'node:assert/strict';
@@ -75,6 +75,8 @@ async function seedUser(uid) {
   writer.set(user.collection('devices').doc('d-1'), { token: `tok-${uid}`, platform: 'ios', appVersion: '4.1.0', updatedAt: new Date() });
   writer.set(user.collection('settings').doc('notifications'), { marketing: true, source: 'prompt', version: 1, updatedAt: new Date() });
   writer.set(user.collection('settings').doc('inbox'), { readAt: new Date() });
+  // Practice mode's daily allowance (4.2.0, `nextPracticeQuestions`).
+  writer.set(user.collection('practice').doc('daily'), { day: '2026-11-14', count: 3, seenToday: ['e-001'], updatedAt: new Date() });
   writer.set(db.collection('wallets').doc(uid), { balance: 150, updatedAt: new Date() });
   writer.set(db.collection('wallets').doc(uid).collection('ledger').doc('sub-1'), { type: 'earn', amount: 50, createdAt: new Date() });
   writer.set(db.collection('subscriptions').doc(uid), { active: true });
@@ -131,6 +133,9 @@ async function userCollections(uid) {
 /** Asserts the state after `GONE` was cleaned up and `STAY` was left alone. */
 async function assertCleanedUp() {
   assert.deepEqual(await userCollections(GONE), []);
+  // The practice allowance goes with `users/<uid>` (4.2.0); another user's stays.
+  assert.equal(await exists(db.collection('users').doc(GONE).collection('practice').doc('daily')), false);
+  assert.equal((await db.collection('users').doc(STAY).collection('practice').doc('daily').get()).get('count'), 3);
   assert.equal(await exists(db.collection('wallets').doc(GONE)), false);
   assert.equal((await db.collection('wallets').doc(GONE).collection('ledger').get()).size, 0);
   assert.equal(await exists(db.collection('subscriptions').doc(GONE)), false);
@@ -154,7 +159,7 @@ async function assertCleanedUp() {
   assert.equal((await db.collection('submissions').doc('s-approved').get()).get('ownerId'), GONE);
   assert.equal((await db.collection('submissions').doc('s-rejected').get()).get('ownerId'), GONE);
   assert.equal(await exists(db.collection('submissions').doc('s-other')), true);
-  assert.deepEqual(await userCollections(STAY), ['devices', 'inbox', 'settings', 'unlocks']);
+  assert.deepEqual(await userCollections(STAY), ['devices', 'inbox', 'practice', 'settings', 'unlocks']);
   assert.equal((await db.collection('wallets').doc(STAY).get()).get('balance'), 150);
   assert.equal((await db.collection('wallets').doc(STAY).collection('ledger').get()).size, 1);
   assert.equal(await exists(db.collection('subscriptions').doc(STAY)), true);
@@ -212,7 +217,7 @@ describe('deleteAccountData', () => {
     for (const uid of ['', `${GONE}/unlocks`, '..', 'a.b', undefined]) {
       assert.deepEqual(await cleanup.deleteAccountData({ db, rtdb, bucket }, uid), { skipped: 'unsupported-uid' });
     }
-    assert.deepEqual(await userCollections(GONE), ['devices', 'inbox', 'settings', 'unlocks']);
+    assert.deepEqual(await userCollections(GONE), ['devices', 'inbox', 'practice', 'settings', 'unlocks']);
     assert.equal(await exists(db.collection('submissions').doc('s-pending')), true);
     assert.equal((await filesUnder(`pending/${GONE}/`)).length, PENDING_FILES.length);
     assert.equal(await exists(eventMarker('n-1', `${GONE}_opened`)), true);

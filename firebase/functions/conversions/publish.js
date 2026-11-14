@@ -16,7 +16,8 @@
 //   so 4.1.0 and Android still show the original pages) and its list title (K28: `title` + `sortKey`, the admin's
 //   `examTitle` or the job's `placement.suggestedTitle`; neither → `failed-precondition`; the exam id never changes);
 // - the practice pools (`questionPools`, scopes tr / u- / c-, split into `__pN` parts) gain the new ids and lose the
-//   removed ones; the subject (`subjects/<id>` + `catalogNodes/<courseId>.subjectId`) is resolved or created;
+//   removed ones, and the subjects' practice index (`questionPoolIndex/<subjectId>`, poolIndex.js) gets the new
+//   counts — also in the K21 move and the exam-deletion cleanup, always in the pools' own transaction; the subject (`subjects/<id>` + `catalogNodes/<courseId>.subjectId`) is resolved or created;
 // - the job becomes `published` and the submission gets `publishedExamId`.
 // Then, for a NEW exam from a submission, the department's "new exam" notice goes out (moved here from the first
 // approval). The uploader gets nothing here (K19): their only notice is the first approval's coins notice.
@@ -49,6 +50,7 @@ import {
 } from './schema.js';
 import { slug } from './slug.js';
 import { resolveSubject, subjectKey } from './subjects.js';
+import { readPoolIndexes, writePoolIndexes } from './poolIndex.js';
 import { DRAFTS, JOBS, cleanFiles, isPlainObject, text } from './jobs.js';
 import { deleteUnreferencedArchiveFiles } from './files.js';
 import { notifyNewExam } from '../notifications/automatic.js';
@@ -136,6 +138,7 @@ export async function publishExamConversionHandler(deps, request) {
       ...existingQuestions.map((doc) => ({ id: doc.id, keys: doc.data(), remove: true })),
       ...questions.map(({ id, data }) => ({ id, keys: data, remove: false })),
     ]);
+    const poolIndexes = await readPoolIndexes(transaction, db, pools, subject ? { [subject.id]: subject.name } : {});
 
     // --- Writes ---
     if (target.replace) {
@@ -159,7 +162,7 @@ export async function publishExamConversionHandler(deps, request) {
     if (subject) writeSubject(transaction, db, subject, target, now);
     for (const doc of existingQuestions) if (!keptIds.has(doc.id)) transaction.delete(doc.ref);
     for (const { id, data } of questions) transaction.set(db.collection('questions').doc(id), data);
-    writePools(transaction, db, pools, now);
+    writePoolIndexes(transaction, poolIndexes, writePools(transaction, db, pools, now), now);
     transaction.update(jobRef, {
       status: 'published',
       publishedAt: now,
@@ -584,9 +587,13 @@ export async function readPools(transaction, db, changes) {
  * Applies the pools' changes: removed ids leave every part (an id both removed and added stays), new ids fill the
  * parts in order and open the next `__pN` part when one is full. Only changed parts are written; an emptied last
  * part is deleted.
+ *
+ * @returns {Map<string, { spec: object, count: number }>} every touched pool's question count after the change (all
+ *   parts), for the practice index (`writePoolIndexes`, poolIndex.js).
  */
 export function writePools(transaction, db, pools, now) {
-  for (const pool of pools.values()) {
+  const totals = new Map();
+  for (const [base, pool] of pools.entries()) {
     const existingParts = pool.parts.filter((part) => part.ids !== null);
     const present = new Set(existingParts.flatMap((part) => part.ids));
     const next = existingParts.map((part) => ({
@@ -632,7 +639,9 @@ export function writePools(transaction, db, pools, now) {
         updatedAt: now,
       });
     });
+    totals.set(base, { spec: pool.spec, count: next.reduce((sum, part) => sum + part.ids.length, 0) });
   }
+  return totals;
 }
 
 // MARK: - Subject change of a course (K21)
@@ -661,7 +670,8 @@ export async function moveCourseSubject(deps, jobId, { courseId, toSubjectId }) 
         { id: snapshot.id, keys: snapshot.data(), remove: true },
         { id: snapshot.id, keys: { ...snapshot.data(), subjectId: toSubjectId }, remove: false },
       ]));
-      writePools(transaction, db, pools, now);
+      const poolIndexes = await readPoolIndexes(transaction, db, pools);
+      writePoolIndexes(transaction, poolIndexes, writePools(transaction, db, pools, now), now);
       for (const snapshot of snapshots) transaction.update(snapshot.ref, { subjectId: toSubjectId });
       return snapshots.length;
     });
@@ -861,7 +871,8 @@ export async function deleteStructuredExamData(deps, examId, { jobIds = [] } = {
   const questions = await db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(db.collection('questions').where('examId', '==', examId));
     const pools = await readPools(transaction, db, snapshot.docs.map((doc) => ({ id: doc.id, keys: doc.data(), remove: true })));
-    writePools(transaction, db, pools, now);
+    const poolIndexes = await readPoolIndexes(transaction, db, pools);
+    writePoolIndexes(transaction, poolIndexes, writePools(transaction, db, pools, now), now);
     for (const doc of snapshot.docs) transaction.delete(doc.ref);
     return snapshot.size;
   });

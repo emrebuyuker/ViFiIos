@@ -604,3 +604,43 @@ describe('Firestore rules — structured exams (4.2.0: questions, pools, subject
     }
   });
 });
+
+describe('Firestore rules — practice mode (4.2.0: pool index, daily allowance)', () => {
+  beforeEach(async () => {
+    await env.clearFirestore();
+    await env.withSecurityRulesDisabled(async (context) => {
+      const seed = context.firestore();
+      await seed.collection('questionPoolIndex').doc('mat').set({
+        subjectId: 'mat', name: 'Matematik', types: { final: { tr: 3, 'u-ege': 2, 'c-ege__mat': 1 } }, updatedAt: new Date(),
+      });
+      await seed.collection('users').doc(users.alice.uid).collection('practice').doc('daily')
+        .set({ day: '2026-11-14', count: 2, seenToday: ['e1-001', 'e1-002'], updatedAt: new Date() });
+    });
+  });
+
+  test('+90 users and admins read the pool index; nobody writes it from a client', async () => {
+    for (const user of [users.alice, users.admin]) {
+      const fs = db(user);
+      await assertSucceeds(fs.collection('questionPoolIndex').doc('mat').get());
+      await assertFails(fs.collection('questionPoolIndex').doc('mat').update({ types: {} }));
+      await assertFails(fs.collection('questionPoolIndex').doc('new').set({ subjectId: 'new', name: 'X', types: {} }));
+      await assertFails(fs.collection('questionPoolIndex').doc('mat').delete());
+    }
+    for (const user of [users.usPhone, users.emailOnly, users.shortTrPhone, null]) {
+      await assertFails(db(user).collection('questionPoolIndex').doc('mat').get());
+    }
+  });
+
+  test('the owner reads their daily allowance but cannot write or reset it; others cannot read it', async () => {
+    const own = db(users.alice).collection('users').doc(users.alice.uid).collection('practice').doc('daily');
+    await assertSucceeds(own.get());
+    await assertFails(own.set({ day: '2026-11-14', count: 0, seenToday: [] }));
+    await assertFails(own.update({ count: 0 }));
+    await assertFails(own.delete());
+    await assertFails(db(users.alice).collection('users').doc(users.alice.uid).collection('practice').doc('other').set({ x: 1 }));
+    for (const user of [users.bob, users.usPhone, null]) {
+      await assertFails(db(user).collection('users').doc(users.alice.uid).collection('practice').doc('daily').get());
+    }
+    await assertFails(db(users.bob).collection('users').doc(users.alice.uid).collection('practice').doc('daily').set({ count: 0 }));
+  });
+});

@@ -462,3 +462,23 @@ export const updatePublishedQuestion = onCall({ region: 'europe-west1' }, (reque
 export const regeneratePublishedQuestion = onCall({ region: 'europe-west1' }, (request) =>
   regeneratePublishedQuestionHandler(notificationDeps, request)
 );
+
+// --- Practice mode ("Sınava gir", 4.2.0; contract: conversions/schema.js PRACTICE MODE) ------------------------------
+
+import { nextPracticeQuestionsHandler } from './conversions/practice.js';
+import { verifySubscriptionTransaction } from './appStore.js';
+
+// Live dependencies of the practice callable. The Premium proof: iOS sends the current StoreKit 2 entitlement's
+// signed transaction (verified with Apple's chain, appStore.js). Android (`{ platform: 'android', purchaseToken,
+// productId }`) is not verified yet — googlePlay.js has no subscription lookup — so it counts as "not Premium".
+// TODO(Android practice): verify Play subscriptions (purchases.subscriptionsv2.get) and return the same payload shape.
+const practiceDeps = {
+  db,
+  now: () => new Date(),
+  verifySubscriptionProof: async (proof) => (proof.platform === 'ios' ? verifySubscriptionTransaction(proof.jws) : null),
+};
+
+// Signed-in +90 users: random practice questions from a pool; free users get PRACTICE_FREE_DAILY_LIMIT a day.
+export const nextPracticeQuestions = onCall({ region: 'europe-west1' }, (request) =>
+  nextPracticeQuestionsHandler(practiceDeps, request)
+);
