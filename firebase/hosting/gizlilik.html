@@ -24,10 +24,10 @@
   <table>
     <tr><th>Veri</th><th>Neden?</th></tr>
     <tr><td>Telefon numarası</td><td>SMS koduyla giriş yapman ve hesabının oluşturulması için.</td></tr>
-    <tr><td>Ad, soyad, cinsiyet, üniversite, fakülte, bölüm</td><td>Profilinin oluşturulması, sana uygun içeriğin gösterilmesi ve bildirimlerin ilgili öğrencilere (ör. yalnızca bir bölüme) gönderilebilmesi için.</td></tr>
+    <tr><td>Ad, soyad, cinsiyet, üniversite, fakülte, bölüm</td><td>Profilinin oluşturulması, sana uygun içeriğin gösterilmesi ve bildirimlerin ilgili öğrencilere (ör. yalnızca bir bölüme) gönderilebilmesi için. Sınav gönderdiğinde adın, soyadın, üniversiten, fakülten ve bölümün gönderimi inceleyen ViFi yöneticilerine gösterilir; telefon numaran gösterilmez.</td></tr>
     <tr><td>Kullanıcı kimliği (Firebase)</td><td>Hesabının, coin bakiyenin ve açtığın sınavların sana bağlanması için.</td></tr>
     <tr><td>Abonelik ve uygulama içi satın alma kayıtları</td><td>Aboneliğinin ve satın alarak açtığın sınavların hesabına tanımlanması için. Ödemeler satın aldığın mağaza (iOS'ta App Store, Android'de Google Play) üzerinden işlenir; kart veya banka bilgilerin bize iletilmez ve bizde saklanmaz. Satın almanın geçerliliği, mağazanın verdiği işlem bilgisiyle sunucumuzda doğrulanır.</td></tr>
-    <tr><td>Gönderdiğin sınav dosyaları</td><td>İnceleme sonrası arşive eklenmesi için. Göndermek isteğe bağlıdır.</td></tr>
+    <tr><td>Gönderdiğin sınav dosyaları</td><td>İnceleme sonrası arşive eklenmesi ve sorularının yapay zekâ ile tek tek gösterilecek şekilde hazırlanması için (bkz. <a href="#yapay-zeka">Yapay zekâ ile soru hazırlama</a>). Göndermek isteğe bağlıdır.</td></tr>
     <tr><td>Uygulama kullanım olayları (ör. açılan ekran, açılan sınav türü)</td><td>Uygulamanın nasıl kullanıldığını anlamak ve geliştirmek için (Google Analytics).</td></tr>
     <tr><td>Bildirim anahtarı ve cihaz kaydı (uygulamanın bu kurulumuna özgü kimlik, platform, uygulama sürümü)</td><td>Bildirimleri hesabına kayıtlı cihazlarına iletebilmek için. Çıkış yaptığında ya da hesabını sildiğinde o cihazın kaydı silinir.</td></tr>
     <tr><td>Uygulama ve cihaz doğrulama bilgileri</td><td>Uygulamayı kötüye kullanıma karşı korumak için.</td></tr>
@@ -48,6 +48,16 @@
     <strong>Hesap › Bildirim Ayarları</strong>'ndan istediğin an geri alabilirsin; bildirim iznini cihazının ayarlarından
     kapatabilirsin. Onay vermenin ya da vermemenin karşılığında hiçbir ödül ya da kısıtlama yoktur.</p>
 
+  <h2 id="yapay-zeka">Yapay zekâ ile soru hazırlama</h2>
+  <p>Arşivdeki sınavların sorularını tek tek ve çözümleriyle gösterebilmek için sınav sayfaları (görsel veya PDF),
+    Google Cloud'un Vertex AI hizmeti üzerinden yapay zekâ modellerine (Anthropic Claude ve Google Gemini) gönderilir.
+    Modeller sayfadaki soruları metne çevirir ve çözer; sonuç bir ViFi yöneticisi tarafından incelendikten sonra
+    yayınlanır. Bu işlemde yalnızca sınav sayfaları gönderilir; telefon numaran, adın ya da hesap bilgilerin gönderilmez.
+    Sınav kâğıdında yazılı olabilecek ad veya numara gibi bilgiler sayfanın görüntüsünde yer alabilir. Bu veriler
+    Google'ın kurumsal hizmet koşullarına göre işlenir ve modellerin eğitiminde kullanılmaz
+    (<a href="https://cloud.google.com/terms/data-processing-addendum" rel="noopener">Google Cloud Veri İşleme Ek'i</a>).
+    Sunucular yurt dışında bulunabilir.</p>
+
   <h2>Yöneticilerin harita ekranı</h2>
   <p>ViFi yöneticileri bir bildirime yer eklerken Google Haritalar ve Google Places hizmetlerini kullanır. Bu ekran
     yalnızca yöneticilere açıktır. Yönetici izin verirse harita, cihazının konumuna (Android'de yaklaşık konumuna)
@@ -60,7 +70,7 @@
   <p>Veriler, uygulamanın altyapısını sağlayan Google'ın Firebase hizmetlerinde (kimlik doğrulama, veritabanı,
     dosya depolama, bildirim, analiz) saklanır ve işlenir. Bu hizmetlerin sunucuları yurt dışında bulunabilir.
     Yöneticilerin bildirim hazırlarken kullandığı harita ekranında Google Haritalar ve Google Places hizmetleri
-    kullanılır.
+    kullanılır. Sınav sayfaları, soruların hazırlanması için Google Cloud Vertex AI hizmetinde işlenir.
     Abonelik ve uygulama içi satın alma ödemeleri, satın almayı yaptığın mağaza tarafından kendi gizlilik politikasına
     göre işlenir: iOS'ta Apple (<a href="https://www.apple.com/legal/privacy/" rel="noopener">App Store</a>), Android'de
     Google (<a href="https://policies.google.com/privacy" rel="noopener">Google Play</a>).
