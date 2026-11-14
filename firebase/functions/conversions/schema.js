@@ -51,6 +51,36 @@ const NON_PRACTICE_EXAM_TYPES = new Set(['laboratuvar', 'odev', 'proje', 'calism
  */
 export const PRACTICE_EXAM_TYPES = Object.freeze(EXAM_TYPES.filter((type) => !NON_PRACTICE_EXAM_TYPES.has(type)));
 
+/**
+ * The fixed exam-name list (owner decisions K27, K29; `ExamNameCatalog` in the app, same ids, names and order). The Add
+ * Exam flow offers only these names, and an exam converted to the structured format gets its title from this list
+ * (owner decision K28: `canonicalExamTitle` / `validateExamTitle`). `examType` is what `parseExamTitle` gives the name.
+ */
+export const EXAM_NAME_CATALOG = Object.freeze([
+  { id: 'vize', name: 'VİZE', examType: 'vize' },
+  { id: 'ara-sinav', name: 'ARA SINAV', examType: 'ara-sinav' },
+  { id: 'final', name: 'FİNAL', examType: 'final' },
+  { id: 'butunleme', name: 'BÜTÜNLEME', examType: 'butunleme' },
+  { id: 'mazeret', name: 'MAZERET', examType: 'mazeret' },
+  { id: 'tek-ders', name: 'TEK DERS', examType: 'tek-ders' },
+  { id: 'ek-sinav', name: 'EK SINAV', examType: 'ek-sinav' },
+  { id: 'yaz-okulu-vize', name: 'YAZ OKULU VİZE', examType: 'vize' },
+  { id: 'yaz-okulu-ara-sinav', name: 'YAZ OKULU ARA SINAV', examType: 'ara-sinav' },
+  { id: 'yaz-okulu-final', name: 'YAZ OKULU FİNAL', examType: 'final' },
+  { id: 'kisa-sinav', name: 'KISA SINAV', examType: 'kisa-sinav' },
+  { id: 'kisa-sinav-1', name: 'KISA SINAV 1', examType: 'kisa-sinav' },
+  { id: 'kisa-sinav-2', name: 'KISA SINAV 2', examType: 'kisa-sinav' },
+  { id: 'kisa-sinav-3', name: 'KISA SINAV 3', examType: 'kisa-sinav' },
+  { id: 'muafiyet', name: 'MUAFİYET SINAVI', examType: 'muafiyet' },
+  { id: 'seviye-tespit', name: 'SEVİYE TESPİT SINAVI', examType: 'seviye-tespit' },
+  { id: 'uygulama', name: 'UYGULAMA SINAVI', examType: 'uygulama' },
+  { id: 'laboratuvar', name: 'LABORATUVAR', examType: 'laboratuvar' },
+  { id: 'odev', name: 'ÖDEV', examType: 'odev' },
+  { id: 'proje', name: 'PROJE', examType: 'proje' },
+  { id: 'calisma-sorulari', name: 'ÇALIŞMA SORULARI', examType: 'calisma-sorulari' },
+  { id: 'cozumlu-sorular', name: 'ÇÖZÜMLÜ SORULAR', examType: 'cozumlu-sorular' },
+].map((entry) => Object.freeze(entry)));
+
 /** Practice-pool scopes (TODO-4.2.0 Ek C): country-wide, one university, one course. */
 export const POOL_SCOPES = Object.freeze(['tr', 'university', 'course']);
 
@@ -85,7 +115,7 @@ export const JOB_ID_PATTERN = /^(exam|sub)-[A-Za-z0-9_-]{1,700}$/;
  * - requestBulkConversion      { courseId | departmentId, provider, dryRun } → { examCount, estimatedCostUsd, jobIds }
  * - regenerateExamConversion   { jobId, provider }                          → { status }           (K14 re-run / failed retry)
  * - regenerateDraftQuestion    { jobId, order, provider }                   → { status }           (K8)
- * - publishExamConversion      { jobId, subjectId?, newSubjectName? }        → { examId, questionCount }  (2nd approval)
+ * - publishExamConversion      { jobId, subjectId?, newSubjectName?, examTitle? } → { examId, questionCount }  (2nd approval)
  * - discardExamConversion      { jobId }                                    → { status }           (K14 "Sınavı iptal et")
  * - updatePublishedQuestion    { questionId, text?, speech?, choices?, answer?, solution? } → { updatedAt }  (K15)
  * - regeneratePublishedQuestion { questionId, provider }                     → { status }           (K15)
@@ -110,6 +140,15 @@ export const JOB_ID_PATTERN = /^(exam|sub)-[A-Za-z0-9_-]{1,700}$/;
  * exam's `files` with the submission's copies and deletes the previous files from Storage, updates pools/subjects, and
  * discards any other active job of that exam (`exam-<examId>`). A duplicate is approved with the same two buttons; the
  * admin app shows a "Bu sınav arşivde zaten yüklü" warning.
+ *
+ * Exam title (owner decisions K28, K29, 14 Nov 2026): a converted exam's title comes from `EXAM_NAME_CATALOG` as
+ * `[<year> ]<list name>[ <1–99>]` (one 4-digit year; an academic-year range shows its second year). Job creation stores `placement.originalTitle` (the archive / submitted title)
+ * and `placement.suggestedTitle` (`canonicalExamTitle(originalTitle)?.title`, `null` when no list name matches).
+ * `publishExamConversion` uses `validateExamTitle(examTitle)` when the admin sent one, else the suggestion (a job
+ * created before K28 has no `suggestedTitle` field: it is computed at publish); neither → `failed-precondition`
+ * "Sınav adı listeden seçilmeli." The title is written to `exams/<id>.title` and `sortKey` (both are the title, as in
+ * the migration); the exam document id never changes. Published questions' `examType` / `year` are parsed from it.
+ * The submission's own `exam` text stays as submitted.
  *
  * Discard (K20): `discardExamConversion` on a `sub-` job deletes the files its first approval copied into imagess/ /
  * pdfs/ (never files an exam document still references). Subject change (K21): publishing with a different
@@ -219,16 +258,118 @@ const TYPE_KEYS = Object.freeze([
 
 /**
  * Splits an archive exam title ("2019 FİNAL", "2017-2018 VİZE", "KISA SINAV 3") into `{ examType, year }`. The
- * year is the first 19xx/20xx number (an academic-year range keeps its first year); either part is `null` when
+ * year is the first 19xx/20xx number (an academic-year range gives its second year, K29); either part is `null` when
  * absent. Mirrors `ExamTitleParser.parse` in the app.
  */
 export function parseExamTitle(title) {
   const key = slug(String(title ?? ''));
   const tokens = key.split('-');
-  const yearToken = tokens.find((token) => /^(19|20)\d{2}$/.test(token));
+  const yearToken = yearOf(tokens);
   const padded = `-${key}-`;
   const match = TYPE_KEYS.find(([, needles]) => needles.some((needle) => padded.includes(`-${needle}-`)));
   return { examType: match ? match[0] : null, year: yearToken ? Number(yearToken) : null };
+}
+
+/**
+ * The exam's year word: the first 19xx/20xx word, or the SECOND year of an academic-year range ("2017-2018" → 2018,
+ * owner decision K29); `null` when there is none.
+ */
+function yearOf(tokens) {
+  const index = tokens.findIndex((token) => /^(19|20)\d{2}$/.test(token));
+  if (index < 0) return null;
+  const next = tokens[index + 1];
+  return next !== undefined && /^(19|20)\d{2}$/.test(next) ? next : tokens[index];
+}
+
+// MARK: - Exam title → list title (K28)
+
+const ENTRY_BY_ID = Object.freeze(Object.fromEntries(EXAM_NAME_CATALOG.map((entry) => [entry.id, entry])));
+/** List entry per base exam type; summer-school vize / ara sınav / final have their own entries. */
+const ENTRY_BY_TYPE = Object.freeze(Object.fromEntries(
+  EXAM_NAME_CATALOG.filter((entry) => !entry.id.startsWith('yaz-okulu-') && !/^kisa-sinav-\d$/.test(entry.id))
+    .map((entry) => [entry.examType, entry]),
+));
+const SUMMER_ENTRY_BY_TYPE = Object.freeze(Object.fromEntries(
+  EXAM_NAME_CATALOG.filter((entry) => entry.id.startsWith('yaz-okulu-')).map((entry) => [entry.examType, entry]),
+));
+const LIST_NAME_ALTERNATION = EXAM_NAME_CATALOG.map((entry) => entry.name)
+  .sort((a, b) => b.length - a.length)
+  .join('|');
+const LIST_TITLE_PATTERN = new RegExp(`^(?:((?:19|20)\\d{2}) )?(${LIST_NAME_ALTERNATION})(?: ([1-9]\\d?))?$`, 'u');
+
+/** Index of the first occurrence of `needle` (slug words) in `tokens`, or -1. */
+function indexOfWords(tokens, needle) {
+  const words = needle.split('-');
+  for (let index = 0; index + words.length <= tokens.length; index += 1) {
+    if (words.every((word, offset) => tokens[index + offset] === word)) return index;
+  }
+  return -1;
+}
+
+/**
+ * The list title an archive title converts to (owner decision K28): `{ title, entryId, examType }`, or `null` when no
+ * list name matches. Title = year part + list name + sequence number:
+ * - year: the first 19xx/20xx word; an academic-year range ("2017-2018") gives its SECOND year (K29);
+ * - list name: the base type by `parseExamTitle`'s priority without plain "yaz okulu" (study materials first, so
+ *   "FİNAL ÇALIŞMA SORULARI" → ÇALIŞMA SORULARI; LAB → LABORATUVAR, QUIZ → KISA SINAV …); a title that also says
+ *   "yaz okulu" maps vize / ara sınav / final to the YAZ OKULU entries. "YAZ OKULU" alone has no base type → `null`;
+ * - sequence number: a 1–99 number written right after the matched type words ("QUIZ 5" → "KISA SINAV 5");
+ *   a kısa sınav numbered 1–3 takes the list's own "KISA SINAV 1/2/3" name instead (K29).
+ * Every other word (course names, "CEVAPLI" …) is dropped. Mirrors `ExamTitleParser.canonicalTitle` in the app.
+ */
+export function canonicalExamTitle(title) {
+  const tokens = slug(String(title ?? '')).split('-');
+  let match = null;
+  for (const [type, needles] of TYPE_KEYS) {
+    if (type === 'yaz-okulu') continue;
+    for (const needle of needles) {
+      const index = indexOfWords(tokens, needle);
+      if (index >= 0) {
+        match = { type, end: index + needle.split('-').length };
+        break;
+      }
+    }
+    if (match) break;
+  }
+  if (!match) return null;
+  const summer = indexOfWords(tokens, 'yaz-okulu') >= 0;
+  const entry = (summer ? SUMMER_ENTRY_BY_TYPE[match.type] : null) ?? ENTRY_BY_TYPE[match.type];
+  if (!entry) return null;
+
+  const year = yearOf(tokens);
+  const after = tokens[match.end];
+  let number = after !== undefined && /^\d{1,2}$/.test(after) && Number(after) >= 1 ? Number(after) : null;
+  // "KISA SINAV 1/2/3" are list names of their own (K29); a higher quiz number stays a sequence number.
+  const numbered = number !== null && entry.id === 'kisa-sinav' ? ENTRY_BY_ID[`kisa-sinav-${number}`] : undefined;
+  const finalEntry = numbered ?? entry;
+  if (numbered) number = null;
+  return {
+    title: [year, finalEntry.name, number].filter((part) => part !== null).join(' '),
+    entryId: finalEntry.id,
+    examType: finalEntry.examType,
+  };
+}
+
+/**
+ * Splits a list title (`[<year> ]<list name>[ <1–99>]`, year = one 19xx/20xx word, K29) into `{ year, entryId,
+ * number, title }`; `null` for anything else. Whitespace is trimmed and collapsed; the name must be written exactly
+ * as in the list (Turkish uppercase). "KISA SINAV 2" is the list name itself; a numbered list name takes no number.
+ */
+export function parseListTitle(title) {
+  if (typeof title !== 'string') return null;
+  const normalized = title.normalize('NFC').trim().replace(/\s+/gu, ' ');
+  const match = LIST_TITLE_PATTERN.exec(normalized);
+  if (!match) return null;
+  const entry = EXAM_NAME_CATALOG.find((candidate) => candidate.name === match[2]);
+  if (match[3] && /^kisa-sinav-\d$/.test(entry.id)) return null;
+  return { year: match[1] ? Number(match[1]) : null, entryId: entry.id, number: match[3] ? Number(match[3]) : null, title: normalized };
+}
+
+/** The normalised list title, or `ConversionSchemaError('invalid-exam-title')` (K28: only list names are accepted). */
+export function validateExamTitle(title) {
+  const parsed = parseListTitle(title);
+  if (!parsed) throw new ConversionSchemaError('invalid-exam-title', 'Sınav adı listeden seçilmeli.');
+  return parsed.title;
 }
 
 // MARK: - AI output (both providers)

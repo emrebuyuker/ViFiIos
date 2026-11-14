@@ -13,7 +13,8 @@
 // - the drafts become `questions/<examId>-<nnn>` (published shape + denormalised query keys + `schemaVersion`);
 //   questions of an earlier publish of the same exam that are no longer there are deleted;
 // - `exams/<id>` gets `format: 'structured'`, `questionCount`, `structuredAt`, `conversionJobId` (its `files` are kept,
-//   so 4.1.0 and Android still show the original pages);
+//   so 4.1.0 and Android still show the original pages) and its list title (K28: `title` + `sortKey`, the admin's
+//   `examTitle` or the job's `placement.suggestedTitle`; neither → `failed-precondition`; the exam id never changes);
 // - the practice pools (`questionPools`, scopes tr / u- / c-, split into `__pN` parts) gain the new ids and lose the
 //   removed ones; the subject (`subjects/<id>` + `catalogNodes/<courseId>.subjectId`) is resolved or created;
 // - the job becomes `published` and the submission gets `publishedExamId`.
@@ -38,7 +39,9 @@ import {
   LIMITS,
   PRACTICE_EXAM_TYPES,
   QUESTION_SCHEMA_VERSION,
+  canonicalExamTitle,
   parseExamTitle,
+  parseListTitle,
   plainSpeech,
   publishedQuestionId,
   questionOrderKey,
@@ -65,13 +68,15 @@ const ACTIVE_JOB_STATUSES = Object.freeze(['queued', 'processing', 'ready', 'fai
 // MARK: - publishExamConversion
 
 /**
- * `publishExamConversion` `{ jobId, subjectId?, newSubjectName? }` → `{ examId, questionCount }`. Idempotent: a job
- * that is already `published` returns its result and writes nothing.
+ * `publishExamConversion` `{ jobId, subjectId?, newSubjectName?, examTitle? }` → `{ examId, questionCount }`.
+ * Idempotent: a job that is already `published` returns its result and writes nothing. `examTitle` (K28) must be a
+ * list title (`validateExamTitle`); without it the job's suggestion is used.
  */
 export async function publishExamConversionHandler(deps, request) {
   const uid = requireAdmin(request);
   const jobId = requireJobId(request.data?.jobId);
   const override = subjectOverride(request.data);
+  const titleOverride = examTitleOverride(request.data);
   const { db } = deps;
   const now = Timestamp.fromDate(deps.now?.() ?? new Date());
   const jobRef = db.collection(JOBS).doc(jobId);
@@ -110,7 +115,9 @@ export async function publishExamConversionHandler(deps, request) {
       ? { courseId: target.ids.course, fromSubjectId: previousSubjectId, toSubjectId: subject.id, status: 'pending' }
       : null;
 
-    const { examType, year } = parseExamTitle(target.names.exam);
+    const examTitle = titleOverride ?? suggestedTitle(job, target);
+    if (!examTitle) throw new HttpsError('failed-precondition', 'Sınav adı listeden seçilmeli.');
+    const { examType, year } = parseExamTitle(examTitle);
     const keys = {
       subjectId: subject?.id ?? null,
       courseId: target.ids.course,
@@ -134,16 +141,19 @@ export async function publishExamConversionHandler(deps, request) {
     if (target.replace) {
       transaction.update(target.examRef, {
         format: 'structured', questionCount: questions.length, structuredAt: now, conversionJobId: jobId,
-        files: target.files, kind: target.kind,
+        files: target.files, kind: target.kind, title: examTitle, sortKey: examTitle,
       });
       for (const other of target.otherJobs) {
         transaction.update(other.ref, { status: 'discarded', reviewedBy: uid, discardedAt: now, discardReason: 'replaced' });
       }
     } else if (target.type === 'submission') {
-      writeCatalogAndExam(transaction, db, target, { now, questionCount: questions.length, jobId, subjectId: subject?.id });
+      writeCatalogAndExam(transaction, db, target, {
+        now, questionCount: questions.length, jobId, subjectId: subject?.id, examTitle,
+      });
     } else {
       transaction.update(db.collection('exams').doc(target.examId), {
         format: 'structured', questionCount: questions.length, structuredAt: now, conversionJobId: jobId,
+        title: examTitle, sortKey: examTitle,
       });
     }
     if (subject) writeSubject(transaction, db, subject, target, now);
@@ -156,6 +166,7 @@ export async function publishExamConversionHandler(deps, request) {
       reviewedBy: uid,
       publishedExamId: target.examId,
       questionCount: questions.length,
+      publishedTitle: examTitle,
       subjectId: subject?.id ?? null,
       error: null,
       ...(subjectMove ? { subjectMove } : {}),
@@ -353,7 +364,7 @@ async function readLegacyTarget(transaction, db, job) {
  * Creates the missing catalog nodes, bumps `childCount` of the existing parent whose child is new (as iOS
  * `ArchivePublishPlan`, but on the nodes' state now) and creates the exam document from the plan.
  */
-function writeCatalogAndExam(transaction, db, target, { now, questionCount, jobId, subjectId }) {
+function writeCatalogAndExam(transaction, db, target, { now, questionCount, jobId, subjectId, examTitle }) {
   const planned = new Map((Array.isArray(target.plan.nodesToCreate) ? target.plan.nodesToCreate : [])
     .filter((node) => isPlainObject(node) && typeof node.id === 'string')
     .map(({ id, ...fields }) => [id, fields]));
@@ -390,7 +401,8 @@ function writeCatalogAndExam(transaction, db, target, { now, questionCount, jobI
 
   transaction.create(target.examRef, {
     ...target.plan.exam,
-    title: target.names.exam,
+    title: examTitle,
+    sortKey: examTitle,
     universityId: target.ids.university,
     facultyId: target.ids.faculty,
     departmentId: target.ids.department,
@@ -469,6 +481,27 @@ function answerOf(answer) {
 export { subjectKey };
 
 /** `{ subjectId }` (an existing subject) or `{ newSubjectName }` from the request; `null` for automatic matching. */
+/** The admin's list title (`examTitle`, K28), normalised; `null` when absent; `invalid-argument` when not a list title. */
+function examTitleOverride(data) {
+  const value = data?.examTitle;
+  if (value === undefined || value === null) return null;
+  const parsed = parseListTitle(value);
+  if (!parsed) throw new HttpsError('invalid-argument', 'Sınav adı listeden seçilmeli.');
+  return parsed.title;
+}
+
+/**
+ * The job's suggested list title (K28): `placement.suggestedTitle` (`null` = none); a job created before K28 has no
+ * such field, so it is computed from the original title now.
+ */
+function suggestedTitle(job, target) {
+  const placement = isPlainObject(job.placement) ? job.placement : {};
+  if (Object.hasOwn(placement, 'suggestedTitle')) {
+    return parseListTitle(placement.suggestedTitle)?.title ?? null;
+  }
+  return canonicalExamTitle(text(placement.originalTitle) || target.names.exam)?.title ?? null;
+}
+
 function subjectOverride(data) {
   const subjectId = data?.subjectId;
   const newSubjectName = data?.newSubjectName;

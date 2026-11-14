@@ -127,6 +127,35 @@ struct ExamConversionParserTests {
         #expect(!job.status.isTerminal)
     }
 
+    @Test("The placement carries the original title and the list suggestion (K28)")
+    func parsesTitleSuggestion() throws {
+        let base: [String: Any] = ["source": ["type": "legacy", "examId": "e"], "kind": "JPG", "status": "ready"]
+        let names: [String: Any] = ["names": ["U", "F", "D", "C", "2019 FİZİK LAB"]]
+
+        let stored = try #require(ExamConversionParser.conversion(id: "x", data: base.merging([
+            "placement": names.merging(["originalTitle": "2019 FİZİK LAB", "suggestedTitle": "2019 LABORATUVAR"]) { $1 },
+        ]) { $1 }))
+        #expect(stored.originalTitle == "2019 FİZİK LAB")
+        #expect(stored.suggestedTitle == "2019 LABORATUVAR")
+
+        let none = try #require(ExamConversionParser.conversion(id: "x", data: base.merging([
+            "placement": ["originalTitle": "DERS NOTU", "suggestedTitle": NSNull()],
+        ]) { $1 }))
+        #expect(none.originalTitle == "DERS NOTU")
+        #expect(none.suggestedTitle == nil)
+
+        // A job created before K28 has no suggestion field: it is computed from the exam name, as on the server.
+        let old = try #require(ExamConversionParser.conversion(id: "x", data: base.merging(["placement": names]) { $1 }))
+        #expect(old.originalTitle == "2019 FİZİK LAB")
+        #expect(old.suggestedTitle == "2019 LABORATUVAR")
+
+        // A stored suggestion that is not a list title is ignored.
+        let bad = try #require(ExamConversionParser.conversion(id: "x", data: base.merging([
+            "placement": ["suggestedTitle": "2019 FİZİK"],
+        ]) { $1 }))
+        #expect(bad.suggestedTitle == nil)
+    }
+
     @Test("Jobs without a valid source, kind or status are skipped")
     func rejectsInvalid() {
         let base: [String: Any] = ["source": ["type": "legacy", "examId": "e"], "kind": "JPG", "status": "ready"]

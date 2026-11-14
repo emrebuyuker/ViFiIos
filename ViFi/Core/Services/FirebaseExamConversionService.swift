@@ -94,10 +94,12 @@ final class FirebaseExamConversionService: ExamConversionServicing {
         }
     }
 
-    func publish(jobId: String, subjectId: String?, newSubjectName: String?) async throws -> PublishedExamResult {
+    func publish(jobId: String, subjectId: String?, newSubjectName: String?, examTitle: String?) async throws -> PublishedExamResult {
         let data = try await call(
             ExamConversionCalls.Name.publish,
-            ExamConversionCalls.publish(jobId: jobId, subjectId: subjectId, newSubjectName: newSubjectName)
+            ExamConversionCalls.publish(
+                jobId: jobId, subjectId: subjectId, newSubjectName: newSubjectName, examTitle: examTitle
+            )
         )
         guard let result = ExamConversionCalls.publishResult(from: data) else {
             throw ExamConversionError.unknown(message: String(localized: "Sunucudan beklenmeyen bir yanıt geldi."))

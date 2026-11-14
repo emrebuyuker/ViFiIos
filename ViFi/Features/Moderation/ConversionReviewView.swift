@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The second approval of one ready job: the original pages (the protected preview) and the draft questions, with
-/// per-question edit and regenerate (K8), the course mapping, "Yayınla", "Tümünü yeniden üret" (K14) and "Sınavı
+/// per-question edit and regenerate (K8), the exam's list title (K28), the course mapping, "Yayınla", "Tümünü yeniden üret" (K14) and "Sınavı
 /// iptal et". The draft shows Markdown/LaTeX as written; it is an admin-only review, the user screen renders it.
 struct ConversionReviewView: View {
     let job: ExamConversion
@@ -74,6 +74,7 @@ private struct ConversionReviewScreen: View {
         case let .loaded(questions):
             Form {
                 infoSection
+                ConversionTitleSection(viewModel: viewModel)
                 if let message = viewModel.errorMessage, !message.isEmpty {
                     Section {
                         Label(message, systemImage: "exclamationmark.circle.fill")

@@ -380,6 +380,9 @@ flowchart LR
 - **Eski sınavlar** üç yoldan geçirilir: sınav başına "Yeni yapıya geçir", Moderasyon'dan ders/bölüm toplu kuyruğu (önce tahmini maliyet) ve tek
   seferlik betik (`firebase/scripts/convert-legacy-exams.mjs`, [firebase/README.md](firebase/README.md)). Her yolda taslaklar tek tek admin
   incelemesinden geçer.
+- **Sınav adı listeden** (K28, K29): yeni yapıya geçen sınavın adı Sınav Ekle listesindeki adlardan biri olur (yıl + ad + sıra no; "2017-2018
+  VİZE" → "2018 VİZE", "2019 FİZİK LAB" → "2019 LABORATUVAR"). Admin önerilen adı inceleme ekranında değiştirebilir; tanınmayan adda listeden
+  seçmeden yayınlanamaz. Sınavın id'si değişmez.
 - **Mükerrer gönderim** arşivdeki sınavı değiştirir: moderasyon sayfası "Bu sınav arşivde zaten yüklü" uyarısı verir; 2. onay mevcut sınavın
   sorularını ve sayfa dosyalarını gönderimin kopyalarıyla değiştirir, eski dosyaları siler; ikinci kopya eklenmez.
 - **Aylık 50 $ sınır.** Yapay zekâ harcaması `aiUsage/<YYYY-MM>` altında toplanır; sınır aşılırsa yeni işler ay sonuna kadar kuyrukta bekler ve
@@ -577,7 +580,7 @@ swiftlint --fix
   `notificationSchedule`, `notificationAutomatic`, `notificationStats`, `accountCleanup`. Yapılandırılmış sınav hattı: `conversionSchema`
   (sözleşme + sınav adı ayrıştırıcı), `conversionPipeline` (sahte model istemcisiyle), `conversionAdmin` (callable'lar, 2. onay, mükerrer, iptal),
   `convertLegacyExams` (geçiş betiği), `firestore.rules` / `storage.rules` (yeni koleksiyonlar).
-- **4.2.0 iOS testleri** — `StructuredExamParserTests`, `ExamTitleParserTests` (sunucuyla aynı 35 vaka), `MathTextTokenizerTests`,
+- **4.2.0 iOS testleri** — `StructuredExamParserTests`, `ExamTitleParserTests` (sunucuyla aynı vakalar: 36 tür/yıl, 32 liste adı, 20 doğrulama), `MathTextTokenizerTests`,
   `FormulaRenderingTests` (SwiftMath, kalkan içinde yerleşim), `QuestionContentViewTests`, `StructuredExamViewModelTests`, `ExamRoutingTests`,
   `ConversionAdminViewModelTests`, `ExamConversionCallsTests`; arayüz: `StructuredExamUITests`, `ModerationUITests`.
 - **SwiftLint** her derlemede çalışır. `print` yerine `Logger`, Combine yerine Observation kullanımı gibi proje

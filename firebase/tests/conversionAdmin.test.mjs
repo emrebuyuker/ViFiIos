@@ -4,7 +4,7 @@
 // questions, pools, subjects, department notice), discarding, editing and regenerating published questions, and the
 // exam-deletion cleanup; the owner decisions of 13 Nov 2026: duplicates replace the existing exam (K22), a discarded
 // submission's copies are removed (K20), a subject change moves the whole course (K21), and publishing sends the
-// uploader nothing (K19). FCM and Storage are fakes; nothing leaves this machine and no AI is called.
+// uploader nothing (K19); 14 Nov 2026: a converted exam's title comes from the exam-name list (K28, K29). FCM and Storage are fakes; nothing leaves this machine and no AI is called.
 
 import { test, before, after, beforeEach, describe, mock } from 'node:test';
 import assert from 'node:assert/strict';
@@ -241,6 +241,8 @@ describe('requestExamConversion', () => {
     assert.deepEqual(created.files, [{ storagePath: 'imagess/e1-0.jpg', order: 0 }, { storagePath: 'imagess/e1-1.jpg', order: 1 }]);
     assert.equal(created.placement.subjectId, publish.subjectKey(NAMES.course));
     assert.equal(created.placement.subjectName, NAMES.course);
+    assert.equal(created.placement.originalTitle, '2019 VİZE');
+    assert.equal(created.placement.suggestedTitle, '2019 VİZE');
     assert.deepEqual(queue.tasks, [{ jobId: 'exam-e1' }]);
 
     // Pressing again while it runs does nothing.
@@ -412,6 +414,8 @@ describe('publishExamConversion: submission (second approval)', () => {
     assert.equal(exam.conversionJobId, jobId);
     assert.deepEqual(exam.files, [{ storagePath: 'pdfs/copied.pdf', order: 0 }]);
     assert.equal(exam.structuredAt.toMillis(), DAY.getTime());
+    assert.equal(exam.title, '2024 FİNAL');
+    assert.equal(exam.sortKey, '2024 FİNAL');
 
     // Published questions: the Ek A shape with denormalised keys; review-only fields left out.
     const first = await getData(db.collection('questions').doc(`${examId}-001`));
@@ -691,7 +695,10 @@ describe('publishExamConversion: legacy exam and subjects', () => {
     const question = await getData(db.collection('questions').doc('L1-001'));
     assert.equal(question.subjectId, 'algoritma-ve-programlama');
     assert.equal(question.examType, 'butunleme');
-    assert.equal(question.year, 2018);
+    // K29: an academic-year range counts as its second year; the exam's title becomes the list title (K28).
+    assert.equal(question.year, 2019);
+    assert.equal(exam.title, '2019 BÜTÜNLEME');
+    assert.equal(exam.sortKey, '2019 BÜTÜNLEME');
     assert.deepEqual((await getData(trPool)).ids, ['other-001', 'L1-001']);
     assert.equal((await getData(db.collection('catalogNodes').doc(COURSE))).subjectId, 'algoritma-ve-programlama');
     assert.equal((await db.collection('subjects').doc('algoritmalar').get()).exists, false);
@@ -890,5 +897,105 @@ describe('job creation: the suggested subject', () => {
     await admin.requestExamConversionHandler(depsWith(), asAdmin({ examId: 'e2', provider: 'gemini' }));
     const byNode = (await getData(job('exam-e2'))).placement;
     assert.deepEqual([byNode.subjectId, byNode.subjectName], ['ayrik', 'Ayrık Matematik']);
+  });
+});
+
+describe('exam title from the list (K28)', () => {
+  /** A ready legacy job for `examId` (created by the real job builder, so its placement carries the suggestion). */
+  async function seedReadyLegacy(examId, title, { count = 1 } = {}) {
+    await seedExam(examId, { title });
+    const exam = await getData(db.collection('exams').doc(examId));
+    const { legacyJob } = await import('../functions/conversions/jobs.js');
+    await job(`exam-${examId}`).set({ ...legacyJob(examId, exam, { provider: 'claude' }), status: 'ready' });
+    await seedDrafts(`exam-${examId}`, count);
+    return `exam-${examId}`;
+  }
+
+  test('jobs store the original title and its list suggestion (null when nothing matches)', async () => {
+    const { legacyJob, submissionJob } = await import('../functions/conversions/jobs.js');
+    const exam = (title) => ({ kind: 'JPG', files: [{ storagePath: 'imagess/a.jpg', order: 0 }], title });
+    assert.deepEqual(
+      [legacyJob('e', exam(' 2019 FİZİK LAB ')).placement.originalTitle, legacyJob('e', exam('2019 FİZİK LAB')).placement.suggestedTitle],
+      ['2019 FİZİK LAB', '2019 LABORATUVAR'],
+    );
+    assert.equal(legacyJob('e', exam('DERS NOTU')).placement.suggestedTitle, null);
+    const submission = {
+      exam: '2017-2018 VİZE', kind: 'PDF', conversionProvider: 'claude',
+      publishPlan: { examId: 'x', exam: { files: [{ storagePath: 'pdfs/a.pdf', order: 0 }] } },
+    };
+    const placement = submissionJob('s', submission).placement;
+    assert.deepEqual([placement.originalTitle, placement.suggestedTitle], ['2017-2018 VİZE', '2018 VİZE']);
+  });
+
+  test('a legacy exam is renamed to the suggestion; its id never changes and the questions follow the title', async () => {
+    await seedCatalog();
+    const jobId = await seedReadyLegacy('T1', '2019 KISA SINAV 2 (FİZİK)');
+    assert.equal((await getData(job(jobId))).placement.suggestedTitle, '2019 KISA SINAV 2');
+
+    assert.deepEqual(await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId })), { examId: 'T1', questionCount: 1 });
+    const exam = await getData(db.collection('exams').doc('T1'));
+    assert.deepEqual([exam.title, exam.sortKey, exam.format], ['2019 KISA SINAV 2', '2019 KISA SINAV 2', 'structured']);
+    const question = await getData(db.collection('questions').doc('T1-001'));
+    assert.deepEqual([question.examId, question.examType, question.year], ['T1', 'kisa-sinav', 2019]);
+    assert.equal((await getData(job(jobId))).publishedTitle, '2019 KISA SINAV 2');
+  });
+
+  test('the admin\'s title wins over the suggestion; the type and year come from it', async () => {
+    await seedCatalog();
+    const jobId = await seedReadyLegacy('T2', '2019 VİZE');
+
+    await assert.rejects(
+      admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId, examTitle: '2019 VİZE SINAVI' })),
+      { code: 'invalid-argument' },
+    );
+    await assert.rejects(admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId, examTitle: 7 })), { code: 'invalid-argument' });
+    await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId, examTitle: '  2020   YAZ OKULU FİNAL ' }));
+    const exam = await getData(db.collection('exams').doc('T2'));
+    assert.deepEqual([exam.title, exam.sortKey], ['2020 YAZ OKULU FİNAL', '2020 YAZ OKULU FİNAL']);
+    const question = await getData(db.collection('questions').doc('T2-001'));
+    assert.deepEqual([question.examType, question.year], ['final', 2020]);
+  });
+
+  test('an unrecognised title is refused until the admin picks a list name', async () => {
+    await seedCatalog();
+    const jobId = await seedReadyLegacy('T3', 'DERS NOTU');
+    assert.equal((await getData(job(jobId))).placement.suggestedTitle, null);
+
+    await assert.rejects(
+      admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId })),
+      { code: 'failed-precondition', message: 'Sınav adı listeden seçilmeli.' },
+    );
+    assert.equal((await getData(job(jobId))).status, 'ready');
+    assert.equal((await db.collection('questions').get()).size, 0);
+    assert.equal((await getData(db.collection('exams').doc('T3'))).title, 'DERS NOTU');
+
+    await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId, examTitle: 'ÇALIŞMA SORULARI' }));
+    const exam = await getData(db.collection('exams').doc('T3'));
+    assert.deepEqual([exam.title, exam.format], ['ÇALIŞMA SORULARI', 'structured']);
+    const question = await getData(db.collection('questions').doc('T3-001'));
+    assert.deepEqual([question.examType, question.year], ['calisma-sorulari', null]);
+  });
+
+  test('a submission\'s new exam gets the list title; the exam id and the submission text stay', async () => {
+    await seedCatalog({ course: false });
+    const { examId, jobId } = await seedReadySubmission('s-k28', { title: '2024 FİNAL' });
+    await job(jobId).update({ placement: { originalTitle: '2024 FİNAL', suggestedTitle: '2024 FİNAL' } });
+
+    await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId, examTitle: '2024 BÜTÜNLEME' }));
+    const exam = await getData(db.collection('exams').doc(examId));
+    assert.equal(examId, `${COURSE}__2024-final`);
+    assert.deepEqual([exam.title, exam.sortKey], ['2024 BÜTÜNLEME', '2024 BÜTÜNLEME']);
+    assert.equal((await getData(db.collection('submissions').doc('s-k28'))).exam, '2024 FİNAL');
+    assert.equal((await getData(db.collection('questions').doc(`${examId}-001`))).examType, 'butunleme');
+  });
+
+  test('a duplicate renames the existing exam it replaces', async () => {
+    await seedCatalog();
+    await seedExam('T4', { title: '2024 FİNAL (ESKİ)' });
+    const { jobId } = await seedReadyDuplicate('d-k28', 'T4');
+
+    await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId }));
+    const exam = await getData(db.collection('exams').doc('T4'));
+    assert.deepEqual([exam.title, exam.sortKey], ['2024 FİNAL', '2024 FİNAL']);
   });
 });

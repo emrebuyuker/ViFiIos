@@ -1,13 +1,15 @@
 // The structured-exam contract (`functions/conversions/schema.js`): ids, the exam-title parser (parity with the
-// app's ExamTitleParserTests), pool ids and AI output validation. Pure — no emulator needed.
+// app's ExamTitleParserTests), the exam-name list and list titles (K28, K29), pool ids and AI output validation. Pure — no emulator needed.
 
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ConversionSchemaError,
+  EXAM_NAME_CATALOG,
   EXAM_TYPES,
   PRACTICE_EXAM_TYPES,
   PROVIDERS,
+  canonicalExamTitle,
   conversionJobId,
   figureStoragePath,
   parseExamTitle,
@@ -15,6 +17,7 @@ import {
   publishedQuestionId,
   questionPoolId,
   usageMonthKey,
+  validateExamTitle,
   validateModelOutput,
 } from '../functions/conversions/schema.js';
 import { slug as functionsSlug } from '../functions/conversions/slug.js';
@@ -84,7 +87,8 @@ describe('conversion schema — exam title parser (same cases as ExamTitleParser
   const cases = [
     ['2019 FİNAL', 'final', 2019],
     ['2018 VİZE', 'vize', 2018],
-    ['2017-2018 VİZE', 'vize', 2017],
+    ['2017-2018 VİZE', 'vize', 2018],
+    ['2019 2020 FİNAL', 'final', 2020],
     ['2020 BÜTÜNLEME', 'butunleme', 2020],
     ['2021 MAZERET', 'mazeret', 2021],
     ['2019 KISA SINAV 2', 'kisa-sinav', 2019],
@@ -123,6 +127,100 @@ describe('conversion schema — exam title parser (same cases as ExamTitleParser
       assert.deepEqual(parseExamTitle(title), { examType, year });
     });
   }
+});
+
+describe('conversion schema — exam-name list (same ids and names as ExamNameCatalog.swift)', () => {
+  test('the list is the owner\'s 22 names in order (K27, K29)', () => {
+    assert.deepEqual(EXAM_NAME_CATALOG.map(({ id, name }) => [id, name]), [
+      ['vize', 'VİZE'], ['ara-sinav', 'ARA SINAV'], ['final', 'FİNAL'], ['butunleme', 'BÜTÜNLEME'],
+      ['mazeret', 'MAZERET'], ['tek-ders', 'TEK DERS'], ['ek-sinav', 'EK SINAV'],
+      ['yaz-okulu-vize', 'YAZ OKULU VİZE'], ['yaz-okulu-ara-sinav', 'YAZ OKULU ARA SINAV'],
+      ['yaz-okulu-final', 'YAZ OKULU FİNAL'], ['kisa-sinav', 'KISA SINAV'], ['kisa-sinav-1', 'KISA SINAV 1'],
+      ['kisa-sinav-2', 'KISA SINAV 2'], ['kisa-sinav-3', 'KISA SINAV 3'], ['muafiyet', 'MUAFİYET SINAVI'],
+      ['seviye-tespit', 'SEVİYE TESPİT SINAVI'], ['uygulama', 'UYGULAMA SINAVI'], ['laboratuvar', 'LABORATUVAR'],
+      ['odev', 'ÖDEV'], ['proje', 'PROJE'], ['calisma-sorulari', 'ÇALIŞMA SORULARI'],
+      ['cozumlu-sorular', 'ÇÖZÜMLÜ SORULAR'],
+    ]);
+  });
+
+  test('every list name parses to its entry\'s exam type and is its own canonical title', () => {
+    for (const entry of EXAM_NAME_CATALOG) {
+      assert.deepEqual(parseExamTitle(`2024 ${entry.name}`), { examType: entry.examType, year: 2024 }, entry.name);
+      assert.deepEqual(canonicalExamTitle(`2024 ${entry.name}`), { title: `2024 ${entry.name}`, entryId: entry.id, examType: entry.examType });
+      assert.equal(validateExamTitle(entry.name), entry.name);
+    }
+  });
+});
+
+describe('conversion schema — canonical list title (same cases as ExamTitleParserTests.swift)', () => {
+  const cases = [
+    ['2019 KISA SINAV 2', '2019 KISA SINAV 2', 'kisa-sinav-2'],
+    ['2017-2018 VİZE', '2018 VİZE', 'vize'],
+    ['2019 2020 FİNAL', '2020 FİNAL', 'final'],
+    ['2019 FİZİK LAB', '2019 LABORATUVAR', 'laboratuvar'],
+    ['2018 FİZİK LABORATUAR 2', '2018 LABORATUVAR 2', 'laboratuvar'],
+    ['2019 VİZE YAZ OKULU', '2019 YAZ OKULU VİZE', 'yaz-okulu-vize'],
+    ['2021 YAZ OKULU ARA SINAV', '2021 YAZ OKULU ARA SINAV', 'yaz-okulu-ara-sinav'],
+    ['2021 YAZ OKULU FİNAL', '2021 YAZ OKULU FİNAL', 'yaz-okulu-final'],
+    ['2019 YAZ OKULU BÜTÜNLEME', '2019 BÜTÜNLEME', 'butunleme'],
+    ['QUIZ 3', 'KISA SINAV 3', 'kisa-sinav-3'],
+    ['QUIZ 2', 'KISA SINAV 2', 'kisa-sinav-2'],
+    ['QUIZ 5', 'KISA SINAV 5', 'kisa-sinav'],
+    ['2018 KISA SINAV 12', '2018 KISA SINAV 12', 'kisa-sinav'],
+    ['QUIZ', 'KISA SINAV', 'kisa-sinav'],
+    ['2018 FİNAL ÇALIŞMA SORULARI', '2018 ÇALIŞMA SORULARI', 'calisma-sorulari'],
+    ['2019 FİNAL', '2019 FİNAL', 'final'],
+    ['FİNAL', 'FİNAL', 'final'],
+    ['MATEMATİK 2 FİNAL', 'FİNAL', 'final'],
+    ['2019 VİZE 2', '2019 VİZE 2', 'vize'],
+    ['2019 VİZE CEVAPLI', '2019 VİZE', 'vize'],
+    ['2019 ARASINAV', '2019 ARA SINAV', 'ara-sinav'],
+    ['2020 EK SINAVI', '2020 EK SINAV', 'ek-sinav'],
+    ['2018 ÖDEVLER', '2018 ÖDEV', 'odev'],
+    ['2019 PROJESİ', '2019 PROJE', 'proje'],
+    ['2022 MUAFİYET SINAVI', '2022 MUAFİYET SINAVI', 'muafiyet'],
+    ['2023 YAZ OKULU', null, null],
+    ['DERS NOTU', null, null],
+    ['SİSTEM', null, null],
+    ['POSTER', null, null],
+    ['2019 TEK', null, null],
+    ['2022 UYGULAMA', null, null],
+    ['', null, null],
+  ];
+  for (const [title, expected, entryId] of cases) {
+    test(`"${title}" -> ${expected}`, () => {
+      const result = canonicalExamTitle(title);
+      assert.equal(result?.title ?? null, expected);
+      assert.equal(result?.entryId ?? null, entryId);
+      if (result) {
+        assert.equal(validateExamTitle(result.title), result.title);
+        assert.equal(result.examType, parseExamTitle(result.title).examType);
+      }
+    });
+  }
+});
+
+describe('conversion schema — list title validation (same cases as ExamTitleParserTests.swift)', () => {
+  const accepted = [
+    ['2019 VİZE', '2019 VİZE'],
+    ['VİZE', 'VİZE'],
+    ['KISA SINAV 2', 'KISA SINAV 2'],
+    ['KISA SINAV 5', 'KISA SINAV 5'],
+    ['2018 YAZ OKULU FİNAL', '2018 YAZ OKULU FİNAL'],
+    ['ÇÖZÜMLÜ SORULAR 99', 'ÇÖZÜMLÜ SORULAR 99'],
+    ['  2019   FİNAL ', '2019 FİNAL'],
+  ];
+  const rejected = [
+    '2017-2018 VİZE', '2019 VIZE', 'vize', 'VİZE 0', 'VİZE 100', 'VİZE 05', 'KISA SINAV 2 3', 'DERS NOTU',
+    '19 VİZE', '1899 VİZE', '2019 FİZİK VİZE', 'VİZE 2019', '',
+  ];
+  for (const [title, normalized] of accepted) {
+    test(`accepts "${title}"`, () => assert.equal(validateExamTitle(title), normalized));
+  }
+  for (const title of rejected) {
+    test(`rejects "${title}"`, () => fails(() => validateExamTitle(title), 'invalid-exam-title'));
+  }
+  test('rejects a non-string', () => fails(() => validateExamTitle(null), 'invalid-exam-title'));
 });
 
 describe('conversion schema — model output validation', () => {

@@ -26,7 +26,7 @@ final class StubExamConversionService: ExamConversionServicing {
         case regenerate(jobId: String, provider: AIProvider)
         case regenerateQuestion(jobId: String, order: Int, provider: AIProvider)
         case saveDraftQuestion(jobId: String, questionId: String)
-        case publish(jobId: String, subjectId: String?, newSubjectName: String?)
+        case publish(jobId: String, subjectId: String?, newSubjectName: String?, examTitle: String?)
         case discard(jobId: String)
         case requestBulk(scope: BulkConversionScope, provider: AIProvider, dryRun: Bool)
         case updatePublishedQuestion(questionId: String)
@@ -80,8 +80,8 @@ final class StubExamConversionService: ExamConversionServicing {
         try await record(.saveDraftQuestion(jobId: jobId, questionId: question.id))
     }
 
-    func publish(jobId: String, subjectId: String?, newSubjectName: String?) async throws -> PublishedExamResult {
-        try await record(.publish(jobId: jobId, subjectId: subjectId, newSubjectName: newSubjectName))
+    func publish(jobId: String, subjectId: String?, newSubjectName: String?, examTitle: String?) async throws -> PublishedExamResult {
+        try await record(.publish(jobId: jobId, subjectId: subjectId, newSubjectName: newSubjectName, examTitle: examTitle))
         return publishResult
     }
 

@@ -12,7 +12,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import * as logger from 'firebase-functions/logger';
-import { ID_SEGMENT_PATTERN, PROVIDERS, conversionJobId } from './schema.js';
+import { ID_SEGMENT_PATTERN, PROVIDERS, canonicalExamTitle, conversionJobId } from './schema.js';
 import { suggestSubject } from './subjects.js';
 
 export const JOBS = 'examConversions';
@@ -76,6 +76,7 @@ export function legacyJob(examId, exam, { provider = null, requestedBy = 'system
       departmentId: text(exam.departmentId),
       courseId: text(exam.courseId),
       names: [exam.universityName, exam.facultyName, exam.departmentName, exam.courseName, exam.title].map(text),
+      ...titleSuggestion(exam.title),
     },
     files,
     kind: exam.kind,
@@ -107,6 +108,7 @@ export function submissionJob(submissionId, submission) {
       departmentId: text(plan.departmentId),
       courseId: text(plan.courseId),
       names: [submission.university, submission.faculty, submission.department, submission.lesson, submission.exam].map(text),
+      ...titleSuggestion(plan.exam?.title ?? submission.exam),
     },
     files,
     kind,
@@ -114,6 +116,15 @@ export function submissionJob(submissionId, submission) {
     // The approving admin is not recorded on the submission; the trigger acts for them.
     requestedBy: 'system',
   });
+}
+
+/**
+ * `placement.originalTitle` (the archive / submitted exam title, kept for the admin) and `placement.suggestedTitle`
+ * (its list title, owner decision K28; `null` when no list name matches and the admin has to pick one).
+ */
+export function titleSuggestion(title) {
+  const originalTitle = text(title);
+  return { originalTitle, suggestedTitle: canonicalExamTitle(originalTitle)?.title ?? null };
 }
 
 /**

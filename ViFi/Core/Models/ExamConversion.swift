@@ -56,4 +56,9 @@ nonisolated struct ExamConversion: Identifiable, Hashable, Sendable {
     /// The server's suggested country-wide course identity (`placement.subjectId` / `subjectName`), if it has one.
     var suggestedSubjectId: String?
     var suggestedSubjectName: String?
+    /// The exam's title before conversion (`placement.originalTitle`; the archive or submitted text).
+    var originalTitle: String?
+    /// The list title the server suggests (`placement.suggestedTitle`, K28); `nil` when no list name matched and the
+    /// admin has to pick one before publishing.
+    var suggestedTitle: String?
 }

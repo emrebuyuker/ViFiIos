@@ -37,11 +37,12 @@ nonisolated enum ExamConversionCalls {
         ["jobId": jobId, "order": order, "provider": provider.rawValue]
     }
 
-    /// A blank subject field is left out, so the server falls back to its own suggestion.
-    static func publish(jobId: String, subjectId: String?, newSubjectName: String?) -> [String: Any] {
+    /// A blank subject field or exam title is left out, so the server falls back to its own suggestion.
+    static func publish(jobId: String, subjectId: String?, newSubjectName: String?, examTitle: String?) -> [String: Any] {
         var payload: [String: Any] = ["jobId": jobId]
         if let subjectId = trimmed(subjectId) { payload["subjectId"] = subjectId }
         if let name = trimmed(newSubjectName) { payload["newSubjectName"] = name }
+        if let title = trimmed(examTitle) { payload["examTitle"] = title }
         return payload
     }
 

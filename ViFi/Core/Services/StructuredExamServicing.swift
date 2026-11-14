@@ -35,9 +35,9 @@ protocol ExamConversionServicing: AnyObject {
 
     /// Second approval: publishes the draft into `questions` and marks the exam `format: structured`. `subjectId`
     /// picks an existing country-wide course identity, `newSubjectName` opens a new one; both `nil` lets the server
-    /// use its own suggestion.
+    /// use its own suggestion. `examTitle` is the list title the exam gets (K28); `nil` keeps the server's suggestion.
     @discardableResult
-    func publish(jobId: String, subjectId: String?, newSubjectName: String?) async throws -> PublishedExamResult
+    func publish(jobId: String, subjectId: String?, newSubjectName: String?, examTitle: String?) async throws -> PublishedExamResult
 
     /// "Sınavı iptal et" (K14): gives the job up for good (`discarded`); coins are never taken back.
     func discard(jobId: String) async throws
@@ -68,7 +68,7 @@ final class UnavailableExamConversionService: ExamConversionServicing {
     func regenerate(jobId: String, provider: AIProvider) async throws { throw failure }
     func regenerateQuestion(jobId: String, order: Int, provider: AIProvider) async throws { throw failure }
     func saveDraftQuestion(jobId: String, question: ExamQuestion) async throws { throw failure }
-    func publish(jobId: String, subjectId: String?, newSubjectName: String?) async throws -> PublishedExamResult { throw failure }
+    func publish(jobId: String, subjectId: String?, newSubjectName: String?, examTitle: String?) async throws -> PublishedExamResult { throw failure }
     func discard(jobId: String) async throws { throw failure }
     func requestBulkConversion(scope: BulkConversionScope, provider: AIProvider, dryRun: Bool) async throws -> BulkConversionEstimate {
         throw failure

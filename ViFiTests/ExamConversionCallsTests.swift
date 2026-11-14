@@ -37,14 +37,15 @@ struct ExamConversionCallsTests {
         #expect(question["order"] as? Int == 3)
     }
 
-    @Test("Publishing leaves blank subject fields out")
+    @Test("Publishing leaves blank subject fields and a blank title out")
     func publishPayload() {
-        let blank = ExamConversionCalls.publish(jobId: "j", subjectId: "  ", newSubjectName: nil)
+        let blank = ExamConversionCalls.publish(jobId: "j", subjectId: "  ", newSubjectName: nil, examTitle: " ")
         #expect(blank.keys.sorted() == ["jobId"])
 
-        let full = ExamConversionCalls.publish(jobId: "j", subjectId: "s", newSubjectName: " Yeni ")
+        let full = ExamConversionCalls.publish(jobId: "j", subjectId: "s", newSubjectName: " Yeni ", examTitle: "2019 VİZE")
         #expect(full["subjectId"] as? String == "s")
         #expect(full["newSubjectName"] as? String == "Yeni")
+        #expect(full["examTitle"] as? String == "2019 VİZE")
     }
 
     @Test("Question content fields are the editable ones only")

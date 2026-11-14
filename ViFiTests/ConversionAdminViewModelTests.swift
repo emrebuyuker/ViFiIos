@@ -8,12 +8,15 @@ enum ConversionFixture {
         id: String = "sub-s1",
         status: ConversionStatus = .ready,
         provider: AIProvider? = .claude,
-        error: String? = nil
+        error: String? = nil,
+        originalTitle: String = "2023 VİZE",
+        suggestedTitle: String? = "2023 VİZE"
     ) -> ExamConversion {
         ExamConversion(
             id: id, source: .submission(submissionId: "s1"), kind: .images, status: status, provider: provider,
             attempts: 1, error: error, usage: ConversionUsage(inputTokens: 100, outputTokens: 50, costUsd: 0.42),
-            placementNames: ["Uni", "Fak", "Böl", "Ders", "2023 VİZE"], createdAt: nil, readyAt: nil
+            placementNames: ["Uni", "Fak", "Böl", "Ders", originalTitle], createdAt: nil, readyAt: nil,
+            originalTitle: originalTitle, suggestedTitle: suggestedTitle
         )
     }
 
@@ -88,10 +91,10 @@ struct ConversionJobsViewModelTests {
 @Suite("ConversionReviewViewModel")
 struct ConversionReviewViewModelTests {
     private func makeViewModel(
-        questions: [ExamQuestion] = [ConversionFixture.question(order: 1, needsReview: true), ConversionFixture.question(order: 2)]
+        questions: [ExamQuestion] = [ConversionFixture.question(order: 1, needsReview: true), ConversionFixture.question(order: 2)],
+        job: ExamConversion = ConversionFixture.job()
     ) -> (ConversionReviewViewModel, StubExamConversionService) {
         let service = StubExamConversionService()
-        let job = ConversionFixture.job()
         service.draftsByJob[job.id] = questions
         return (ConversionReviewViewModel(job: job, service: service), service)
     }
@@ -149,7 +152,7 @@ struct ConversionReviewViewModelTests {
 
         await viewModel.publish()
 
-        #expect(service.calls == [.publish(jobId: "sub-s1", subjectId: nil, newSubjectName: nil)])
+        #expect(service.calls == [.publish(jobId: "sub-s1", subjectId: nil, newSubjectName: nil, examTitle: "2023 VİZE")])
         #expect(viewModel.outcome == .published(questionCount: 2))
     }
 
@@ -162,7 +165,7 @@ struct ConversionReviewViewModelTests {
 
         await viewModel.publish()
 
-        #expect(service.calls == [.publish(jobId: "sub-s1", subjectId: "calculus-1", newSubjectName: nil)])
+        #expect(service.calls == [.publish(jobId: "sub-s1", subjectId: "calculus-1", newSubjectName: nil, examTitle: "2023 VİZE")])
 
         let (second, secondService) = makeViewModel()
         await second.loadIfNeeded()
@@ -171,7 +174,7 @@ struct ConversionReviewViewModelTests {
 
         await second.publish()
 
-        #expect(secondService.calls == [.publish(jobId: "sub-s1", subjectId: nil, newSubjectName: "Kuantum Fiziği")])
+        #expect(secondService.calls == [.publish(jobId: "sub-s1", subjectId: nil, newSubjectName: "Kuantum Fiziği", examTitle: "2023 VİZE")])
     }
 
     @Test("Publishing with an empty subject field is refused before any call")
@@ -209,6 +212,70 @@ struct ConversionReviewViewModelTests {
         #expect(service.calls == [.discard(jobId: "sub-s1")])
         #expect(viewModel.outcome == .discarded)
         #expect(!viewModel.canPublish)
+    }
+
+    @Test("The title editor starts from the server's suggestion (K28)")
+    func titleDefaultsToSuggestion() async {
+        let (viewModel, _) = makeViewModel(job: ConversionFixture.job(originalTitle: "2019 FİZİK QUIZ 5", suggestedTitle: "2019 KISA SINAV 5"))
+
+        #expect(viewModel.titleYear == "2019")
+        #expect(viewModel.titleEntryId == "kisa-sinav")
+        #expect(viewModel.titleNumber == "5")
+        #expect(viewModel.examTitle == "2019 KISA SINAV 5")
+        #expect(viewModel.titleProblem == nil)
+        #expect(viewModel.job.originalTitle == "2019 FİZİK QUIZ 5")
+    }
+
+    @Test("Without a suggestion a list name must be picked before publishing (K28)")
+    func titleRequiredWithoutSuggestion() async {
+        let (viewModel, service) = makeViewModel(job: ConversionFixture.job(originalTitle: "DERS NOTU", suggestedTitle: nil))
+        await viewModel.loadIfNeeded()
+
+        #expect(viewModel.titleEntryId == nil)
+        #expect(viewModel.examTitle == nil)
+        #expect(viewModel.titleProblem != nil)
+        #expect(!viewModel.canPublish)
+        await viewModel.publish()
+        #expect(service.calls.isEmpty)
+
+        viewModel.titleEntryId = "calisma-sorulari"
+        #expect(viewModel.canPublish)
+        await viewModel.publish()
+        #expect(service.calls == [.publish(jobId: "sub-s1", subjectId: nil, newSubjectName: nil, examTitle: "ÇALIŞMA SORULARI")])
+    }
+
+    @Test("The admin's edited title is validated and sent (K28, K29)")
+    func titleEdits() async {
+        let (viewModel, service) = makeViewModel()
+        await viewModel.loadIfNeeded()
+
+        viewModel.titleYear = "2017-2018"
+        #expect(viewModel.examTitle == nil)
+        #expect(!viewModel.canPublish)
+        viewModel.titleYear = "19"
+        #expect(viewModel.examTitle == nil)
+        viewModel.titleYear = " "
+        #expect(viewModel.examTitle == "VİZE")
+        viewModel.titleYear = "2020"
+
+        viewModel.titleNumber = "100"
+        #expect(viewModel.examTitle == nil)
+        viewModel.titleNumber = "0"
+        #expect(viewModel.examTitle == nil)
+        viewModel.titleNumber = "2"
+        viewModel.titleEntryId = "yaz-okulu-final"
+        #expect(viewModel.examTitle == "2020 YAZ OKULU FİNAL 2")
+
+        // "KISA SINAV" + 2 is the list's own "KISA SINAV 2"; a numbered name takes no extra number.
+        viewModel.titleEntryId = "kisa-sinav"
+        #expect(viewModel.examTitle == "2020 KISA SINAV 2")
+        viewModel.titleEntryId = "kisa-sinav-2"
+        #expect(viewModel.examTitle == nil)
+        viewModel.titleNumber = ""
+        #expect(viewModel.examTitle == "2020 KISA SINAV 2")
+
+        await viewModel.publish()
+        #expect(service.calls == [.publish(jobId: "sub-s1", subjectId: nil, newSubjectName: nil, examTitle: "2020 KISA SINAV 2")])
     }
 
     @Test("An exam without drafts cannot be published")

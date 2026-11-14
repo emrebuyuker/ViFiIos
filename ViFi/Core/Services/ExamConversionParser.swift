@@ -5,7 +5,7 @@ import Foundation
 /// Pure and Firestore-free: callers convert `Timestamp` values to `Date` first. Shape (server-written,
 /// `firebase/functions/conversions/schema.js`): `{ source: {type: legacy|submission, examId?, submissionId?},
 /// kind: JPG|PDF, status, model: {provider, id}, attempts, error?, usage: {inputTokens, outputTokens, costUsd},
-/// placement: {names: [String], ids: [String], subjectId?, subjectName?}, files: [{storagePath, order}],
+/// placement: {names: [String], ids: [String], subjectId?, subjectName?, originalTitle?, suggestedTitle?}, files: [{storagePath, order}],
 /// createdAt, readyAt? }`.
 nonisolated enum ExamConversionParser {
     static func conversion(id: String, data: [String: Any]) -> ExamConversion? {
@@ -28,8 +28,25 @@ nonisolated enum ExamConversionParser {
             readyAt: data["readyAt"] as? Date,
             files: files(from: data["files"]),
             suggestedSubjectId: nonEmpty(placement?["subjectId"]),
-            suggestedSubjectName: nonEmpty(placement?["subjectName"])
+            suggestedSubjectName: nonEmpty(placement?["subjectName"]),
+            originalTitle: originalTitle(placement),
+            suggestedTitle: suggestedTitle(placement)
         )
+    }
+
+    /// `placement.originalTitle`, else the exam name of `placement.names` (jobs created before K28).
+    private static func originalTitle(_ placement: [String: Any]?) -> String? {
+        nonEmpty(placement?["originalTitle"]) ?? nonEmpty((placement?["names"] as? [Any])?.last)
+    }
+
+    /// `placement.suggestedTitle` when it is a list title (`null` = none); a job created before K28 has no such field,
+    /// so the suggestion is computed from the original title, as the server does at publish.
+    private static func suggestedTitle(_ placement: [String: Any]?) -> String? {
+        guard let placement else { return nil }
+        if placement.keys.contains("suggestedTitle") {
+            return nonEmpty(placement["suggestedTitle"]).flatMap(ExamListTitle.parse)?.title
+        }
+        return originalTitle(placement).flatMap(ExamTitleParser.canonicalTitle)?.title
     }
 
     private static func files(from value: Any?) -> [SubmissionFileRef] {

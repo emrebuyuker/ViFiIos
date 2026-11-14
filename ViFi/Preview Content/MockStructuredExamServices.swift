@@ -37,7 +37,8 @@ final class MockExamQuestionReader: ExamQuestionReading {
     }
 }
 
-/// An in-memory conversion workflow: one ready job and one failed job; actions update the jobs like the server would.
+/// An in-memory conversion workflow: two ready jobs (one with a list-title suggestion, one whose title matches no list
+/// name, K28) and one failed job; actions update the jobs like the server would.
 final class MockExamConversionService: ExamConversionServicing {
     private var jobs: [ExamConversion]
     private var usage = AIMonthlyUsage(month: AIMonthlyUsage.monthKey(for: .now), costUsd: 12.4)
@@ -62,7 +63,17 @@ final class MockExamConversionService: ExamConversionServicing {
                 SubmissionFileRef(storagePath: "imagess/mock-1.jpg", order: 1),
                 SubmissionFileRef(storagePath: "imagess/mock-2.jpg", order: 2),
             ],
-            suggestedSubjectId: "ayrik-matematik", suggestedSubjectName: "Ayrık Matematik"
+            suggestedSubjectId: "ayrik-matematik", suggestedSubjectName: "Ayrık Matematik",
+            originalTitle: "2023 VİZE", suggestedTitle: "2023 VİZE"
+        ),
+        ExamConversion(
+            id: "sub-sub-2", source: .submission(submissionId: "sub-2"), kind: .images, status: .ready,
+            provider: .gemini, attempts: 1, error: nil,
+            usage: ConversionUsage(inputTokens: 12_000, outputTokens: 4_000, costUsd: 0.21),
+            placementNames: ["Boğaziçi Üniversitesi", "Mühendislik Fakültesi", "Bilgisayar Mühendisliği", "Ayrık Matematik", "2021 DERS NOTU"],
+            createdAt: Date(timeIntervalSince1970: 1_761_950_000), readyAt: Date(timeIntervalSince1970: 1_761_950_300),
+            files: [SubmissionFileRef(storagePath: "imagess/mock-3.jpg", order: 1)],
+            originalTitle: "2021 DERS NOTU", suggestedTitle: nil
         ),
         ExamConversion(
             id: "exam-mock-legacy", source: .legacy(examId: "mock-legacy"), kind: .pdf, status: .failed,
@@ -116,8 +127,13 @@ final class MockExamConversionService: ExamConversionServicing {
         try await Task.sleep(for: latency)
     }
 
-    func publish(jobId: String, subjectId: String?, newSubjectName: String?) async throws -> PublishedExamResult {
+    func publish(jobId: String, subjectId: String?, newSubjectName: String?, examTitle: String?) async throws -> PublishedExamResult {
         try await Task.sleep(for: latency)
+        // Like the server (K28): a title must come from the list, either the admin's or the job's suggestion.
+        let job = jobs.first { $0.id == jobId }
+        guard (examTitle ?? job?.suggestedTitle).flatMap(ExamListTitle.parse) != nil else {
+            throw ExamConversionError.notAllowed(message: String(localized: "Sınav adı listeden seçilmeli."))
+        }
         update(jobId) { $0.with(status: .published) }
         return PublishedExamResult(examId: "mock-\(jobId)", questionCount: Self.sampleQuestionCount)
     }
@@ -162,7 +178,8 @@ private extension ExamConversion {
             id: id, source: source, kind: kind, status: status, provider: provider ?? self.provider,
             attempts: attempts, error: status == .failed ? error : nil, usage: usage,
             placementNames: placementNames, createdAt: createdAt, readyAt: readyAt, files: files,
-            suggestedSubjectId: suggestedSubjectId, suggestedSubjectName: suggestedSubjectName
+            suggestedSubjectId: suggestedSubjectId, suggestedSubjectName: suggestedSubjectName,
+            originalTitle: originalTitle, suggestedTitle: suggestedTitle
         )
     }
 }

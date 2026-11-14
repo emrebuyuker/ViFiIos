@@ -125,6 +125,10 @@ nonisolated final class ModerationUITests: XCTestCase {
 
         XCTAssertTrue(element("conversion.review", in: app).waitForExistence(timeout: Timeout.content),
                       "The review screen did not appear")
+        // K28: the exam's list title is pre-filled from the server's suggestion, next to the original title.
+        XCTAssertTrue(reveal("conversion.review.title", in: app))
+        XCTAssertEqual(element("conversion.review.title", in: app).label, "2023 VİZE")
+        XCTAssertTrue(element("conversion.review.title.original", in: app).exists, "The original title is missing")
         // The draft list is long and lazy, so scroll until the publish button is built.
         let publish = element("conversion.review.publish", in: app)
         for _ in 0..<15 where !publish.exists { app.swipeUp() }
@@ -138,8 +142,49 @@ nonisolated final class ModerationUITests: XCTestCase {
         XCTAssertTrue(done.waitForExistence(timeout: Timeout.content), "The publish result did not appear")
         done.tap()
 
-        XCTAssertTrue(app.staticTexts["Hazır sınav yok"].waitForExistence(timeout: Timeout.content),
-                      "The published exam stayed in the ready list")
+        let row = element("conversion.row.sub-sub-1", in: app)
+        XCTAssertTrue(element("conversion.row.sub-sub-2", in: app).waitForExistence(timeout: Timeout.content),
+                      "The ready list did not come back")
+        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: row)
+        XCTAssertEqual(XCTWaiter.wait(for: [gone], timeout: Timeout.content), .completed, "The published exam stayed in the ready list")
+    }
+
+    @MainActor
+    func testUnrecognisedTitleBlocksPublishingUntilANameIsPicked() {
+        let app = launchApp(admin: true)
+
+        tap("toolbar.account", in: app)
+        tap("account.moderation", in: app)
+        tap("moderation.ready", in: app)
+        tap("conversion.row.sub-sub-2", in: app)
+        XCTAssertTrue(element("conversion.review", in: app).waitForExistence(timeout: Timeout.content),
+                      "The review screen did not appear")
+
+        // "2021 DERS NOTU" matches no list name (K28): no suggestion, and "Yayınla" stays disabled.
+        XCTAssertTrue(reveal("conversion.review.title", in: app))
+        XCTAssertEqual(element("conversion.review.title", in: app).label, "Listeden bir ad seç")
+        let publish = element("conversion.review.publish", in: app)
+        for _ in 0..<15 where !publish.exists { app.swipeUp() }
+        XCTAssertTrue(publish.exists, "The publish button did not appear")
+        XCTAssertFalse(publish.isEnabled, "Publishing was allowed without a list name")
+
+        for _ in 0..<15 where !element("conversion.review.title.name", in: app).isHittable { app.swipeDown() }
+        tap("conversion.review.title.name", in: app)
+        // The menu lists the names in the list's order; "FİNAL" is near the top, so it is on screen.
+        let option = app.buttons["FİNAL"].firstMatch
+        XCTAssertTrue(option.waitForExistence(timeout: Timeout.transition), "The list names did not appear")
+        option.tap()
+        tap("conversion.review.title.year", in: app)
+        app.typeText("2021")
+        XCTAssertEqual(element("conversion.review.title", in: app).label, "2021 FİNAL")
+
+        for _ in 0..<15 where !publish.isHittable { app.swipeUp() }
+        XCTAssertTrue(publish.isEnabled, "Publishing stayed disabled after a name was picked")
+        tap("conversion.review.publish", in: app)
+        let confirm = app.alerts.buttons["Yayınla"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: Timeout.transition), "The publish confirmation did not appear")
+        confirm.tap()
+        XCTAssertTrue(app.alerts.buttons["Tamam"].waitForExistence(timeout: Timeout.content), "The publish result did not appear")
     }
 
     @MainActor

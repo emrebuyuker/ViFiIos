@@ -22,7 +22,7 @@ nonisolated enum ReviewOutcome: Equatable {
 }
 
 /// Drives the second-approval review of one ready job: the draft questions, edits, per-question and whole-exam
-/// regeneration (K8, K14), publishing with the course mapping, and "Sınavı iptal et".
+/// regeneration (K8, K14), publishing with the course mapping and the exam's list title (K28), and "Sınavı iptal et".
 @Observable
 final class ConversionReviewViewModel {
     let job: ExamConversion
@@ -37,6 +37,12 @@ final class ConversionReviewViewModel {
     var subjectMode: SubjectMode = .suggested
     var subjectId = ""
     var newSubjectName = ""
+
+    /// The exam title the exam is published with (K28): `[<year> ]<list name>[ <1–99>]`. Pre-filled from the server's
+    /// suggestion; empty (no name) when there is none, and publishing waits until a name is picked.
+    var titleYear = ""
+    var titleEntryId: String?
+    var titleNumber = ""
 
     @ObservationIgnored private let service: any ExamConversionServicing
     @ObservationIgnored private var hasLoaded = false
@@ -59,6 +65,46 @@ final class ConversionReviewViewModel {
         self.now = now
         self.pollInterval = pollInterval
         self.pollWindow = pollWindow
+        if let suggestion = job.suggestedTitle.flatMap(ExamListTitle.parse) {
+            titleYear = suggestion.year.map(String.init) ?? ""
+            titleEntryId = suggestion.entryId
+            titleNumber = suggestion.number.map(String.init) ?? ""
+        }
+    }
+
+    /// The list title the editor's parts make, normalised as the server stores it; `nil` while they are not valid.
+    var examTitle: String? {
+        guard titleProblem == nil, let titleEntryId else { return nil }
+        let parts = ExamListTitle(
+            year: ExamListTitle.year(trimmed(titleYear)), entryId: titleEntryId,
+            number: ExamListTitle.sequenceNumber(trimmed(titleNumber))
+        )
+        return ExamListTitle.parse(parts.title)?.title
+    }
+
+    /// Why the title cannot be published yet, or `nil` when it can.
+    var titleProblem: String? {
+        guard let titleEntryId, ExamNameCatalog.entry(id: titleEntryId) != nil else {
+            return String(localized: "Listeden bir ad seç")
+        }
+        let year = trimmed(titleYear)
+        if !year.isEmpty, ExamListTitle.year(year) == nil {
+            return String(localized: "Yıl 4 haneli olmalı (ör. 2019) ya da boş kalmalı.")
+        }
+        let number = trimmed(titleNumber)
+        if !number.isEmpty {
+            guard ExamListTitle.sequenceNumber(number) != nil else {
+                return String(localized: "Sıra no 1–99 arasında olmalı ya da boş kalmalı.")
+            }
+            if titleEntryId.hasPrefix("kisa-sinav-") {
+                return String(localized: "Bu ad zaten numaralı; sıra no boş kalmalı.")
+            }
+        }
+        return nil
+    }
+
+    private func trimmed(_ text: String) -> String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Whether the server is regenerating `question` right now.
@@ -83,7 +129,7 @@ final class ConversionReviewViewModel {
     }
 
     var canPublish: Bool {
-        !isWorking && outcome == nil && !(drafts.value?.isEmpty ?? true)
+        !isWorking && outcome == nil && !(drafts.value?.isEmpty ?? true) && examTitle != nil
     }
 
     func loadIfNeeded() async {
@@ -183,8 +229,11 @@ final class ConversionReviewViewModel {
             }
             subject = (nil, name)
         }
+        guard let examTitle else { return }
         await perform {
-            let result = try await self.service.publish(jobId: self.job.id, subjectId: subject.id, newSubjectName: subject.name)
+            let result = try await self.service.publish(
+                jobId: self.job.id, subjectId: subject.id, newSubjectName: subject.name, examTitle: examTitle
+            )
             self.outcome = .published(questionCount: result.questionCount)
         }
     }
