@@ -166,6 +166,38 @@ export const CALLABLES = Object.freeze([
   'regeneratePublishedQuestion',
 ]);
 
+/**
+ * PRACTICE MODE ("Sınava gir", in 4.2.0 — owner decisions P1–P5, 14 Nov 2026; plan: local TODO-SINAVA-GIR.md).
+ *
+ * Discovery (no callable): course catalog nodes carry `subjectId` (written by publish); the app reads
+ * `questionPoolIndex/<subjectId>` = `{ subjectId, name, types: { <practice examType>: { tr: n, "u-<universityId>": n,
+ * "c-<courseId>": n } }, updatedAt }` (1 read) to show the "Sınava gir" button (only when the course has ≥1 question in
+ * any scope — data-driven, no remote switch) and the per-type / per-scope counts. Written by the server in the same
+ * transaction as the pools (publish, K21 subject move, exam deletion cleanup); +90 users and admins read it.
+ * All scopes are shown even with a single question (P4).
+ *
+ * Questions are handed out by a callable so the free daily limit cannot be bypassed:
+ * - nextPracticeQuestions { subjectId, examType, scope: 'course'|'university'|'tr', courseId?, universityId?,
+ *     exclude: [questionId ≤ 300], count: 1…10, subscriptionProof? }
+ *   → { questions: [published question shape, Ek A, ids `<examId>-<nnn>` + `examTitle`, `universityName`],
+ *       poolSize, remainingToday: number | null (null = Premium, unlimited), limitReached: bool }
+ *   Random questions from the pool minus `exclude` (the session's seen ids); an exhausted pool returns [] (the app
+ *   starts over by clearing `exclude`). Free users: PRACTICE_FREE_DAILY_LIMIT questions per Istanbul calendar day,
+ *   counted per account in `users/<uid>/practice/daily` = `{ day: 'YYYY-MM-DD', count }` (server-only write, owner read),
+ *   decremented per question delivered (a re-delivered id within the same day is not counted twice — keep
+ *   `seenToday: [ids]` ≤ 50 on the doc). Premium: no counter. Unlimited session length (P2); no right/wrong tracking (P3).
+ * - Premium proof: the subscription lives in StoreKit / Play, so the client sends `subscriptionProof`
+ *   (`{ platform: 'ios', jws }` = the current StoreKit 2 entitlement's signed transaction; Android later
+ *   `{ platform: 'android', purchaseToken, productId }`). The server verifies it (appStore.js / googlePlay.js helpers),
+ *   checks product ∈ subscription products, not revoked, `expiresDate` > now, and caches the result in
+ *   `subscriptions/<uid>` = `{ platform, productId, originalTransactionId, expiresAt, verifiedAt }` so later calls skip
+ *   re-verification until `expiresAt`. No proof / invalid proof → free rules.
+ * Account deletion removes `users/<uid>/practice/*` (and `subscriptions/<uid>` already).
+ */
+export const PRACTICE_FREE_DAILY_LIMIT = 5;
+export const PRACTICE_MAX_BATCH = 10;
+export const PRACTICE_MAX_EXCLUDE = 300;
+
 // MARK: - Ids and paths
 
 /** `exam-<examId>` for a legacy exam, `sub-<submissionId>` for a user submission. */
