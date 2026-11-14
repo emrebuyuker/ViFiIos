@@ -26,6 +26,7 @@ nonisolated enum FirestoreArchiveParser {
         static let order = "order"
         static let format = "format"
         static let questionCount = "questionCount"
+        static let subjectId = "subjectId"
     }
 
     /// `exams/<id>.format` of an exam converted to questions (4.2.0). The original `files` stay on it until Faz 4.
@@ -49,7 +50,13 @@ nonisolated enum FirestoreArchiveParser {
                 guard let summary = examSummary(from: doc.data) else { return nil }
                 return ArchiveItem(path: childPath, level: .exam, childCount: nil, exam: summary)
             }
-            return ArchiveItem(path: childPath, level: childLevel, childCount: childCount(from: doc.data), exam: nil)
+            return ArchiveItem(
+                path: childPath,
+                level: childLevel,
+                childCount: childCount(from: doc.data),
+                exam: nil,
+                subjectId: childLevel == .lesson ? subjectId(from: doc.data) : nil
+            )
         }
         return ArchiveParser.sorted(items, level: childLevel)
     }
@@ -60,6 +67,13 @@ nonisolated enum FirestoreArchiveParser {
         let urls = fileURLs(from: data, bucket: bucket)
         guard !urls.isEmpty else { return nil }
         return ExamDocument(path: path, kind: kind, fileURLs: urls, questionCount: structuredQuestionCount(from: data))
+    }
+
+    /// The `subjectId` of a course catalog node (4.2.0), `nil` when absent or blank.
+    static func subjectId(from data: [String: Any]) -> String? {
+        guard let value = (data[Field.subjectId] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !value.isEmpty else { return nil }
+        return value
     }
 
     // MARK: - Helpers

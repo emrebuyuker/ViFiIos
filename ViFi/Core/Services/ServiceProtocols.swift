@@ -18,9 +18,19 @@ protocol ArchiveRepository: AnyObject {
     /// by a previous session. Lists re-read their entries on each element; the stream ends when the
     /// consuming task is cancelled.
     func archiveChanges() -> AsyncStream<Void>
+
+    /// The subject of the course at `path` (4.2.0, keys the practice mode's question pools); `nil` when the course
+    /// has none or it cannot be read. Never throws: the practice entry simply stays hidden.
+    func subjectId(forCourse path: ArchivePath) async -> String?
 }
 
 extension ArchiveRepository {
+    /// Sources without a cheaper lookup find the course among its parent's entries.
+    func subjectId(forCourse path: ArchivePath) async -> String? {
+        guard let parent = path.parent, let siblings = try? await items(at: parent) else { return nil }
+        return siblings.first { $0.path == path }?.subjectId
+    }
+
     /// Sources that keep themselves available offline (the Realtime Database via `keepSynced`) or have nothing
     /// remote to warm (sample data, test doubles) do nothing.
     func prefetchArchive() async throws {}
@@ -107,6 +117,12 @@ nonisolated enum AnalyticsEvent: Equatable, Sendable {
     case structuredExamOpened(questionCount: Int)
     /// 4.2.0: "Cevabı Göster" tapped, once per question per screen visit.
     case answerRevealed(order: Int)
+
+    // Practice mode ("Sınava gir", 4.2.0)
+    case practiceStarted(examType: ExamType, scope: PracticeScope)
+    case practiceAnswerRevealed
+    case practiceLimitReached
+    case practicePaywallOpened
 
     // Coin economy
     case examUnlockSheetShown(canAfford: Bool)

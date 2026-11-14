@@ -27,6 +27,9 @@ nonisolated struct ArchiveItem: Identifiable, Hashable, Sendable {
     let childCount: Int?
     /// Exams only. `nil` when the exam node has no files.
     let exam: ExamSummary?
+    /// Courses only (4.2.0): the subject a course belongs to, which keys the practice mode's question pools.
+    /// `nil` when the course has none; optional with a default so existing call sites compile unchanged.
+    var subjectId: String?
 
     var id: ArchivePath { path }
     var name: String { path.displayName ?? "" }

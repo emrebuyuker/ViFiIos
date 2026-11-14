@@ -32,6 +32,10 @@ private extension AnalyticsEvent {
         case .recentExamOpened: "recent_exam_open"
         case .structuredExamOpened: "exam_open"
         case .answerRevealed: "answer_revealed"
+        case .practiceStarted: "practice_started"
+        case .practiceAnswerRevealed: "practice_answer_revealed"
+        case .practiceLimitReached: "practice_limit_reached"
+        case .practicePaywallOpened: "practice_paywall_opened"
         case .examUnlockSheetShown: "unlock_sheet_shown"
         case .earnCoinsTapped: "earn_coins_tapped"
         case .examUnlocked: "exam_unlock"
@@ -72,6 +76,8 @@ private extension AnalyticsEvent {
             return ["kind": "structured", "question_count": questionCount]
         case let .answerRevealed(order):
             return ["question_order": order]
+        case let .practiceStarted(examType, scope):
+            return ["exam_type": examType.rawValue, "scope": scope.rawValue]
         case let .examUnlockSheetShown(canAfford):
             return ["can_afford": canAfford]
         case let .examUnlocked(kind, coinsSpent, alreadyUnlocked):
@@ -101,7 +107,8 @@ private extension AnalyticsEvent {
              let .marketingConsentAccepted(source), let .marketingConsentDeclined(source):
             return ["source": source.rawValue]
         case .recentExamOpened, .earnCoinsTapped, .loginSucceeded, .profileCompleted, .profileUpdated,
-             .signedOut, .accountDeleted, .submissionRejected:
+             .signedOut, .accountDeleted, .submissionRejected, .practiceAnswerRevealed, .practiceLimitReached,
+             .practicePaywallOpened:
             return nil
         }
     }

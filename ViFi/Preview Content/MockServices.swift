@@ -66,7 +66,12 @@ extension AppEnvironment {
             ),
             questionReader: MockExamQuestionReader(),
             conversionService: MockExamConversionService(),
-            submitterReader: MockSubmitterProfileReader()
+            submitterReader: MockSubmitterProfileReader(),
+            practiceIndexReader: CachingPracticeIndexReader(base: MockPracticeIndexReader()),
+            practiceService: MockPracticeService(
+                isSubscribed: arguments.contains(LaunchArgument.subscribed),
+                limitReached: arguments.contains(LaunchArgument.practiceLimitReached)
+            )
         )
         // `-ViFiOpenNotification <id>` starts as if the push of that notification had been tapped.
         if let tapped = openedNotificationId(arguments: arguments) {
@@ -160,6 +165,11 @@ final class MockArchiveRepository: ArchiveRepository {
     func items(at path: ArchivePath) async throws -> [ArchiveItem] {
         let node = try await node(at: path)
         return ArchiveParser.items(in: node, at: path).map(Self.markingStructured)
+    }
+
+    /// Only the Topoloji 1 course has a subject (and a practice index, see `MockPracticeIndexReader`).
+    func subjectId(forCourse path: ArchivePath) async -> String? {
+        path == .mockPracticeLesson ? MockPracticeIndexReader.subjectId : nil
     }
 
     func document(at path: ArchivePath) async throws -> ExamDocument {

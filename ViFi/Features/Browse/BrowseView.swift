@@ -7,7 +7,7 @@ struct BrowseView: View {
     @Environment(AppEnvironment.self) private var environment
 
     var body: some View {
-        BrowseScreen(path: path, repository: environment.repository)
+        BrowseScreen(path: path, repository: environment.repository, practiceIndexReader: environment.practiceIndexReader)
     }
 }
 
@@ -17,6 +17,8 @@ private struct BrowseScreen: View {
     @Environment(AppEnvironment.self) private var environment
     @Environment(Router.self) private var router
     @State private var viewModel: BrowseViewModel
+    /// Whether the course offers "Sınava gir" (4.2.0); stays hidden on every other level.
+    @State private var practice: PracticeEntryViewModel
     @State private var hasTrackedLevel = false
     /// Whether the signed-in user is an admin (reveals the delete action on exams); resolved on appear.
     @State private var isAdmin = false
@@ -28,8 +30,9 @@ private struct BrowseScreen: View {
     @State private var isShowingAddExam = false
     @State private var isShowingPaywall = false
 
-    init(path: ArchivePath, repository: any ArchiveRepository) {
+    init(path: ArchivePath, repository: any ArchiveRepository, practiceIndexReader: any PracticeIndexReading) {
         _viewModel = State(initialValue: BrowseViewModel(path: path, repository: repository))
+        _practice = State(initialValue: PracticeEntryViewModel(path: path, repository: repository, reader: practiceIndexReader))
     }
 
     var body: some View {
@@ -40,6 +43,10 @@ private struct BrowseScreen: View {
                 BreadcrumbBar(path: viewModel.path) { router.popTo($0) }
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
+            }
+
+            if let index = practice.index {
+                PracticeStartSection(index: index, courseId: practice.courseId)
             }
 
             if !items.isEmpty {
@@ -92,6 +99,7 @@ private struct BrowseScreen: View {
             await loadIfNeeded()
         }
         .task { await viewModel.refreshOnArchiveChanges() }
+        .task { await practice.load() }
         .task { isAdmin = await environment.auth.isCurrentUserAdmin() }
         .task(id: viewModel.searchQuery) { await trackSearch() }
         .alert("Sınav silinsin mi?", isPresented: deleteConfirmationBinding, presenting: examToDelete) { item in
