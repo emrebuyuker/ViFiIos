@@ -999,3 +999,100 @@ describe('exam title from the list (K28)', () => {
     assert.deepEqual([exam.title, exam.sortKey], ['2024 FİNAL', '2024 FİNAL']);
   });
 });
+
+// --- Practice pool index (questionPoolIndex, 4.2.0 practice mode) ---------------------------------------------------
+
+describe('practice pool index (questionPoolIndex)', () => {
+  const index = (subjectId) => db.collection('questionPoolIndex').doc(subjectId);
+  const UNI = `u-${EGE}`;
+  const CRS = `c-${COURSE}`;
+
+  async function publishLegacy(examId, { title, count = 1, data = {} } = {}) {
+    await seedExam(examId, { title });
+    await job(`exam-${examId}`).set({ source: { type: 'legacy', examId }, status: 'ready' });
+    await seedDrafts(`exam-${examId}`, count);
+    return admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId: `exam-${examId}`, ...data }));
+  }
+
+  test('publish writes the counts per type and scope in the pools\' transaction; other entries are kept', async () => {
+    await seedCatalog({ course: false });
+    // Another university's count, already in the index, must survive.
+    await index('algoritmalar').set({ subjectId: 'algoritmalar', name: 'Algoritmalar', types: { final: { tr: 7, 'u-other': 7 } } });
+    await db.collection('questionPools').doc('algoritmalar__final__tr').set({ ids: Array.from({ length: 7 }, (_, k) => `o-00${k}`) });
+    const { jobId } = await seedReadySubmission('i1');
+    await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId }));
+
+    const first = await getData(index('algoritmalar'));
+    assert.equal(first.subjectId, 'algoritmalar');
+    assert.equal(first.name, 'Algoritmalar');
+    assert.deepEqual(first.types, { final: { tr: 9, 'u-other': 7, [UNI]: 2, [CRS]: 2 } });
+    assert.equal(first.updatedAt.toMillis(), DAY.getTime());
+
+    await publishLegacy('I2', { title: '2020 VİZE', count: 3 });
+    assert.deepEqual((await getData(index('algoritmalar'))).types, {
+      final: { tr: 9, 'u-other': 7, [UNI]: 2, [CRS]: 2 },
+      vize: { tr: 3, [UNI]: 3, [CRS]: 3 },
+    });
+  });
+
+  test('a brand-new subject gets its index with the new subject\'s name; study material adds nothing', async () => {
+    await seedCatalog();
+    await publishLegacy('I3', { title: '2021 FİNAL', data: { newSubjectName: 'Algoritma Analizi' } });
+    const created = await getData(index('algoritma-analizi'));
+    assert.equal(created.name, 'Algoritma Analizi');
+    assert.deepEqual(created.types, { final: { tr: 1, [UNI]: 1, [CRS]: 1 } });
+
+    await publishLegacy('I4', { title: 'ÇALIŞMA SORULARI', data: { subjectId: 'algoritma-analizi' } });
+    assert.equal((await getData(db.collection('questions').doc('I4-001'))).examType, 'calisma-sorulari');
+    assert.deepEqual((await getData(index('algoritma-analizi'))).types, { final: { tr: 1, [UNI]: 1, [CRS]: 1 } });
+  });
+
+  test('re-publishing with fewer questions lowers the counts', async () => {
+    await seedCatalog();
+    await publishLegacy('I5', { title: '2019 FİNAL', count: 3 });
+    assert.deepEqual((await getData(index('algoritmalar'))).types.final, { tr: 3, [UNI]: 3, [CRS]: 3 });
+    // A duplicate replaces the structured exam's 3 questions with 1 (K22).
+    const { jobId } = await seedReadyDuplicate('i5dup', 'I5', { count: 1 });
+    await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId, examTitle: '2019 FİNAL' }));
+    assert.deepEqual((await getData(index('algoritmalar'))).types.final, { tr: 1, [UNI]: 1, [CRS]: 1 });
+  });
+
+  test('a subject change (K21) moves the counts to the new subject; an emptied index is deleted', async () => {
+    await seedCatalog();
+    await publishLegacy('I6', { title: '2019 VİZE', count: 2 });
+    assert.ok((await index('algoritmalar').get()).exists);
+
+    await publishLegacy('I7', { title: '2020 VİZE', data: { newSubjectName: 'Algoritma Analizi' } });
+    assert.equal((await index('algoritmalar').get()).exists, false);
+    assert.deepEqual((await getData(index('algoritma-analizi'))).types, { vize: { tr: 3, [UNI]: 3, [CRS]: 3 } });
+  });
+
+  test('exam deletion cleanup lowers the counts and deletes the index with the last question', async () => {
+    await seedCatalog();
+    await publishLegacy('I8', { title: '2019 FİNAL', count: 2 });
+    await publishLegacy('I9', { title: '2020 VİZE', count: 1 });
+    await publish.deleteStructuredExamData(depsWith(), 'I8');
+    assert.deepEqual((await getData(index('algoritmalar'))).types, { vize: { tr: 1, [UNI]: 1, [CRS]: 1 } });
+    await db.collection('exams').doc('I9').delete();
+    await publish.onExamDeletedHandler(depsWith(), { params: { examId: 'I9' } });
+    assert.equal((await index('algoritmalar').get()).exists, false);
+  });
+
+  test('applyPoolCounts: sets, removes zero scopes and empty types, drops non-practice types', async () => {
+    const poolIndex = await import('../functions/conversions/poolIndex.js');
+    const types = { final: { tr: 3, 'u-a': 3 }, odev: { tr: 1 }, vize: { tr: 0 } };
+    assert.deepEqual(poolIndex.applyPoolCounts(types, [
+      { examType: 'final', scopeKey: 'u-a', count: 0 },
+      { examType: 'final', scopeKey: 'tr', count: 2 },
+      { examType: 'butunleme', scopeKey: 'c-x', count: 4 },
+      { examType: 'laboratuvar', scopeKey: 'tr', count: 9 },
+    ]), { final: { tr: 2 }, butunleme: { 'c-x': 4 } });
+    assert.deepEqual(poolIndex.applyPoolCounts({ final: { tr: 1 } }, [{ examType: 'final', scopeKey: 'tr', count: 0 }]), {});
+    assert.equal(poolIndex.hasPracticeQuestions({}), false);
+    assert.equal(poolIndex.hasPracticeQuestions({ final: { tr: 1 } }), true);
+    assert.equal(poolIndex.poolScopeKey({ scope: 'tr' }), 'tr');
+    assert.equal(poolIndex.poolScopeKey({ scope: 'university', universityId: 'u' }), 'u-u');
+    assert.equal(poolIndex.poolScopeKey({ scope: 'course', courseId: 'c' }), 'c-c');
+    assert.equal(poolIndex.poolScopeKey({ scope: 'course' }), null);
+  });
+});

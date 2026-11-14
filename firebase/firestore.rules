@@ -67,6 +67,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Practice mode (4.2.0, "Sınava gir"): one document per subject with the question count of every practice pool
+    // (`{ subjectId, name, types: { <examType>: { tr | u-<universityId> | c-<courseId>: n } }, updatedAt }`), kept
+    // by the conversion Cloud Functions in the pools' own transactions. Archive content: +90 users and admins read.
+    match /questionPoolIndex/{subjectId} {
+      allow read: if canReadArchive();
+      allow write: if false;
+    }
+
     // AI conversion jobs: admins follow them in the app; only the pipeline writes them. Admins may edit a draft
     // question's content fields directly (K8) — never its order, figures, review metadata of others or the job.
     match /examConversions/{jobId} {
@@ -213,6 +221,13 @@ service cloud.firestore {
       // What the user has unlocked with coins (or via a subscription). Server-written only.
       match /unlocks/{examId} {
         allow read: if isOwner(uid) || isAdmin();
+        allow write: if false;
+      }
+
+      // Practice mode's free daily allowance (`daily` = `{ day, count, seenToday, updatedAt }`), counted only by the
+      // `nextPracticeQuestions` Cloud Function. The owner reads it (what is left today); nobody writes it from a client.
+      match /practice/{docId} {
+        allow read: if isOwner(uid);
         allow write: if false;
       }
 

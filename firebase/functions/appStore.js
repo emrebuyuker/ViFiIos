@@ -1,4 +1,4 @@
-// App Store transaction verification for the paid single-exam unlock.
+// App Store transaction verification for the paid single-exam unlock and the practice mode's Premium proof.
 //
 // A client that buys the `exam.unlock` consumable sends the transaction's signed representation (StoreKit 2
 // JWS). We verify Apple's signature here — never trust the client — so an exam is unlocked only for a real,
@@ -20,6 +20,12 @@ export const BUNDLE_ID = 'com.BuyukerYazilim.ViFi2';
 
 /** The consumable product that unlocks a single exam. */
 export const EXAM_UNLOCK_PRODUCT_ID = 'com.BuyukerYazilim.ViFi2.exam.unlock';
+
+/** The Premium auto-renewable subscriptions (`StoreProductID.subscriptions` in the app). */
+export const SUBSCRIPTION_PRODUCT_IDS = Object.freeze([
+  'com.BuyukerYazilim.ViFi2.premium.monthly',
+  'com.BuyukerYazilim.ViFi2.premium.yearly',
+]);
 
 // The app's numeric App Store id, required to verify PRODUCTION transactions. Unknown until the app is
 // published; set APP_APPLE_ID in the function's environment then. Until it is set, only Sandbox transactions
@@ -53,13 +59,13 @@ function environmentsToTry() {
 }
 
 /**
- * Verifies a StoreKit 2 signed transaction and returns its decoded payload, or throws if the signature,
- * environment, bundle id or product id is wrong. The caller still applies replay protection.
+ * Verifies a StoreKit 2 signed transaction's signature (Apple's chain, this app's bundle id) in every environment the
+ * server can verify, and returns the decoded payload. Product checks are the caller's.
  *
  * @param {string} signedTransaction The JWS representation from `Transaction.jwsRepresentation`.
- * @returns {Promise<{transactionId: string, productId: string, bundleId: string}>}
+ * @returns {Promise<object>} The decoded `JWSTransactionDecodedPayload`.
  */
-export async function verifyExamUnlockTransaction(signedTransaction) {
+export async function verifySignedTransaction(signedTransaction) {
   if (typeof signedTransaction !== 'string' || signedTransaction.length === 0) {
     throw new Error('empty signed transaction');
   }
@@ -71,16 +77,45 @@ export async function verifyExamUnlockTransaction(signedTransaction) {
       if (payload.bundleId !== BUNDLE_ID) {
         throw new Error(`unexpected bundle id ${payload.bundleId}`);
       }
-      if (payload.productId !== EXAM_UNLOCK_PRODUCT_ID) {
-        throw new Error(`unexpected product id ${payload.productId}`);
-      }
-      if (!payload.transactionId) {
-        throw new Error('transaction has no id');
-      }
       return payload;
     } catch (error) {
       lastError = error;
     }
   }
   throw lastError ?? new Error('verification failed');
+}
+
+/**
+ * Verifies a StoreKit 2 signed transaction and returns its decoded payload, or throws if the signature,
+ * environment, bundle id or product id is wrong. The caller still applies replay protection.
+ *
+ * @param {string} signedTransaction The JWS representation from `Transaction.jwsRepresentation`.
+ * @returns {Promise<{transactionId: string, productId: string, bundleId: string}>}
+ */
+export async function verifyExamUnlockTransaction(signedTransaction) {
+  const payload = await verifySignedTransaction(signedTransaction);
+  if (payload.productId !== EXAM_UNLOCK_PRODUCT_ID) {
+    throw new Error(`unexpected product id ${payload.productId}`);
+  }
+  if (!payload.transactionId) {
+    throw new Error('transaction has no id');
+  }
+  return payload;
+}
+
+/**
+ * Verifies the signed transaction of the current Premium entitlement (practice mode's `subscriptionProof`, contract:
+ * conversions/schema.js PRACTICE MODE) and returns its decoded payload; throws for a bad signature, another app or a
+ * product that is not a subscription. Expiry and revocation are checked by the caller against its own clock
+ * (`subscriptionFromTransaction`, conversions/practice.js).
+ *
+ * @param {string} signedTransaction
+ * @returns {Promise<{productId: string, originalTransactionId: string, expiresDate?: number, revocationDate?: number}>}
+ */
+export async function verifySubscriptionTransaction(signedTransaction) {
+  const payload = await verifySignedTransaction(signedTransaction);
+  if (!SUBSCRIPTION_PRODUCT_IDS.includes(payload.productId)) {
+    throw new Error(`unexpected product id ${payload.productId}`);
+  }
+  return payload;
 }

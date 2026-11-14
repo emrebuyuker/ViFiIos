@@ -10,6 +10,7 @@ ayrıntılı açıklama için kök [README.md](../README.md) içindeki *Firebase
 | `firebase.json`, `.firebaserc` | Emülatör portları ve varsayılan proje (`vifi-831a8`) |
 | `scripts/revoke-download-tokens.mjs` | Storage indirme belirteçlerini yedekler, iptal eder, geri yükler |
 | `scripts/convert-legacy-exams.mjs` | Eski sınavları tek seferlik yeni yapıya geçirme işlerini başlatır (4.2.0, K12c) |
+| `scripts/rebuild-pool-index.mjs` | Pratik modu havuz özetini (`questionPoolIndex`) mevcut havuzlardan tek seferlik kurar (4.2.0, "Sınava gir") |
 | `firestore.rules`, `firestore.indexes.json` | Cloud Firestore (`vifi` DB) kuralları ve bileşik indeksleri |
 | `functions/` | Cloud Functions (europe-west1): `unlockExam`, `recordLoginDiagnostic`, `purchaseExamUnlock`, bildirimler (`notifications/`), hesap silme temizliği ve 4.2.0 yapılandırılmış sınav hattı (`conversions/`, aşağıda) |
 | `tests/` | Kural testleri (emülatör), Function handler testleri (bildirim + dönüştürme), satın alma doğrulama testleri ve betik testleri |
@@ -56,11 +57,12 @@ Eski bir sınavın ya da onaylanan bir gönderimin dosyaları yapay zekâyla sor
 | `requestBulkConversion` | callable, admin | Ders/bölüm için toplu iş (`dryRun` tahmin döner; en çok 200 sınav) |
 | `regenerateExamConversion` | callable, admin | Tümünü yeniden üret / başarısız işi yeniden başlat / sağlayıcı bekleyen işi başlat |
 | `regenerateDraftQuestion` | callable, admin | İncelemedeki taslağın tek sorusunu yeniden üretir |
-| `publishExamConversion` | callable, admin | 2. onay: taslağı `questions`'a yayınlar (tek transaction), havuz + ders kimliği günceller |
+| `publishExamConversion` | callable, admin | 2. onay: taslağı `questions`'a yayınlar (tek transaction), havuz + havuz özeti (`questionPoolIndex`) + ders kimliği günceller |
 | `discardExamConversion` | callable, admin | "Sınavı iptal et"; gönderim işinde 1. onayın kopyaladığı dosyaları siler |
 | `updatePublishedQuestion` | callable, admin | Yayındaki soruyu düzenler (anında yayında, id değişmez) |
 | `regeneratePublishedQuestion` | callable, admin | Yayındaki tek soruyu yeniden üretip aynı id altında yayına alır |
 | `processExamConversion` | `onTaskDispatched` (Cloud Tasks; 1800 sn, 2 GiB, 3 deneme, en çok 3 eşzamanlı) | Yapay zekâ hattı: dosyalar → Vertex AI (Claude ya da Gemini) → doğrulama → şekil kırpma → taslaklar → `ready` |
+| `nextPracticeQuestions` | callable, +90 | Pratik modu ("Sınava gir"): havuzdan rastgele soru (en çok 10, `exclude` hariç); ücretsiz kullanıcıya İstanbul günü başına 5 soru (`users/<uid>/practice/daily`), Premium sınırsız (`subscriptionProof` doğrulanır, `subscriptions/<uid>`'de önbelleklenir; Android kanıtı henüz doğrulanmıyor) |
 | `onSubmissionModerated` (değişti) | Firestore tetikleyicisi | 1. onay (`publishPlan`) → iş `sub-<id>` + kuyruk; bölüm bildirimi 2. onaya taşındı; 4.1.0 onayı → sağlayıcısız `exam-<id>` işi |
 
 - **Model seçimi:** her yapay zekâ işleminde `provider: 'claude' | 'gemini'` zorunludur, sunucuda varsayılan yoktur. Model kimliği, bölge (`global`), fiyat ve
@@ -174,6 +176,18 @@ node scripts/revoke-download-tokens.mjs restore --from   backups/tokens-<tarih>.
 - Gerçek bucket için `STORAGE_EMULATOR_HOST` ayarlamayın. Betiğin ilk satırı hedefi yazar
   (`PRODUCTION Cloud Storage` veya `emulator <host>`).
 - Emülatör belirteç iptalini doğru yansıtmaz; iptal/geri yükleme döngüsü `tests/fake-gcs-server.mjs` ile test edilir.
+
+## Pratik modu havuz özeti (4.2.0, "Sınava gir")
+
+`questionPoolIndex/<dersKimliği>` yayın, ders taşıma (K21) ve sınav silme temizliğinde havuzlarla aynı transaction'da güncellenir.
+Bu özellikten önce yayınlanmış havuzlar için bir kez:
+
+```bash
+cd firebase
+node scripts/rebuild-pool-index.mjs                                                   # yerel emülatörde deneme
+node scripts/rebuild-pool-index.mjs --project vifi-831a8 --confirm-project vifi-831a8          # canlı deneme (yalnız okur)
+node scripts/rebuild-pool-index.mjs --project vifi-831a8 --confirm-project vifi-831a8 --apply  # YALNIZCA sahip onayıyla, yayın yapılmıyorken
+```
 
 ## Eski sınavların tek seferlik geçişi (4.2.0, K12c / K24)
 
