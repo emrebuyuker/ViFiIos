@@ -52,6 +52,31 @@ struct PracticeSessionViewModelTests {
         #expect(service.requests[2].exclude == ["e1-001", "e1-002"])
     }
 
+    @Test("Questions are numbered 1, 2, 3… in the session, and starting over begins at 1 again")
+    func runningNumber() async {
+        let service = StubPracticeService(results: [
+            .batch(PracticeFixture.batch(ids: ["e1-004"], remaining: nil)),
+            .batch(PracticeFixture.batch(ids: ["e2-001"], remaining: nil)),
+            .batch(PracticeFixture.batch(ids: [], remaining: nil)),
+            .batch(PracticeFixture.batch(ids: ["e1-004"], remaining: nil)),
+        ])
+        let viewModel = makeViewModel(service)
+        #expect(viewModel.questionNumber == 0)
+
+        await viewModel.start()
+        #expect(viewModel.questionNumber == 1)
+        await waitForRequests(service, count: 2)
+        await viewModel.next()
+        #expect(viewModel.questionNumber == 2)
+        await waitForRequests(service, count: 3)
+        await viewModel.next()
+        #expect(viewModel.phase == .exhausted)
+        #expect(viewModel.questionNumber == 2)
+
+        await viewModel.restart()
+        #expect(viewModel.questionNumber == 1)
+    }
+
     @Test("Revealing flips the answer; moving on hides it again; only the first reveal of a question is counted")
     func reveal() async {
         let service = StubPracticeService(results: [

@@ -13,13 +13,16 @@ import UIKit
 struct QuestionCardView: View {
     let question: ExamQuestion
     let isAnswerRevealed: Bool
+    /// The card's heading; `nil` = the exam's own numbering ("4. Soru"). Practice mode passes its running number
+    /// ("Soru 3"), since its questions come from different exams (owner decision, 14 Nov 2026).
+    var title: String?
     var onToggleAnswer: () -> Void
 
     @Environment(AppEnvironment.self) private var environment
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("\(question.label). Soru")
+            Text(title ?? "\(question.label). Soru")
                 .font(.headline)
                 .padding(.horizontal, 16)
                 .padding(.top, 14)

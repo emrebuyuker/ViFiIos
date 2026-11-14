@@ -26,7 +26,8 @@
     <tr><td>Telefon numarası</td><td>SMS koduyla giriş yapman ve hesabının oluşturulması için.</td></tr>
     <tr><td>Ad, soyad, cinsiyet, üniversite, fakülte, bölüm</td><td>Profilinin oluşturulması, sana uygun içeriğin gösterilmesi ve bildirimlerin ilgili öğrencilere (ör. yalnızca bir bölüme) gönderilebilmesi için. Sınav gönderdiğinde adın, soyadın, üniversiten, fakülten ve bölümün gönderimi inceleyen ViFi yöneticilerine gösterilir; telefon numaran gösterilmez.</td></tr>
     <tr><td>Kullanıcı kimliği (Firebase)</td><td>Hesabının, coin bakiyenin ve açtığın sınavların sana bağlanması için.</td></tr>
-    <tr><td>Abonelik ve uygulama içi satın alma kayıtları</td><td>Aboneliğinin ve satın alarak açtığın sınavların hesabına tanımlanması için. Ödemeler satın aldığın mağaza (iOS'ta App Store, Android'de Google Play) üzerinden işlenir; kart veya banka bilgilerin bize iletilmez ve bizde saklanmaz. Satın almanın geçerliliği, mağazanın verdiği işlem bilgisiyle sunucumuzda doğrulanır.</td></tr>
+    <tr><td>Abonelik ve uygulama içi satın alma kayıtları</td><td>Aboneliğinin ve satın alarak açtığın sınavların hesabına tanımlanması için. Ödemeler satın aldığın mağaza (iOS'ta App Store, Android'de Google Play) üzerinden işlenir; kart veya banka bilgilerin bize iletilmez ve bizde saklanmaz. Satın almanın geçerliliği, mağazanın verdiği işlem bilgisiyle sunucumuzda doğrulanır. Bir abonelik yalnızca bir ViFi hesabında kullanılabilir; aboneliğin, ilk doğrulandığı hesaba bağlanır.</td></tr>
+    <tr><td>"Sınava gir" günlük soru sayacı</td><td>Sınava gir modunda o gün görüntülediğin soru sayısı, ücretsiz günlük hakkını uygulamak için hesabına bağlı tutulur ve her gün sıfırlanır.</td></tr>
     <tr><td>Gönderdiğin sınav dosyaları</td><td>İnceleme sonrası arşive eklenmesi ve sorularının yapay zekâ ile tek tek gösterilecek şekilde hazırlanması için (bkz. <a href="#yapay-zeka">Yapay zekâ ile soru hazırlama</a>). Göndermek isteğe bağlıdır.</td></tr>
     <tr><td>Uygulama kullanım olayları (ör. açılan ekran, açılan sınav türü)</td><td>Uygulamanın nasıl kullanıldığını anlamak ve geliştirmek için (Google Analytics).</td></tr>
     <tr><td>Bildirim anahtarı ve cihaz kaydı (uygulamanın bu kurulumuna özgü kimlik, platform, uygulama sürümü)</td><td>Bildirimleri hesabına kayıtlı cihazlarına iletebilmek için. Çıkış yaptığında ya da hesabını sildiğinde o cihazın kaydı silinir.</td></tr>
@@ -83,7 +84,7 @@
 
   <h2>Saklama süresi</h2>
   <p>Hesap ve profil verilerin hesabın açık kaldığı sürece saklanır. Bildirim tercihin, bildirim kutun, bildirim
-    etkileşimlerin ve cihaz kayıtların da hesabın açık kaldığı sürece saklanır; hesabını sildiğinde silinir. Hesabını
+    etkileşimlerin, cihaz kayıtların ve "Sınava gir" günlük soru sayacın da hesabın açık kaldığı sürece saklanır; hesabını sildiğinde silinir. Hesabını
     sildiğinde ne olacağı
     <a href="/hesap-silme">Hesap Silme</a> sayfasında açıklanır. Giriş hatası kayıtları 60 gün, kullanım istatistikleri
     en fazla 14 ay saklanır. Satın alma kayıtlarının sipariş/işlem kimliği, aynı satın almanın tekrar kullanılmasını

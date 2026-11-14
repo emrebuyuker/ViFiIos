@@ -41,6 +41,8 @@ nonisolated final class SubjectMappingUITests: XCTestCase {
         tap("subjects.row.fizik-2", in: app)
         tap("subjects.course.change", in: app)
         tap("subjects.picker.row.fizik-1", in: app)
+        // A single course move is confirmed first.
+        tap("subjects.move.confirm", in: app)
 
         // The only course left Fizik 2, so the subject is empty but still listed; Fizik 1 now holds three courses.
         XCTAssertTrue(element("subjects.detail", in: app).waitForExistence(timeout: Timeout.content))

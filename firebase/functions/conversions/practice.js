@@ -188,15 +188,29 @@ export async function nextPracticeQuestionsHandler(deps, request) {
   };
 }
 
+/** A cached subscription is trusted for at most this long, then re-verified from a fresh proof (owner decision). */
+export const SUBSCRIPTION_REVERIFY_MS = 24 * 60 * 60 * 1000;
+
+/** The owner document id of a store subscription: `<platform>-<originalTransactionId>` (`/` cannot appear in it). */
+export function subscriptionOwnerId(platform, originalTransactionId) {
+  return `${platform}-${String(originalTransactionId).replace(/\//g, '_')}`;
+}
+
 /**
- * Premium = a cached subscription (`subscriptions/<uid>.expiresAt` after now) or a `subscriptionProof` that verifies
- * now (then cached). Anything else — no proof, a malformed or rejected one, a store error — is the free rules.
+ * Premium = a cached subscription (`subscriptions/<uid>`: `expiresAt` after now AND verified within the last 24 hours)
+ * or a `subscriptionProof` that verifies now (then cached). Anything else — no proof, a malformed or rejected one, a
+ * store error — is the free rules.
+ *
+ * One subscription serves one account (owner decision): the first account that proves it owns it
+ * (`subscriptionOwners/<platform>-<originalTransactionId>` = `{ uid, platform, originalTransactionId, boundAt }`); a
+ * proof of a subscription bound to another account is the free rules. Account deletion releases the binding.
+ * Known limit: the proof is checked locally (signature, product, expiry, revocation inside the payload) — a refund is
+ * seen when the store stops handing the client the entitlement, so within 24 hours for an honest client.
  */
 async function isPremium(deps, uid, rawProof, now) {
   const ref = deps.db.collection('subscriptions').doc(uid);
   const cached = await ref.get();
-  const cachedExpiry = cached.exists ? cached.get('expiresAt') : null;
-  if (typeof cachedExpiry?.toMillis === 'function' && cachedExpiry.toMillis() > now.getTime()) return true;
+  if (cached.exists && isFreshCache(cached, now)) return true;
 
   const proof = validProof(rawProof);
   if (!proof || typeof deps.verifySubscriptionProof !== 'function') return false;
@@ -209,14 +223,40 @@ async function isPremium(deps, uid, rawProof, now) {
   }
   const subscription = subscriptionFromTransaction(payload, now, proof.platform);
   if (!subscription) return false;
-  await ref.set({
-    platform: subscription.platform,
-    productId: subscription.productId,
-    originalTransactionId: subscription.originalTransactionId,
-    expiresAt: Timestamp.fromDate(subscription.expiresAt),
-    verifiedAt: Timestamp.fromDate(now),
+
+  const ownerRef = deps.db.collection('subscriptionOwners')
+    .doc(subscriptionOwnerId(subscription.platform, subscription.originalTransactionId));
+  return deps.db.runTransaction(async (transaction) => {
+    const owner = await transaction.get(ownerRef);
+    const ownerUid = owner.exists ? owner.get('uid') : null;
+    if (ownerUid && ownerUid !== uid) {
+      logger.warn('Practice: subscription bound to another account', { uid, platform: subscription.platform });
+      return false;
+    }
+    if (!ownerUid) {
+      transaction.set(ownerRef, {
+        uid,
+        platform: subscription.platform,
+        originalTransactionId: subscription.originalTransactionId,
+        boundAt: Timestamp.fromDate(now),
+      });
+    }
+    transaction.set(ref, {
+      platform: subscription.platform,
+      productId: subscription.productId,
+      originalTransactionId: subscription.originalTransactionId,
+      expiresAt: Timestamp.fromDate(subscription.expiresAt),
+      verifiedAt: Timestamp.fromDate(now),
+    });
+    return true;
   });
-  return true;
+}
+
+function isFreshCache(snapshot, now) {
+  const expiresAt = snapshot.get('expiresAt');
+  const verifiedAt = snapshot.get('verifiedAt');
+  if (typeof expiresAt?.toMillis !== 'function' || typeof verifiedAt?.toMillis !== 'function') return false;
+  return expiresAt.toMillis() > now.getTime() && now.getTime() - verifiedAt.toMillis() < SUBSCRIPTION_REVERIFY_MS;
 }
 
 /** Every id of the pool (all `__pN` parts, in order); `[]` when the pool does not exist. */

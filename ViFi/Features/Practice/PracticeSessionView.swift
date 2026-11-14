@@ -71,6 +71,7 @@ private struct PracticeSessionScreen: View {
                             QuestionCardView(
                                 question: current.question,
                                 isAnswerRevealed: viewModel.isAnswerRevealed,
+                                title: String(localized: "Soru \(viewModel.questionNumber)"),
                                 onToggleAnswer: { viewModel.toggleAnswer() }
                             )
                         }

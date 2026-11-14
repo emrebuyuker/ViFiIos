@@ -6,7 +6,8 @@
 // - Firestore `users/{uid}` with every subcollection: unlocked exams ("açılan sınav kayıtları"), notification
 //   inbox, registered devices, notification settings, the practice-mode daily allowance (`practice/daily`, 4.2.0).
 // - `wallets/{uid}` with its `ledger` ("Coin bakiyesi").
-// - `subscriptions/{uid}` (entitlement state keyed by the account).
+// - `subscriptions/{uid}` (entitlement state keyed by the account) and its `subscriptionOwners/*` binding (4.2.0
+//   practice mode: one subscription serves one account; deleting the account frees it for a new one).
 // - The user's still-pending submissions ("Onay bekleyen sınav gönderimleri") and every file under
 //   `pending/{uid}/` in Storage — the archive never points there: an approval copies the files to `imagess/`/`pdfs/`.
 // - The Realtime Database profile `users/{uid}` ("Profil … Hemen silinir"). The app deletes it before deleting the
@@ -57,6 +58,8 @@ export async function deleteAccountData(deps, uid) {
     firestoreUser: () => db.recursiveDelete(db.collection('users').doc(uid)),
     wallet: () => db.recursiveDelete(db.collection('wallets').doc(uid)),
     subscription: () => db.recursiveDelete(db.collection('subscriptions').doc(uid)),
+    // Releases the practice-mode subscription binding so the subscriber can use it with a new account.
+    subscriptionOwners: () => deleteSubscriptionOwners(db, uid),
     pendingSubmissions: () => deletePendingSubmissions(db, uid),
     // Pending submissions' uploads (and leftovers of rejected / failed ones); a missing prefix is a no-op.
     pendingFiles: () => bucket.deleteFiles({ prefix: `pending/${uid}/` }),
@@ -150,4 +153,11 @@ async function deleteNotificationEvents(db, uid) {
   const failure = (await Promise.all(deletes)).find(Boolean);
   if (failure) throw failure;
   return markers.length;
+}
+
+/** Deletes the `subscriptionOwners` bindings of `uid` (practice mode, 4.2.0). */
+async function deleteSubscriptionOwners(db, uid) {
+  const snapshot = await db.collection('subscriptionOwners').where('uid', '==', uid).get();
+  await Promise.all(snapshot.docs.map((doc) => doc.ref.delete()));
+  return snapshot.size;
 }

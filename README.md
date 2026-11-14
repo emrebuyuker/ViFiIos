@@ -195,6 +195,7 @@ Cloud Firestore (isimli `vifi` veritabanı) — arşiv ve bildirimler:
   questionPools/<subjectId>__<examType>__<tr|u-<üniv>|c-<ders>>[__pN]  { ids[], count, updatedAt }  # "Sınava gir" havuzu
   questionPoolIndex/<subjectId>  { subjectId, name, types{<tür>:{tr|u-<üniv>|c-<ders>: n}}, updatedAt } # havuz özeti, +90 okur
   users/<uid>/practice/daily     { day, count, seenToday[], updatedAt }                             # ücretsiz günlük hak, yalnız sunucu
+  subscriptionOwners/<platform>-<originalTransactionId>  { uid, platform, originalTransactionId, boundAt }  # bir abonelik = bir hesap
   subjects/<subjectId>       { name, aliases[] }                                                    # ülke geneli ders kimliği
   examConversions/<jobId>    { source, placement, files, kind, status, attempts, model{provider,id}, usage, … }  # yalnız admin okur
     └ questions/<nnn>        taslak soru (+ confidence, needsReview, editedBy/At, regenerationLeaseUntil/Error)

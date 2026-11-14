@@ -80,6 +80,8 @@ async function seedUser(uid) {
   writer.set(db.collection('wallets').doc(uid), { balance: 150, updatedAt: new Date() });
   writer.set(db.collection('wallets').doc(uid).collection('ledger').doc('sub-1'), { type: 'earn', amount: 50, createdAt: new Date() });
   writer.set(db.collection('subscriptions').doc(uid), { active: true });
+  // Practice mode's subscription binding (4.2.0): one subscription, one account.
+  writer.set(db.collection('subscriptionOwners').doc(`ios-orig-${uid}`), { uid, platform: 'ios', originalTransactionId: `orig-${uid}`, boundAt: new Date() });
   await writer.close();
   await rtdb.ref('users').child(uid).set({ profile: { name: 'Ad', surname: 'Soyad', universityId: 'ege-universitesi' } });
   // A legacy (pre-Firestore) RTDB submission queue entry.
@@ -139,6 +141,7 @@ async function assertCleanedUp() {
   assert.equal(await exists(db.collection('wallets').doc(GONE)), false);
   assert.equal((await db.collection('wallets').doc(GONE).collection('ledger').get()).size, 0);
   assert.equal(await exists(db.collection('subscriptions').doc(GONE)), false);
+  assert.equal(await exists(db.collection('subscriptionOwners').doc(`ios-orig-${GONE}`)), false);
   assert.equal(await exists(db.collection('submissions').doc('s-pending')), false);
   assert.equal((await rtdb.ref('users').child(GONE).once('value')).exists(), false);
   assert.equal((await rtdb.ref('pendingExams').child(GONE).once('value')).exists(), false);
@@ -163,6 +166,7 @@ async function assertCleanedUp() {
   assert.equal((await db.collection('wallets').doc(STAY).get()).get('balance'), 150);
   assert.equal((await db.collection('wallets').doc(STAY).collection('ledger').get()).size, 1);
   assert.equal(await exists(db.collection('subscriptions').doc(STAY)), true);
+  assert.equal(await exists(db.collection('subscriptionOwners').doc(`ios-orig-${STAY}`)), true);
   assert.equal((await db.collection('purchasedTransactions').doc('tx-stay').get()).get('uid'), STAY);
   assert.equal((await rtdb.ref('users').child(STAY).child('profile/name').once('value')).val(), 'Ad');
   assert.equal((await rtdb.ref('pendingExams').child(STAY).child('old-1/lesson').once('value')).val(), 'Ders');

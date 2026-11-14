@@ -298,6 +298,10 @@ describe('Firestore rules — coins (admin-written), entitlements (server-only),
   test('even an admin cannot write subscriptions or unlocks from a client', async () => {
     const fs = db(users.admin);
     await assertFails(sub(fs, 'alice').set({ active: true }));
+    // Practice mode's subscription binding: no client access at all (4.2.0).
+    await assertFails(fs.collection('subscriptionOwners').doc('ios-1').get());
+    await assertFails(fs.collection('subscriptionOwners').doc('ios-1').set({ uid: 'admin' }));
+    await assertFails(db(users.alice).collection('subscriptionOwners').doc('ios-1').get());
     await assertFails(unlock(fs, 'alice', 'exam2').set({ coinsSpent: 0 }));
   });
 

@@ -26,6 +26,8 @@ final class PracticeSessionViewModel {
     private(set) var phase: Phase = .loading
     private(set) var current: PracticeQuestion?
     private(set) var isAnswerRevealed = false
+    /// The running number of the question on screen in this session ("Soru 1, 2, 3…"); 0 before the first one.
+    private(set) var questionNumber = 0
     /// The pool's size as the server last reported it.
     private(set) var poolSize: Int
 
@@ -84,6 +86,7 @@ final class PracticeSessionViewModel {
         prefetchTask = nil
         queue = []
         seenIds = []
+        questionNumber = 0
         isPoolDone = false
         current = nil
         phase = .loading
@@ -139,6 +142,7 @@ final class PracticeSessionViewModel {
 
     private func show(_ question: PracticeQuestion) {
         current = question
+        questionNumber += 1
         isAnswerRevealed = false
         hasTrackedReveal = false
         phase = .question

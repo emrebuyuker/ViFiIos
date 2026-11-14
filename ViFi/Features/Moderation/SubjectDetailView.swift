@@ -125,7 +125,7 @@ struct SubjectDetailView: View {
     }
 }
 
-/// The detail screen's pickers, rename field and merge confirmation.
+/// The detail screen's pickers, rename field and the move / merge confirmations.
 private struct SubjectDialogs: ViewModifier {
     let subject: AdminSubject
     let viewModel: SubjectMappingViewModel
@@ -135,7 +135,22 @@ private struct SubjectDialogs: ViewModifier {
 
     @State private var mergeTarget: AdminSubject?
     @State private var isConfirmingMerge = false
+    /// The picked move of one course, confirmed before it runs (owner decision, 14 Nov 2026).
+    @State private var pendingMove: PendingMove?
+    @State private var isConfirmingMove = false
     @State private var newName = ""
+
+    private struct PendingMove {
+        let course: SubjectCourse
+        let pick: SubjectPick
+
+        var targetName: String {
+            switch pick {
+            case let .existing(target): target.name
+            case let .new(name): name
+            }
+        }
+    }
 
     /// Every subject but this one: where a course or this subject can go.
     private var otherSubjects: [AdminSubject] {
@@ -144,11 +159,24 @@ private struct SubjectDialogs: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .sheet(item: $changing) { course in
+            .sheet(item: $changing, onDismiss: { isConfirmingMove = pendingMove != nil }, content: { course in
                 SubjectPickerSheet(title: "Yeni konu seç", subjects: otherSubjects, allowsNew: true) { pick in
+                    pendingMove = PendingMove(course: course, pick: pick)
                     changing = nil
-                    Task { await change(course, to: pick) }
                 }
+            })
+            .alert("Ders taşınsın mı?", isPresented: $isConfirmingMove, presenting: pendingMove) { move in
+                Button("Taşı") {
+                    pendingMove = nil
+                    Task { await change(move.course, to: move.pick) }
+                }
+                .accessibilityIdentifier("subjects.move.confirm")
+                Button("Vazgeç", role: .cancel) { pendingMove = nil }
+            } message: { move in
+                Text(
+                    "“\(move.course.name)” dersi “\(move.targetName)” konusuna taşınacak: \(move.course.questionCount) yayınlanmış "
+                        + "sorusu ve soru havuzları yeni konuya geçer."
+                )
             }
             .sheet(isPresented: $isPickingMerge, onDismiss: { isConfirmingMerge = mergeTarget != nil }, content: {
                 SubjectPickerSheet(title: "Birleştirilecek ders", subjects: otherSubjects, allowsNew: false) { pick in

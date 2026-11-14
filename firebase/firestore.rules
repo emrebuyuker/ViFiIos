@@ -215,6 +215,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Practice mode (4.2.0): which account a store subscription is bound to (one subscription, one account). Written
+    // only by the `nextPracticeQuestions` Cloud Function; no client reads it.
+    match /subscriptionOwners/{ownerId} {
+      allow read, write: if false;
+    }
+
     // Per-user state lives under `users/{uid}/…` in Firestore (the profile itself stays in the Realtime
     // Database for now). The parent `users/{uid}` document is not used and stays denied by the catch-all.
     match /users/{uid} {

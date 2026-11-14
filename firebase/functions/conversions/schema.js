@@ -214,9 +214,13 @@ export const CALLABLES = Object.freeze([
  *   `{ platform: 'android', purchaseToken, productId }`). The server verifies it (appStore.js
  *   `verifySubscriptionTransaction`; Android is not verified yet and counts as free), checks product ∈ subscription
  *   products, not revoked, `expiresDate` > now, and caches the result in `subscriptions/<uid>` = `{ platform,
- *   productId, originalTransactionId, expiresAt, verifiedAt }` so later calls skip re-verification (and the proof)
- *   until `expiresAt`. No proof / invalid proof / store error → free rules (never an error).
- * Account deletion removes `users/<uid>/practice/*` (with `users/<uid>`) and `subscriptions/<uid>`.
+ *   productId, originalTransactionId, expiresAt, verifiedAt }` so later calls skip re-verification for at most 24 hours
+ *   (and never past `expiresAt`); then a fresh proof is needed. One subscription serves ONE account: the first account
+ *   that proves it is bound in `subscriptionOwners/<platform>-<originalTransactionId>` = `{ uid, platform,
+ *   originalTransactionId, boundAt }` (server-only, no client access); another account's proof of it gets the free
+ *   rules. No proof / invalid proof / store error → free rules (never an error).
+ * Account deletion removes `users/<uid>/practice/*` (with `users/<uid>`), `subscriptions/<uid>` and the account's
+ * `subscriptionOwners` bindings (the subscription can then serve a new account).
  */
 export const PRACTICE_FREE_DAILY_LIMIT = 5;
 export const PRACTICE_MAX_BATCH = 10;

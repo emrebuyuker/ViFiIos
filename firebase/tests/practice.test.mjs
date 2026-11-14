@@ -226,6 +226,53 @@ describe('Premium: a verified subscription proof', () => {
     assert.equal(expired.remainingToday, 0);
   });
 
+  test('a cached subscription older than 24 hours needs a fresh proof', async () => {
+    await seedQuestions('P4', 12);
+    await db.collection('subscriptions').doc(USER.uid).set({
+      platform: 'ios', productId: MONTHLY, originalTransactionId: 'orig-1',
+      expiresAt: Timestamp.fromMillis(NOON.getTime() + 10 * 24 * 60 * 60 * 1000), verifiedAt: Timestamp.fromDate(NOON),
+    });
+    const dayLater = new Date(NOON.getTime() + practice.SUBSCRIPTION_REVERIFY_MS);
+    // Not expired, but verified a day ago: without a proof the free rules apply (a refunded entitlement is no longer sent).
+    const stale = await call(deps({ now: dayLater }), request({ count: 8 }));
+    assert.equal(stale.remainingToday, 0);
+    assert.equal(stale.questions.length, 5);
+
+    // With a fresh proof it is Premium again and the cache is renewed.
+    await dailyRef().delete();
+    const d = deps({ now: dayLater, verify: async () => validPayload(dayLater) });
+    const fresh = await call(d, request({ count: 8, subscriptionProof: IOS_PROOF }));
+    assert.equal(fresh.remainingToday, null);
+    assert.equal(d.calls.length, 1);
+    const cached = (await db.collection('subscriptions').doc(USER.uid).get()).data();
+    assert.equal(cached.verifiedAt.toMillis(), dayLater.getTime());
+  });
+
+  test('one subscription serves one account: another account proving it gets the free rules', async () => {
+    await seedQuestions('P5', 12);
+    const ownerRef = db.collection('subscriptionOwners').doc(practice.subscriptionOwnerId('ios', 'orig-1'));
+    const first = deps({ verify: async () => validPayload() });
+    assert.equal((await call(first, request({ count: 3, subscriptionProof: IOS_PROOF }))).remainingToday, null);
+    assert.equal((await ownerRef.get()).get('uid'), USER.uid);
+
+    const other = { uid: 'mehmet', token: { phone_number: '+905554443322' } };
+    const second = deps({ verify: async () => validPayload() });
+    const result = await call(second, request({ count: 10, subscriptionProof: IOS_PROOF }), other);
+    assert.equal(result.remainingToday, 0);
+    assert.equal(result.questions.length, 5);
+    assert.equal((await db.collection('subscriptions').doc('mehmet').get()).exists, false);
+    assert.equal((await ownerRef.get()).get('uid'), USER.uid, 'the binding does not move');
+
+    // The owner keeps it, also after re-verification.
+    const again = deps({ now: new Date(NOON.getTime() + practice.SUBSCRIPTION_REVERIFY_MS + 1), verify: async () => validPayload() });
+    assert.equal((await call(again, request({ count: 1, subscriptionProof: IOS_PROOF }))).remainingToday, null);
+  });
+
+  test('subscriptionOwnerId keeps the id a single document segment', () => {
+    assert.equal(practice.subscriptionOwnerId('ios', '2000001234'), 'ios-2000001234');
+    assert.equal(practice.subscriptionOwnerId('android', 'GPA.1/2'), 'android-GPA.1_2');
+  });
+
   test('an expired, revoked, non-subscription, rejected or Android proof falls back to the free rules', async () => {
     await seedQuestions('P3', 12);
     const cases = [
