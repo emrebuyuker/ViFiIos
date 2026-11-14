@@ -192,7 +192,9 @@ Cloud Firestore (isimli `vifi` veritabanı) — arşiv ve bildirimler:
   questions/<examId>-<nnn>   { schemaVersion, examId, order, label, text, speech, choices[], figures[{storagePath,width,height}],
                                answer{text,choice?,speech?}, solution[], topics[], difficulty, hasFigure, subjectId, courseId,
                                universityId, facultyId, departmentId, examType, year, updatedAt }   # yayınlanmış, yalnız sunucu yazar
-  questionPools/<subjectId>__<examType>__<tr|u-<üniv>|c-<ders>>[__pN]  { ids[], count, updatedAt }  # ileride "Sınava gir" için
+  questionPools/<subjectId>__<examType>__<tr|u-<üniv>|c-<ders>>[__pN]  { ids[], count, updatedAt }  # "Sınava gir" havuzu
+  questionPoolIndex/<subjectId>  { subjectId, name, types{<tür>:{tr|u-<üniv>|c-<ders>: n}}, updatedAt } # havuz özeti, +90 okur
+  users/<uid>/practice/daily     { day, count, seenToday[], updatedAt }                             # ücretsiz günlük hak, yalnız sunucu
   subjects/<subjectId>       { name, aliases[] }                                                    # ülke geneli ders kimliği
   examConversions/<jobId>    { source, placement, files, kind, status, attempts, model{provider,id}, usage, … }  # yalnız admin okur
     └ questions/<nnn>        taslak soru (+ confidence, needsReview, editedBy/At, regenerationLeaseUntil/Error)
@@ -352,7 +354,7 @@ tek tek ve "Cevabı Göster" ile açar. Orijinal dosyalar silinmez: yapılandır
 
 > [!IMPORTANT]
 > **Bu özelliğin sunucu tarafı henüz canlıda değil.** Kod, kural taslakları ve emulator testleri `v-4.2.0` dalında hazırdır;
-> `vifi-831a8`'de yeni Firestore/Storage kuralları, indeksler, 8 callable, `processExamConversion` kuyruğu ve Vertex AI
+> `vifi-831a8`'de yeni Firestore/Storage kuralları, indeksler, 13 callable, `processExamConversion` kuyruğu ve Vertex AI
 > etkinleştirmesi yayınlanmadı. Sıra: 4.1.0 canlıda olsun → proje sahibinin onayıyla yayın → uçtan uca deneme → Android ile aynı anda
 > sürüm. Yayın dışı kalan her şey yok sayılırsa uygulama bugünkü gibi çalışır (yapılandırılmış sınav yok, soru ekranı hiç açılmaz).
 
@@ -390,8 +392,10 @@ flowchart LR
 - **Veri tasarrufu.** Sınav açılınca yalnızca o sınavın soruları (`where examId == X order by order`, ~10–30 okuma) iner; şekiller ekrana
   gelince, kimlikli indirme ve disk önbelleğiyle. `ArchivePrefetcher` soruları önceden çekmez.
 - **Uzaktan anahtar yok.** Yapılandırılmış sınav her zaman soru ekranında açılır; davranış uzak bayrakla değişmez (Apple App Review riski).
-- **Gelecek:** soru havuzları (`questionPools`), ülke geneli ders kimliği (`subjects`) ve konu/zorluk etiketleri "Sınava gir" pratik modu
-  (ROADMAP #4) için şimdiden üretilir; bu mod 4.2.0'da geliştirilmez.
+- **"Sınava gir" pratik modu.** Ders ekranındaki düğme, dersin havuz özetini (`questionPoolIndex`, tek okuma) gösterir; kullanıcı sınav türü ve
+  kapsamı (bu ders / üniversitem / Türkiye geneli) seçer, sorular karışık sırayla tek tek gelir ("Cevabı Göster", doğru/yanlış takibi yok).
+  Sorular `nextPracticeQuestions` Function'ından gelir: ücretsiz kullanıcıya günde 5 soru (sunucuda sayılır, Premium sınırsız; ön-çekme yalnız
+  Premium'da). Adminler Moderasyon › Ders eşleme ekranında derslerin ülke geneli kimliğini düzeltir (taşı / yeniden adlandır / birleştir).
 
 Android için sözleşme (veri modeli, ayrıştırma ve çizim kuralları, yayın sırası) yerel `STRUCTURED-EXAMS.md` dosyasındadır; platform
 sözleşmesinin yetkili kaynağı `firebase/functions/conversions/schema.js`'tir.
@@ -638,7 +642,7 @@ cd firebase
 firebase deploy --only functions --project vifi-831a8 --account <sahip hesabı>
 ```
 
-**4.2.0 yapılandırılmış sınavlar:** yeni kurallar + indeksler (`questions (examId, order)`, `examConversions (status, createdAt desc)`), 8 callable
+**4.2.0 yapılandırılmış sınavlar:** yeni kurallar + indeksler (`questions (examId, order)`, `examConversions (status, createdAt desc)`), 13 callable
 ve `processExamConversion` kuyruk Function'ı aynı komutlarla yayınlanır; ek önkoşul Vertex AI API'nin açılması ve Model Garden'da Claude'un
 etkinleştirilmesidir. **Hiçbiri yayınlanmadı**; yalnızca proje sahibinin açık onayıyla, 4.1.0 canlıya çıktıktan sonra. Eski sınavların toplu
 geçişi için `firebase/scripts/convert-legacy-exams.mjs` ([firebase/README.md](firebase/README.md)): varsayılan dry-run, `--apply` canlı veri
@@ -840,7 +844,7 @@ ayrıştırıcıları (`ExamQuestionParser`, `ExamConversionParser`, `ExamTitleP
   akışı) açıklandı. What's New bu derlemenin bütün görünür değişikliklerini kesin iddia kullanmadan içeriyor. Göndermeden önce admin
   hesabıyla giriş yapılıp iki admin girişinin göründüğü doğrulandı.
 - [ ] **4.2.0 (yapılandırılmış sınavlar):** Android ile **aynı anda** yayın (iOS, Android hazır olana kadar incelemeye gönderilmez); backend (kurallar + indeksler,
-  8 callable + kuyruk, Vertex AI + Model Garden'da Claude) yeni istemciden **önce** ve yalnızca sahibin onayıyla yayınlandı; `providers/config.js`'teki `VERIFY`
+  13 callable + kuyruk, Vertex AI + Model Garden'da Claude) yeni istemciden **önce** ve yalnızca sahibin onayıyla yayınlandı; `providers/config.js`'teki `VERIFY`
   değerleri canlı Vertex'te doğrulandı; 1 eski sınavla uçtan uca (geçir → bildirim → incele → yayınla) ve 1 test gönderimiyle iki onaylı akış denendi;
   soru ekranının ekran koruması gerçek cihazda denendi; Google Cloud bütçe uyarısı (Vertex) kuruldu; gizlilik politikasına üçüncü taraf işleyici (Vertex AI)
   notu eklendi, gizlilik manifesti/etiketi gerekiyorsa güncellendi; App Review notunda yapay zekâ içeriği ve admin dönüştürme ekranları anlatıldı (iki demo hesap).
@@ -1003,7 +1007,7 @@ yanlış alt görünümüne gömülüydü. Yeni yapı gerçek cihazda doğruland
 > yayınlandıktan sonra devreye alın.
 
 > [!NOTE]
-> **4.2.0 yapılandırılmış sınavlar henüz canlıda değil (13 Kasım 2026).** Yeni Firestore/Storage kuralları, indeksler, 8 callable, `processExamConversion`
+> **4.2.0 yapılandırılmış sınavlar henüz canlıda değil (13 Kasım 2026).** Yeni Firestore/Storage kuralları, indeksler, 13 callable, `processExamConversion`
 > kuyruğu ve Vertex AI etkinleştirmesi yayınlanmadı; 4.2.0 Android hazır olana kadar incelemeye gönderilmez. Yapay zekâ çıktısı her taslakta admin
 > incelemesinden geçer ve yine de hata içerebilir; soru ekranında bu yüzden kısa bir not gösterilir. Sınav silme, yapılandırılmış verinin
 > (sorular, havuzlar, şekiller, iş) sunucuda temizliğine henüz bağlı değildir (açık iş).
