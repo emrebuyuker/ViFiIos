@@ -649,7 +649,8 @@ export function writePools(transaction, db, pools, now) {
 /**
  * Moves every published question of `courseId` to `toSubjectId` (field + pool entries), `chunk` questions per
  * transaction; a question already on the new subject is skipped, so a repeated or resumed move is a no-op for it.
- * Marks the job's `subjectMove` done at the end.
+ * Marks the job's `subjectMove` done at the end (`jobId` null = an admin's direct change from `subjectsAdmin.js`,
+ * which has no job to mark).
  *
  * @returns {Promise<{ moved: number }>}
  */
@@ -676,9 +677,11 @@ export async function moveCourseSubject(deps, jobId, { courseId, toSubjectId }) 
       return snapshots.length;
     });
   }
-  await db.collection(JOBS).doc(jobId).update({
-    'subjectMove.status': 'done', 'subjectMove.movedCount': moved, 'subjectMove.doneAt': now,
-  });
+  if (jobId) {
+    await db.collection(JOBS).doc(jobId).update({
+      'subjectMove.status': 'done', 'subjectMove.movedCount': moved, 'subjectMove.doneAt': now,
+    });
+  }
   return { moved };
 }
 

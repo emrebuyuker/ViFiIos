@@ -71,7 +71,8 @@ extension AppEnvironment {
             practiceService: MockPracticeService(
                 isSubscribed: arguments.contains(LaunchArgument.subscribed),
                 limitReached: arguments.contains(LaunchArgument.practiceLimitReached)
-            )
+            ),
+            subjectMappingService: MockSubjectMappingService()
         )
         // `-ViFiOpenNotification <id>` starts as if the push of that notification had been tapped.
         if let tapped = openedNotificationId(arguments: arguments) {

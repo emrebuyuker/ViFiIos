@@ -31,6 +31,7 @@ let rtdb;
 let fns;
 let admin;
 let publish;
+let subjects;
 let schema;
 
 before(async () => {
@@ -40,6 +41,7 @@ before(async () => {
   fns = await import('../functions/index.js');
   admin = await import('../functions/conversions/admin.js');
   publish = await import('../functions/conversions/publish.js');
+  subjects = await import('../functions/conversions/subjectsAdmin.js');
   schema = await import('../functions/conversions/schema.js');
   db = getFirestore('vifi');
   rtdb = getDatabase();
@@ -206,6 +208,7 @@ describe('admin gate', () => {
       admin.requestExamConversionHandler, admin.requestBulkConversionHandler, admin.regenerateExamConversionHandler,
       admin.regenerateDraftQuestionHandler, admin.publishExamConversionHandler, admin.discardExamConversionHandler,
       admin.updatePublishedQuestionHandler, admin.regeneratePublishedQuestionHandler,
+      subjects.listSubjectsHandler, subjects.setCourseSubjectHandler, subjects.renameSubjectHandler, subjects.mergeSubjectsHandler,
     ];
     assert.equal(handlers.length, schema.CALLABLES.length);
     for (const handler of handlers) {

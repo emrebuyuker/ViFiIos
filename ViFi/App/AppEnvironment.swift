@@ -74,6 +74,8 @@ final class AppEnvironment {
     @ObservationIgnored let practiceIndexReader: any PracticeIndexReading
     /// Hands out practice questions (server-side daily limit for free users).
     @ObservationIgnored let practiceService: any PracticeServicing
+    /// Admin-only subject mapping (P5): review and fix which country-wide subject each course belongs to.
+    @ObservationIgnored let subjectMappingService: any SubjectMappingServicing
 
     init(
         repository: any ArchiveRepository,
@@ -111,7 +113,8 @@ final class AppEnvironment {
         conversionService: any ExamConversionServicing = UnavailableExamConversionService(),
         submitterReader: any SubmitterProfileReading = NoopSubmitterProfileReader(),
         practiceIndexReader: any PracticeIndexReading = EmptyPracticeIndexReader(),
-        practiceService: any PracticeServicing = UnavailablePracticeService()
+        practiceService: any PracticeServicing = UnavailablePracticeService(),
+        subjectMappingService: any SubjectMappingServicing = UnavailableSubjectMappingService()
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -154,6 +157,7 @@ final class AppEnvironment {
         self.captureShield = captureShield
         self.questionReader = questionReader
         self.conversionService = conversionService
+        self.subjectMappingService = subjectMappingService
         self.submitterReader = submitterReader
         self.practiceIndexReader = practiceIndexReader
         self.practiceService = practiceService
@@ -218,7 +222,8 @@ final class AppEnvironment {
             conversionService: FirebaseExamConversionService(auth: auth),
             submitterReader: FirebaseSubmitterProfileReader(),
             practiceIndexReader: CachingPracticeIndexReader(base: FirebasePracticeIndexReader()),
-            practiceService: FirebasePracticeService(subscription: subscriptionService)
+            practiceService: FirebasePracticeService(subscription: subscriptionService),
+            subjectMappingService: FirebaseSubjectMappingService()
         )
     }
 

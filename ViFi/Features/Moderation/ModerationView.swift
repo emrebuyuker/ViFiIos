@@ -84,6 +84,12 @@ private struct ModerationScreen: View {
                 Label("Toplu dönüştür", systemImage: "square.stack.3d.up")
             }
             .accessibilityIdentifier("moderation.bulk")
+            NavigationLink {
+                SubjectMappingView()
+            } label: {
+                Label("Ders eşleme", systemImage: "arrow.triangle.merge")
+            }
+            .accessibilityIdentifier("moderation.subjects")
         }
     }
 }

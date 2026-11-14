@@ -394,6 +394,12 @@ import {
   requestExamConversionHandler,
   updatePublishedQuestionHandler,
 } from './conversions/admin.js';
+import {
+  listSubjectsHandler,
+  mergeSubjectsHandler,
+  renameSubjectHandler,
+  setCourseSubjectHandler,
+} from './conversions/subjectsAdmin.js';
 
 /** The Cloud Tasks queue of the AI pipeline's task function (`processExamConversion`, europe-west1). */
 const CONVERSION_QUEUE = 'locations/europe-west1/functions/processExamConversion';
@@ -481,4 +487,21 @@ const practiceDeps = {
 // Signed-in +90 users: random practice questions from a pool; free users get PRACTICE_FREE_DAILY_LIMIT a day.
 export const nextPracticeQuestions = onCall({ region: 'europe-west1' }, (request) =>
   nextPracticeQuestionsHandler(practiceDeps, request)
+);
+
+// Admin subject mapping (P5; conversions/subjectsAdmin.js).
+export const listSubjects = onCall({ region: 'europe-west1', timeoutSeconds: 120 }, (request) =>
+  listSubjectsHandler(notificationDeps, request)
+);
+
+export const setCourseSubject = onCall({ region: 'europe-west1', timeoutSeconds: 300 }, (request) =>
+  setCourseSubjectHandler(notificationDeps, request)
+);
+
+export const renameSubject = onCall({ region: 'europe-west1' }, (request) =>
+  renameSubjectHandler(notificationDeps, request)
+);
+
+export const mergeSubjects = onCall({ region: 'europe-west1', timeoutSeconds: 540 }, (request) =>
+  mergeSubjectsHandler(notificationDeps, request)
 );
