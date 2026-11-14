@@ -33,6 +33,20 @@ final class StoreKitSubscriptionService: SubscriptionServicing {
         return false
     }
 
+    func currentEntitlementJWS() async -> String? {
+        var best: (expires: Date, jws: String)?
+        for await result in Transaction.currentEntitlements {
+            guard case let .verified(transaction) = result,
+                  StoreProductID.subscriptions.contains(transaction.productID),
+                  transaction.revocationDate == nil else { continue }
+            let expires = transaction.expirationDate ?? .distantFuture
+            if best.map({ expires > $0.expires }) ?? true {
+                best = (expires, result.jwsRepresentation)
+            }
+        }
+        return best?.jws
+    }
+
     func statusChanges() -> AsyncStream<Bool> {
         AsyncStream { continuation in
             let task = Task {

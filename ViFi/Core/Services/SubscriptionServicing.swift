@@ -22,6 +22,14 @@ protocol SubscriptionServicing: AnyObject {
 
     /// Restores past purchases from the App Store (for a reinstall or a new device).
     func restore() async throws
+
+    /// The signed transaction (JWS) of the current subscription entitlement, or `nil` without one. The practice
+    /// mode sends it to the server as Premium proof (`subscriptionProof`); the server verifies it.
+    func currentEntitlementJWS() async -> String?
+}
+
+extension SubscriptionServicing {
+    func currentEntitlementJWS() async -> String? { nil }
 }
 
 /// Subscription failures, with Turkish messages for the UI.

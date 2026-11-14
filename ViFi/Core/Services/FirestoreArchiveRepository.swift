@@ -64,6 +64,13 @@ final class FirestoreArchiveRepository: ArchiveRepository {
         try await prefetchPublished(in: Self.examsCollection)
     }
 
+    /// One document read of the course node (served from the cache when it was listed before).
+    func subjectId(forCourse path: ArchivePath) async -> String? {
+        guard path.level == .lesson, let courseID = path.components.last else { return nil }
+        let snapshot = try? await firestore.collection(Self.catalogCollection).document(courseID).getDocument()
+        return snapshot?.data().flatMap(FirestoreArchiveParser.subjectId(from:))
+    }
+
     /// Intentionally passive: Firestore has no cheap whole-archive change signal (the server version node was
     /// deliberately not added — see `FIRESTORE-MIGRATION.md`/T6). Lists refresh on appearance and pull-to-refresh;
     /// offline is served from Firestore's on-disk cache.

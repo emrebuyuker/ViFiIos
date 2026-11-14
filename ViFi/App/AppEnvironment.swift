@@ -70,6 +70,10 @@ final class AppEnvironment {
     @ObservationIgnored let questionReader: any ExamQuestionReading
     /// Admin-only AI conversion workflow of the 4.2.0 structured exams (review, publish, bulk, K15 edits).
     @ObservationIgnored let conversionService: any ExamConversionServicing
+    /// Reads a subject's practice-pool summary (types and counts) for the course screen's "Sınava gir" entry.
+    @ObservationIgnored let practiceIndexReader: any PracticeIndexReading
+    /// Hands out practice questions (server-side daily limit for free users).
+    @ObservationIgnored let practiceService: any PracticeServicing
 
     init(
         repository: any ArchiveRepository,
@@ -105,7 +109,9 @@ final class AppEnvironment {
         captureShield: CaptureShieldRemoteSwitch = CaptureShieldRemoteSwitch(reader: NoopCaptureShieldConfigReader()),
         questionReader: any ExamQuestionReading = EmptyExamQuestionReader(),
         conversionService: any ExamConversionServicing = UnavailableExamConversionService(),
-        submitterReader: any SubmitterProfileReading = NoopSubmitterProfileReader()
+        submitterReader: any SubmitterProfileReading = NoopSubmitterProfileReader(),
+        practiceIndexReader: any PracticeIndexReading = EmptyPracticeIndexReader(),
+        practiceService: any PracticeServicing = UnavailablePracticeService()
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -149,6 +155,8 @@ final class AppEnvironment {
         self.questionReader = questionReader
         self.conversionService = conversionService
         self.submitterReader = submitterReader
+        self.practiceIndexReader = practiceIndexReader
+        self.practiceService = practiceService
         CaptureShield.isSwitchedOn = captureShield.isEnabled
     }
 
@@ -179,6 +187,7 @@ final class AppEnvironment {
             forcedOff: isCaptureShieldForcedOff(arguments: arguments)
         )
         captureShield.start()
+        let subscriptionService = StoreKitSubscriptionService()
         return AppEnvironment(
             repository: repository,
             fileLoader: RemoteFileLoader(authorizer: authorizer),
@@ -193,7 +202,7 @@ final class AppEnvironment {
             unlockService: FirebaseExamUnlockService(),
             unlocksReader: FirebaseUnlocksReader(),
             examPurchaseService: StoreKitExamPurchaseService(),
-            subscriptionService: StoreKitSubscriptionService(),
+            subscriptionService: subscriptionService,
             catalog: .bundled(),
             storageBucket: bucket ?? "",
             recents: RecentExamsStore(),
@@ -207,7 +216,9 @@ final class AppEnvironment {
             captureShield: captureShield,
             questionReader: FirebaseExamQuestionReader(),
             conversionService: FirebaseExamConversionService(auth: auth),
-            submitterReader: FirebaseSubmitterProfileReader()
+            submitterReader: FirebaseSubmitterProfileReader(),
+            practiceIndexReader: CachingPracticeIndexReader(base: FirebasePracticeIndexReader()),
+            practiceService: FirebasePracticeService(subscription: subscriptionService)
         )
     }
 
@@ -285,6 +296,8 @@ enum LaunchArgument {
     /// With `-ViFiMockData`: starts as if the user declined the campaign consent 31 days ago (so the re-ask is
     /// offered when the inbox opens); campaigns are off.
     static let consentReask = "-ViFiConsentReask"
+    /// With `-ViFiMockData`: the practice mode's free daily limit is already used up (the limit / paywall state).
+    static let practiceLimitReached = "-ViFiPracticeLimitReached"
     /// With `-ViFiMockData`: starts with an active premium subscription (whole archive unlocked, coins hidden).
     static let subscribed = "-ViFiSubscribed"
     /// With `-ViFiMockData` and the notification id as the next argument: starts as if that push had been
