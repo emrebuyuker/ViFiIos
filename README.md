@@ -685,8 +685,8 @@ Sınav pikseli gösteren her yüzey ekran koruma kabından geçer; ayrıntılı 
 4. **Doğrulayın:** `CaptureShieldUITests`'e yüzeyi ekleyin (`-ViFiCaptureShieldSelfTest` ile `verified` beklenir) ve gerekiyorsa
    `XCUIScreen.main.screenshot()` ile sayfanın kart olarak çıktığını örnekleyin. `simctl io screenshot` bayrağı uygulamaz, kanıt
    değildir. Simülatör yalnızca hiyerarşiyi doğrular; gerçek cihazda ekran görüntüsü ve kayıt denemesi şarttır.
-5. **Acil durumda kapatmak:** Realtime Database `config/captureProtection/ios = {enabled: false}` kalkanı kapatır,
-   `{coverMode: "always"}` her kayıtta örtü gösterir. Değer bir sonraki açılışta uygulanır; Console'a yazım proje sahibinin onayıyla.
+5. **Uzaktan anahtar yoktur:** kalkan Release'te hep açıktır, yalnız kendi başına fail-open olur (cihazda kalkan bulunamaz ya da
+   `CaptureShieldCrashGuard` devreye girer). Kapatmak yeni bir sürüm gerektirir (App Review 5.6 reddi sonrası karar, 16 Kasım 2026).
 
 ### Sürüm öncesi kontrol listesi
 
@@ -716,7 +716,7 @@ Sınav pikseli gösteren her yüzey ekran koruma kabından geçer; ayrıntılı 
   (Sign-In alanları) **ve** `admin: true` claim'li yönetici (notta), ikisi de Firebase Console test numarası + kod. Numaralar yalnızca App Store
   Connect ve Console'da durur, depoya yazılmaz. Her gizli ya da rolle açılan özellik yoluyla anlatıldı (Hesap › Moderasyon, Hesap › Bildirim
   Gönder ve sonradan eklenen her yeni özellik); "review hesabına görünmez" gibi bir ifade kullanılmaz. Uzaktan ayarlar (`config/appUpdate`,
-  `config/rewards`, `config/captureProtection`) ve hata gibi görünebilecek davranışlar (ekran koruması kartı, PDF seçim kilidi, bildirim izin
+  `config/rewards`) ve hata gibi görünebilecek davranışlar (ekran koruması kartı, PDF seçim kilidi, bildirim izin
   akışı) açıklandı. What's New bu derlemenin bütün görünür değişikliklerini kesin iddia kullanmadan içeriyor. Göndermeden önce admin
   hesabıyla giriş yapılıp iki admin girişinin göründüğü doğrulandı.
 - [ ] [Sürüm Notları](#sürüm-notları) güncellendi.
@@ -736,6 +736,8 @@ Backend (kurallar + 13 Cloud Function) bu sürümden önce yayınlandı ve 4.0.0
 
 > 4.1.0 (10) 30 Ekim 2026'da incelemeye gönderildi; 8 Kasım 2026'da geri çekilip ekran koruması ve reCAPTCHA SDK'sı eklenerek
 > **4.1.0 (11)** olarak yeniden gönderildi. 4.1.0 (10) hiç yayınlanmadı.
+> 4.1.0 (11) iki kez Guideline 5.6 ile reddedildi (10 ve 16 Kasım 2026); ekran korumasının uzaktan anahtarı
+> (`config/captureProtection/ios`) kaldırılarak **4.1.0 (12)** olarak yeniden gönderilir.
 
 **Sınav içeriği koruması**
 
@@ -745,7 +747,7 @@ yanlış alt görünümüne gömülüydü. Yeni yapı gerçek cihazda doğruland
 - `CaptureShield` + `CaptureShieldedView`: liste kartları, tam ekran sayfalayıcı (yakınlaştırma dahil), PDF ve moderasyon
   önizlemesi ekran görüntüsünde ve ekran kaydında sayfa yerine "Sınav içeriği korumalıdır" kartı olarak çıkar.
 - PDF'te metin seçimi, kopyalama, paylaşma, sözlükte arama, Bul ve sürükleme kapalı; kaydırma ve yakınlaştırma çalışır.
-- Uzaktan anahtar (`config/captureProtection/ios`) ve aynı sürüm + iOS'ta üst üste iki çökmede kalkanı kapatan koruma.
+- Aynı sürüm + iOS'ta üst üste iki çökmede kalkanı kapatan koruma. Uzaktan anahtar yok (4.1.0 (12)).
 - Kayıt / yansıtma örtüsü iki sinyalle (sahne yakalama durumu + ekran bildirimi) ve animasyonsuz çalışır; kalkan çalışırken
   cihazda sayfa görünür kalır, örtü yalnızca kalkan devre dışıyken çıkar. Uygulama değiştirici örtüsü Hesap ve Sınav Ekle
   sayfalarına ve tam ekran sayfalayıcıya da eklendi. `SecureHostingView` kaldırıldı.

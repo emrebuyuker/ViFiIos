@@ -62,8 +62,8 @@ final class AppEnvironment {
     let notificationPrompts: NotificationPromptCoordinator
     /// The admin's map screen for choosing a campaign's location (Google Maps; a stub in mock mode).
     @ObservationIgnored let locationPicker: any LocationPicking
-    /// The screen-capture shield's remote switch, applied for this launch (`isEnabled`, `coverMode`).
-    @ObservationIgnored let captureShield: CaptureShieldRemoteSwitch
+    /// The screen-capture shield's switch for this launch (`isEnabled`, `coverMode`).
+    @ObservationIgnored let captureShield: CaptureShieldSwitch
 
     init(
         repository: any ArchiveRepository,
@@ -96,7 +96,7 @@ final class AppEnvironment {
         locationPicker: any LocationPicking = GoogleLocationPicker(),
         notificationEventReporter: any NotificationEventReporting = NoopNotificationEventReporter(),
         notificationEventDefaults: UserDefaults = .standard,
-        captureShield: CaptureShieldRemoteSwitch = CaptureShieldRemoteSwitch(reader: NoopCaptureShieldConfigReader())
+        captureShield: CaptureShieldSwitch = CaptureShieldSwitch()
     ) {
         self.repository = repository
         self.fileLoader = fileLoader
@@ -162,11 +162,7 @@ final class AppEnvironment {
         // `FirebaseArchiveRepository(auth:)` is kept available for rollback.
         let repository = FirestoreArchiveRepository(bucket: bucket ?? "")
         let rewardsConfig = FirebaseRewardsConfigReader()
-        let captureShield = CaptureShieldRemoteSwitch(
-            reader: FirebaseCaptureShieldConfigReader(),
-            forcedOff: isCaptureShieldForcedOff(arguments: arguments)
-        )
-        captureShield.start()
+        let captureShield = CaptureShieldSwitch(forcedOff: isCaptureShieldForcedOff(arguments: arguments))
         return AppEnvironment(
             repository: repository,
             fileLoader: RemoteFileLoader(authorizer: authorizer),

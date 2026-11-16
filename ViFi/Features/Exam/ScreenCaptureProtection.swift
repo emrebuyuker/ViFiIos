@@ -13,17 +13,10 @@ extension View {
 
 /// How the capture cover decides to appear. `fallback`: only when the capture shield is not protecting the pixels
 /// (the page stays visible on the device while recording, owner decision K4). `always`: on every recording or
-/// mirroring. Driven by the remote switch (`config/captureProtection/ios.coverMode`), set at the root.
+/// mirroring. The app uses `fallback` (`CaptureShieldSwitch.coverMode`), set at the root; there is no remote setting.
 enum CaptureCoverMode: Sendable {
     case fallback
     case always
-
-    init(_ remote: CaptureShieldConfig.CoverMode) {
-        switch remote {
-        case .fallback: self = .fallback
-        case .always: self = .always
-        }
-    }
 }
 
 /// The single gate that decides whether the capture cover is shown. Pure, so it is tested without UIKit.
