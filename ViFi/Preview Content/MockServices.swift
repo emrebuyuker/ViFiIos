@@ -58,10 +58,7 @@ extension AppEnvironment {
             // Reports are only logged in mock mode, and what was "sent" stays out of the real defaults.
             notificationEventReporter: MockNotificationEventReporter(),
             notificationEventDefaults: .mockSuite,
-            captureShield: CaptureShieldSwitch(
-                forcedOff: isCaptureShieldForcedOff(arguments: arguments),
-                defaults: .mockSuite
-            )
+            captureShield: CaptureShieldSwitch(defaults: .mockSuite)
         )
         // `-ViFiOpenNotification <id>` starts as if the push of that notification had been tapped.
         if let tapped = openedNotificationId(arguments: arguments) {

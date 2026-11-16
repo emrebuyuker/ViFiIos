@@ -144,7 +144,7 @@ final class AppEnvironment {
     ///
     /// Call only once `UIApplication` exists (see `AppDelegate.environment`): Firebase Auth, created by
     /// `FirebaseApp.configure()`, needs it to set up phone sign-in.
-    static func live(arguments: [String] = ProcessInfo.processInfo.arguments) -> AppEnvironment {
+    static func live() -> AppEnvironment {
         if FirebaseApp.app() == nil {
             // App Check must be set up before Firebase is configured.
             AppCheck.setAppCheckProviderFactory(ViFiAppCheckProviderFactory())
@@ -162,7 +162,7 @@ final class AppEnvironment {
         // `FirebaseArchiveRepository(auth:)` is kept available for rollback.
         let repository = FirestoreArchiveRepository(bucket: bucket ?? "")
         let rewardsConfig = FirebaseRewardsConfigReader()
-        let captureShield = CaptureShieldSwitch(forcedOff: isCaptureShieldForcedOff(arguments: arguments))
+        let captureShield = CaptureShieldSwitch()
         return AppEnvironment(
             repository: repository,
             fileLoader: RemoteFileLoader(authorizer: authorizer),
@@ -199,16 +199,7 @@ final class AppEnvironment {
             return mock(arguments: arguments)
         }
         #endif
-        return live(arguments: arguments)
-    }
-
-    /// Whether the screen-capture shield is switched off for this launch (`-ViFiCaptureShieldOff`, Debug builds only).
-    static func isCaptureShieldForcedOff(arguments: [String] = ProcessInfo.processInfo.arguments) -> Bool {
-        #if DEBUG
-        arguments.contains(LaunchArgument.captureShieldOff)
-        #else
-        false
-        #endif
+        return live()
     }
 
     /// Whether the app runs on bundled sample data, without Firebase (`-ViFiMockData`, Debug builds only).
@@ -256,8 +247,6 @@ enum LaunchArgument {
     /// With `-ViFiMockData` and the notification id as the next argument: starts as if that push had been
     /// tapped, so the inbox opens on it once the app is past its gates.
     static let openNotification = "-ViFiOpenNotification"
-    /// Switches the screen-capture shield off for this launch (live or mock), for App Store / README screenshots.
-    static let captureShieldOff = "-ViFiCaptureShieldOff"
     /// Measures each shielded exam surface once on screen and publishes verified / unverified (`exam.shield.selfTest`)
     /// for UI tests and the device checklist (D1). A hierarchy check, not proof for device captures.
     static let captureShieldSelfTest = "-ViFiCaptureShieldSelfTest"

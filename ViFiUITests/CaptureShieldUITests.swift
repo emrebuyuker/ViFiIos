@@ -2,7 +2,7 @@ import XCTest
 
 /// The Debug self-test (`-ViFiCaptureShieldSelfTest`) on every exam surface: the list card, the full-screen pager and
 /// the PDF viewer publish `verified` on `exam.shield.selfTest` when the capture render leaves the page out.
-/// `-ViFiCaptureShieldOff` is the negative control (`off`). A hierarchy / regression check, not device proof.
+/// A hierarchy / regression check, not device proof.
 nonisolated final class CaptureShieldUITests: XCTestCase {
     private enum Timeout {
         static let content: TimeInterval = 15
@@ -17,7 +17,7 @@ nonisolated final class CaptureShieldUITests: XCTestCase {
 
     @MainActor
     func testListCardsAreVerified() {
-        let app = launch(shieldOff: false)
+        let app = launch()
         open(Self.course + [Self.imageExam], in: app)
         XCTAssertTrue(element(app, "exam.page.0").waitForExistence(timeout: Timeout.content))
 
@@ -26,7 +26,7 @@ nonisolated final class CaptureShieldUITests: XCTestCase {
 
     @MainActor
     func testPagerPageIsVerified() {
-        let app = launch(shieldOff: false)
+        let app = launch()
         open(Self.course + [Self.imageExam], in: app)
         let first = element(app, "exam.page.0")
         XCTAssertTrue(first.waitForExistence(timeout: Timeout.content))
@@ -39,29 +39,20 @@ nonisolated final class CaptureShieldUITests: XCTestCase {
 
     @MainActor
     func testPDFIsVerified() {
-        let app = launch(shieldOff: false)
+        let app = launch()
         open(Self.course + [Self.pdfExam], in: app)
         XCTAssertTrue(element(app, "exam.pdf").waitForExistence(timeout: Timeout.content))
 
         assertSelfTest(in: app, equals: "verified")
     }
 
-    @MainActor
-    func testShieldOffIsReportedAsOff() {
-        let app = launch(shieldOff: true)
-        open(Self.course + [Self.pdfExam], in: app)
-        XCTAssertTrue(element(app, "exam.pdf").waitForExistence(timeout: Timeout.content))
-
-        assertSelfTest(in: app, equals: "off")
-    }
-
     // MARK: - Helpers
 
     @MainActor
-    private func launch(shieldOff: Bool) -> XCUIApplication {
+    private func launch() -> XCUIApplication {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-ViFiMockData", "-ViFiCaptureShieldSelfTest"] + (shieldOff ? ["-ViFiCaptureShieldOff"] : [])
+        app.launchArguments = ["-ViFiMockData", "-ViFiCaptureShieldSelfTest"]
         app.launch()
         XCTAssertTrue(element(app, "home.list").waitForExistence(timeout: Timeout.content), "The home list did not appear")
         return app

@@ -216,7 +216,8 @@ ViFi-iOS/
   ve `CALayer.render(in:)` bayrağı uygulamaz, kanıt sayılmaz. Debug öz-denetim `-ViFiCaptureShieldSelfTest` → `exam.shield.selfTest`
   (`verified`/`unverified`/`off`; `CaptureShieldUITests`). Bu bir hiyerarşi denetimidir, cihaz kanıtı değildir: **her iOS betasında
   ve her Xcode/SDK değişiminde** cihaz çekirdek seti (`SCREEN-CAPTURE-RESEARCH-FABLE.md` Bölüm 9.3, D1–D4, D10, D12) geçmeden sürüm çıkmaz.
-- **Ekran görüntüleri** (App Store, README) `-ViFiCaptureShieldOff` ile alınır; yoksa sayfalar boş çıkar. Sürüm notu ve
+- **Ekran görüntüleri** (App Store, README) simülatörde `xcrun simctl io booted screenshot` ile alınır (bayrağı uygulamaz, sayfalar
+  görünür). Kalkanı kapatan bir başlatma argümanı yok (`-ViFiCaptureShieldOff` 16 Kasım 2026'da kaldırıldı, App Review 5.6). Sürüm notu ve
   arayüz metni iddiasızdır: "yakalanamaz" denmez; iPhone Yansıtma (Mirroring) bilinen bir sızıntıdır.
 
 ### Arayüz
@@ -296,10 +297,9 @@ cd firebase && firebase deploy --only firestore,storage,functions --project vifi
 | `-ViFiNotificationsReask` | `-ViFiMockData` ile birlikte (yalnızca Debug): izin adımı 31 gün önce reddedilmiş, izin "provisional" → sonraki başarılı sınav gönderiminden sonra tek seferlik tekrar sorulur |
 | `-ViFiConsentReask` | `-ViFiMockData` ile birlikte (yalnızca Debug): kampanya onayı 31 gün önce reddedilmiş, kampanyalar kapalı → bildirim sayfası açılınca onay bir kez daha sorulur |
 | `-ViFiOpenNotification <id>` | `-ViFiMockData` ile birlikte (yalnızca Debug): `<id>` bir sonraki argümandır; o push'a dokunulmuş gibi başlar, kapılardan sonra bildirim sayfası açılır ve `<id>` vurgulanır (UI testlerinde `p-paywall`, `a1` gibi örnek id'ler) |
-| `-ViFiCaptureShieldOff` | Yalnızca Debug (canlı ya da örnek veri): ekran koruma kalkanı bu açılışta kapalı. App Store/README ekran görüntüleri için; kayıt örtüsü `fallback` modunda devreye girer |
 | `-ViFiCaptureShieldSelfTest` | Yalnızca Debug: her korumalı yüzey ekrana gelince ölçülür, sonuç `exam.shield.selfTest` öğesinde (`verified`/`unverified`/`off`). Cihaz listesinde D1 |
 | `-ViFiCaptureLog` | Yalnızca Debug: yakalama sinyallerini (açılıştaki değer, her değişim, `didMoveToWindow`) zaman damgalı OSLog'a (`Logger.app`) yazar; cihazda kayıt/örtü sorunu ayıklamak için |
-| `-ViFiSimulateCapture` | Yalnızca Debug: kayıt/yansıtma varmış gibi davranır (UI testleri). Kalkan aktifken `fallback` modda örtü çıkmaz; örtüyü görmek için `-ViFiCaptureShieldOff` ile birlikte |
+| `-ViFiSimulateCapture` | Yalnızca Debug: kayıt/yansıtma varmış gibi davranır (UI testleri). Kalkan aktifken `fallback` modda örtü çıkmaz (örtünün kararı `CaptureCoverPolicyTests`'te) |
 
 ---
 

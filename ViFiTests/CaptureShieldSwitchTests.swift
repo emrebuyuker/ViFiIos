@@ -11,16 +11,9 @@ struct CaptureShieldSwitchTests {
         return defaults
     }
 
-    @Test func isOnWithFallbackCoverByDefault() throws {
+    @Test func isAlwaysOnWithFallbackCover() throws {
         let shield = CaptureShieldSwitch(defaults: try Self.makeDefaults())
         #expect(shield.isEnabled)
-        #expect(!shield.isForcedOff)
-        #expect(shield.coverMode == .fallback)
-    }
-
-    @Test func forcedOffSwitchesTheShieldOff() throws {
-        let shield = CaptureShieldSwitch(forcedOff: true, defaults: try Self.makeDefaults())
-        #expect(!shield.isEnabled)
         #expect(shield.coverMode == .fallback)
     }
 

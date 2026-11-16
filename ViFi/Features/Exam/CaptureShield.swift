@@ -24,8 +24,8 @@ final class CaptureShield {
     /// `false` when protection cannot be applied on this OS build. Read it before trusting the shield.
     let isAvailable: Bool
 
-    /// This launch's switch (`CaptureShieldSwitch.isEnabled`: off only with Debug `-ViFiCaptureShieldOff`). Set once
-    /// by `AppEnvironment` before any exam page is shown; `false` shows pages unprotected (fail open) and lets the
+    /// This launch's switch (`CaptureShieldSwitch.isEnabled`, always on in the app; tests may turn it off). Set once by
+    /// `AppEnvironment` before any exam page is shown; `false` shows pages unprotected (fail open) and lets the
     /// recording cover take over.
     static var isSwitchedOn = true
 
