@@ -1,8 +1,8 @@
 import XCTest
 
 /// The recording / mirroring cover: `-ViFiSimulateCapture` forces the scene capture trait on. In the default
-/// `fallback` cover mode the cover appears only while the shield is not protecting the page (owner decision K4), so
-/// the "appears" case switches the shield off with `-ViFiCaptureShieldOff`.
+/// `fallback` cover mode the cover appears only while the shield is not protecting the page (owner decision K4); that
+/// gate is covered by `CaptureCoverPolicyTests`, since the app has no way to switch a working shield off.
 nonisolated final class CaptureCoverUITests: XCTestCase {
     private enum Timeout {
         static let content: TimeInterval = 15
@@ -12,14 +12,6 @@ nonisolated final class CaptureCoverUITests: XCTestCase {
         "BOZOK ÜNİVERSİTESİ", "MÜHENDİSLİK MİMARLIK FAKÜLTESİ", "BİLGİSAYAR MÜHENDİSLİĞİ",
         "MÜHENDİSLİK MATEMATİĞİ", "2018 VİZE",
     ]
-
-    @MainActor
-    func testCoverAppearsOverTheExamWhileCapturedWithoutTheShield() {
-        let app = launchApp(simulatingCapture: true, shieldOff: true)
-        openPDFExam(in: app)
-
-        XCTAssertTrue(element(in: app, "exam.captureCover").waitForExistence(timeout: Timeout.content))
-    }
 
     @MainActor
     func testShieldedPageStaysVisibleWhileCaptured() {
@@ -42,12 +34,11 @@ nonisolated final class CaptureCoverUITests: XCTestCase {
     // MARK: - Helpers
 
     @MainActor
-    private func launchApp(simulatingCapture: Bool, shieldOff: Bool = false) -> XCUIApplication {
+    private func launchApp(simulatingCapture: Bool) -> XCUIApplication {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["-ViFiMockData"]
             + (simulatingCapture ? ["-ViFiSimulateCapture"] : [])
-            + (shieldOff ? ["-ViFiCaptureShieldOff"] : [])
         app.launch()
         XCTAssertTrue(element(in: app, "home.list").waitForExistence(timeout: Timeout.content), "The home list did not appear")
         return app

@@ -58,12 +58,7 @@ extension AppEnvironment {
             // Reports are only logged in mock mode, and what was "sent" stays out of the real defaults.
             notificationEventReporter: MockNotificationEventReporter(),
             notificationEventDefaults: .mockSuite,
-            // No Firebase in mock mode; the mirror lives in the throwaway suite.
-            captureShield: CaptureShieldRemoteSwitch(
-                reader: NoopCaptureShieldConfigReader(),
-                defaults: .mockSuite,
-                forcedOff: isCaptureShieldForcedOff(arguments: arguments)
-            ),
+            captureShield: CaptureShieldSwitch(defaults: .mockSuite),
             questionReader: MockExamQuestionReader(),
             conversionService: MockExamConversionService(),
             submitterReader: MockSubmitterProfileReader(),

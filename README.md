@@ -556,10 +556,9 @@ sınav gibi uç durumları içerir. SwiftUI önizlemeleri de aynı veriyi `AppEn
 | `-ViFiConsentReask` | `-ViFiMockData` ile birlikte: kampanya onayı 31 gün önce reddedilmiş, kampanyalar kapalı; bildirim sayfası açılınca onay bir kez daha sorulur. |
 | `-ViFiOpenNotification <id>` | `-ViFiMockData` ile birlikte: `<id>` bir sonraki argümandır; o push'a dokunulmuş gibi başlar, kapılardan sonra bildirim sayfası açılır ve `<id>` vurgulanır. |
 | _(argüman yok)_ | Yapılandırılmış sınav örneği (4.2.0): `-ViFiMockData` ile `KOCAELİ ÜNİVERSİTESİ › MÜHENDİSLİK FAKÜLTESİ › MATEMATİK BÖLÜMÜ › TOPOLOJİ 1 › 2003 FİNAL` soru ekranıyla (3 örnek soru) açılır; diğer sınavlar sayfa görünümünde kalır. Admin dönüştürme ekranları `-ViFiAdmin` ile görünür. |
-| `-ViFiCaptureShieldOff` | Canlı ya da örnek veriyle: ekran koruma kalkanı bu açılışta kapalı. App Store ve README ekran görüntüleri bununla alınır (aksi hâlde sayfalar boş çıkar). |
 | `-ViFiCaptureShieldSelfTest` | Her korumalı sayfa ekrana gelince ölçülür; sonuç `exam.shield.selfTest` öğesinde `verified` / `unverified` / `off`. Cihaz denemesinden önce ilk adım. |
 | `-ViFiCaptureLog` | Ekran kaydı / yansıtma sinyallerini zaman damgasıyla OSLog'a yazar (Console.app'te `[CaptureLog` ile süzün). |
-| `-ViFiSimulateCapture` | Ekran kaydı varmış gibi davranır (UI testleri). Kalkan çalışırken örtü çıkmaz; örtüyü görmek için `-ViFiCaptureShieldOff` ile birlikte kullanın. |
+| `-ViFiSimulateCapture` | Ekran kaydı varmış gibi davranır (UI testleri). Kalkan çalışırken örtü çıkmaz. |
 
 ## Testler ve Kod Kalitesi
 
@@ -782,8 +781,8 @@ Sınav pikseli gösteren her yüzey ekran koruma kabından geçer; ayrıntılı 
 4. **Doğrulayın:** `CaptureShieldUITests`'e yüzeyi ekleyin (`-ViFiCaptureShieldSelfTest` ile `verified` beklenir) ve gerekiyorsa
    `XCUIScreen.main.screenshot()` ile sayfanın kart olarak çıktığını örnekleyin. `simctl io screenshot` bayrağı uygulamaz, kanıt
    değildir. Simülatör yalnızca hiyerarşiyi doğrular; gerçek cihazda ekran görüntüsü ve kayıt denemesi şarttır.
-5. **Acil durumda kapatmak:** Realtime Database `config/captureProtection/ios = {enabled: false}` kalkanı kapatır,
-   `{coverMode: "always"}` her kayıtta örtü gösterir. Değer bir sonraki açılışta uygulanır; Console'a yazım proje sahibinin onayıyla.
+5. **Uzaktan anahtar yoktur:** kalkan Release'te hep açıktır, yalnız kendi başına fail-open olur (cihazda kalkan bulunamaz ya da
+   `CaptureShieldCrashGuard` devreye girer). Kapatmak yeni bir sürüm gerektirir (App Review 5.6 reddi sonrası karar, 16 Kasım 2026).
 
 ### Yapılandırılmış sınavları değiştirmek (4.2.0)
 
@@ -835,13 +834,14 @@ ayrıştırıcıları (`ExamQuestionParser`, `ExamConversionParser`, `ExamTitleP
 - [ ] Ekran koruması: Debug build'de `-ViFiCaptureShieldSelfTest` liste, sayfalayıcı ve PDF için `verified`; gerçek cihazda
   (en az bir güncel iOS ve bir önceki ana sürüm) donanım ekran görüntüsü (liste, sayfalayıcı yakınlaştırmalı/yakınlaştırmasız, PDF),
   Denetim Merkezi kaydı ve uygulama değiştirici denendi (`SCREEN-CAPTURE-RESEARCH-FABLE.md` Bölüm 9.3). Her iOS betasında ve
-  Xcode/SDK değişiminde tekrarlanır. App Store ekran görüntüleri `-ViFiCaptureShieldOff` ile alındı.
+  Xcode/SDK değişiminde tekrarlanır. App Store ekran görüntüleri simülatörde `xcrun simctl io booted screenshot` ile alındı
+  (bayrağı uygulamaz; kalkanı kapatan bir argüman yok).
 - [ ] App Review notunda konum izninin yalnızca admin harita seçicisinde istendiği ve konumun saklanmadığı yazıldı.
 - [ ] **App Review notu (her gönderimde, hesap kapatma riski — Guideline 2.3.1 / 2.1):** iki demo hesap verildi: normal kullanıcı
   (Sign-In alanları) **ve** `admin: true` claim'li yönetici (notta), ikisi de Firebase Console test numarası + kod. Numaralar yalnızca App Store
   Connect ve Console'da durur, depoya yazılmaz. Her gizli ya da rolle açılan özellik yoluyla anlatıldı (Hesap › Moderasyon, Hesap › Bildirim
   Gönder ve sonradan eklenen her yeni özellik); "review hesabına görünmez" gibi bir ifade kullanılmaz. Uzaktan ayarlar (`config/appUpdate`,
-  `config/rewards`, `config/captureProtection`) ve hata gibi görünebilecek davranışlar (ekran koruması kartı, PDF seçim kilidi, bildirim izin
+  `config/rewards`) ve hata gibi görünebilecek davranışlar (ekran koruması kartı, PDF seçim kilidi, bildirim izin
   akışı) açıklandı. What's New bu derlemenin bütün görünür değişikliklerini kesin iddia kullanmadan içeriyor. Göndermeden önce admin
   hesabıyla giriş yapılıp iki admin girişinin göründüğü doğrulandı.
 - [ ] **4.2.0 (yapılandırılmış sınavlar):** Android ile **aynı anda** yayın (iOS, Android hazır olana kadar incelemeye gönderilmez); backend (kurallar + indeksler,
@@ -895,6 +895,8 @@ Backend (kurallar + 13 Cloud Function) bu sürümden önce yayınlandı ve 4.0.0
 
 > 4.1.0 (10) 30 Ekim 2026'da incelemeye gönderildi; 8 Kasım 2026'da geri çekilip ekran koruması ve reCAPTCHA SDK'sı eklenerek
 > **4.1.0 (11)** olarak yeniden gönderildi. 4.1.0 (10) hiç yayınlanmadı.
+> 4.1.0 (11) iki kez Guideline 5.6 ile reddedildi (10 ve 16 Kasım 2026); ekran korumasının uzaktan anahtarı
+> (`config/captureProtection/ios`) ve Debug `-ViFiCaptureShieldOff` argümanı kaldırılarak **4.1.0 (12)** olarak yeniden gönderilir.
 
 **Sınav içeriği koruması**
 
@@ -904,7 +906,7 @@ yanlış alt görünümüne gömülüydü. Yeni yapı gerçek cihazda doğruland
 - `CaptureShield` + `CaptureShieldedView`: liste kartları, tam ekran sayfalayıcı (yakınlaştırma dahil), PDF ve moderasyon
   önizlemesi ekran görüntüsünde ve ekran kaydında sayfa yerine "Sınav içeriği korumalıdır" kartı olarak çıkar.
 - PDF'te metin seçimi, kopyalama, paylaşma, sözlükte arama, Bul ve sürükleme kapalı; kaydırma ve yakınlaştırma çalışır.
-- Uzaktan anahtar (`config/captureProtection/ios`) ve aynı sürüm + iOS'ta üst üste iki çökmede kalkanı kapatan koruma.
+- Aynı sürüm + iOS'ta üst üste iki çökmede kalkanı kapatan koruma. Uzaktan anahtar ve kalkanı kapatan başlatma argümanı yok (4.1.0 (12)).
 - Kayıt / yansıtma örtüsü iki sinyalle (sahne yakalama durumu + ekran bildirimi) ve animasyonsuz çalışır; kalkan çalışırken
   cihazda sayfa görünür kalır, örtü yalnızca kalkan devre dışıyken çıkar. Uygulama değiştirici örtüsü Hesap ve Sınav Ekle
   sayfalarına ve tam ekran sayfalayıcıya da eklendi. `SecureHostingView` kaldırıldı.
