@@ -44,8 +44,8 @@ firebase deploy --only database,storage --project vifi-831a8 --account <sahip he
 ## Yapılandırılmış sınavlar (4.2.0)
 
 > [!WARNING]
-> **Aşağıdakilerin hiçbiri canlıda değil.** Yeni Firestore/Storage kuralları, indeksler, 8 callable, `processExamConversion` kuyruğu ve Vertex AI
-> etkinleştirmesi yalnızca proje sahibinin açık onayıyla, 4.1.0 canlıya çıktıktan sonra yayınlanır. Sözleşmenin yetkili kaynağı
+> **Canlıda (20 Kasım 2026, proje sahibinin onayıyla).** Firestore/Storage kuralları, indeksler, callable'lar, `processExamConversion` kuyruğu ve
+> Vertex AI etkinleştirmesi yayınlandı; istemci 4.2.0 henüz App Store'da değil. Sözleşmenin yetkili kaynağı
 > `functions/conversions/schema.js`'tir; iOS modelleri onu aynalar.
 
 Eski bir sınavın ya da onaylanan bir gönderimin dosyaları yapay zekâyla sorulara çevrilir; admin inceleyip yayınlar. Ürün tarafı: kök

@@ -317,8 +317,8 @@ koordinat + place id, adres ardından gelir). Anahtar yoksa seçici
 | `trackNotificationEvent` | callable, +90 kullanıcı |
 | `dispatchScheduledNotifications` | `onSchedule`, 5 dk, Europe/Istanbul |
 | `onDeviceWritten`, `onSubmissionModerated`, `onSubmissionCreated`, `onExamDeleted` | Firestore tetikleyicisi (isimli `vifi` DB) |
-| `requestExamConversion`, `requestBulkConversion`, `regenerateExamConversion`, `regenerateDraftQuestion`, `publishExamConversion`, `discardExamConversion`, `updatePublishedQuestion`, `regeneratePublishedQuestion` | callable, admin *(4.2.0, henüz yayınlanmadı; bkz. [Soru soru sınavlar](#soru-soru-sınavlar-420))* |
-| `processExamConversion` | Cloud Tasks kuyruk Function'ı (`onTaskDispatched`) *(4.2.0, henüz yayınlanmadı)* |
+| `requestExamConversion`, `requestBulkConversion`, `regenerateExamConversion`, `regenerateDraftQuestion`, `publishExamConversion`, `discardExamConversion`, `updatePublishedQuestion`, `regeneratePublishedQuestion` | callable, admin *(4.2.0, canlıda 20 Kasım 2026; bkz. [Soru soru sınavlar](#soru-soru-sınavlar-420))* |
+| `processExamConversion` | Cloud Tasks kuyruk Function'ı (`onTaskDispatched`) *(4.2.0, canlıda 20 Kasım 2026)* |
 | `onAccountDeleted` | v1 Auth silme tetikleyicisi |
 
 Sözleşmenin (türler, aksiyon tipleri, limitler, alan adları) tek yetkili kaynağı `notifications/schema.js`'tir; iOS
@@ -354,9 +354,9 @@ tek tek ve "Cevabı Göster" ile açar. Orijinal dosyalar silinmez: yapılandır
 4.1.0 ve Android sayfa görünümünü göstermeye devam eder.
 
 > [!IMPORTANT]
-> **Bu özelliğin sunucu tarafı henüz canlıda değil.** Kod, kural taslakları ve emulator testleri `v-4.2.0` dalında hazırdır;
-> `vifi-831a8`'de yeni Firestore/Storage kuralları, indeksler, 13 callable, `processExamConversion` kuyruğu ve Vertex AI
-> etkinleştirmesi yayınlanmadı. Sıra: 4.1.0 canlıda olsun → proje sahibinin onayıyla yayın → uçtan uca deneme → Android ile aynı anda
+> **Bu özelliğin sunucu tarafı canlıda (20 Kasım 2026).** `vifi-831a8`'de yeni Firestore/Storage kuralları, indeksler, 13 callable,
+> `processExamConversion` kuyruğu ve Vertex AI etkinleştirmesi proje sahibinin onayıyla yayınlandı; istemci 4.2.0 henüz App Store'da değil.
+> Sıra: uçtan uca deneme → Android ile aynı anda
 > sürüm. Yayın dışı kalan her şey yok sayılırsa uygulama bugünkü gibi çalışır (yapılandırılmış sınav yok, soru ekranı hiç açılmaz).
 
 ```mermaid
@@ -606,15 +606,15 @@ Varsayılan her şey kapalıdır; aşağıdaki izinler dışında kimse hiçbir 
 | Firestore `users/<uid>/devices/<kurulumId>` | Sahibi (+90) okur, oluşturur / günceller ve siler; yalnızca `{token, platform, appVersion, updatedAt}` (`updatedAt` sunucu zamanı), kimlik `^[A-Za-z0-9_-]{1,128}$`. |
 | Firestore `users/<uid>/settings/notifications` | Sahibi okur ve yazar: yalnızca `{marketing, source: prompt\|settings, version, updatedAt}`; silinemez. |
 | Firestore `users/<uid>/settings/inbox` | Sahibi okur; yalnızca `{readAt}` (sunucu zamanı) yazar; silinemez. |
-| Firestore `questions`, `questionPools`, `subjects` *(4.2.0, henüz yayınlanmadı)* | +90 telefonla girişli kullanıcılar ve yöneticiler okur; kimse yazamaz (yalnız Cloud Functions, Admin SDK). Sınav dosyaları (`exams.files`) bu sürümde de aynen korunur. |
-| Firestore `examConversions` (+ `questions` alt koleksiyonu), `aiUsage` *(4.2.0, henüz yayınlanmadı)* | Yalnızca yönetici okur. İstemci yazamaz; tek istisna yöneticinin taslak sorunun içerik alanlarını (`text`, `speech`, `choices`, `answer`, `solution`, `needsReview`) + `editedBy`/`editedAt` (sunucu zamanı) güncellemesidir; sıra, şekil ve işin kendisi değiştirilemez. |
+| Firestore `questions`, `questionPools`, `subjects` *(4.2.0, canlıda 20 Kasım 2026)* | +90 telefonla girişli kullanıcılar ve yöneticiler okur; kimse yazamaz (yalnız Cloud Functions, Admin SDK). Sınav dosyaları (`exams.files`) bu sürümde de aynen korunur. |
+| Firestore `examConversions` (+ `questions` alt koleksiyonu), `aiUsage` *(4.2.0, canlıda 20 Kasım 2026)* | Yalnızca yönetici okur. İstemci yazamaz; tek istisna yöneticinin taslak sorunun içerik alanlarını (`text`, `speech`, `choices`, `answer`, `solution`, `needsReview`) + `editedBy`/`editedAt` (sunucu zamanı) güncellemesidir; sıra, şekil ve işin kendisi değiştirilemez. |
 | Realtime DB `/Universitiess` (silindi) | Eski arşiv kopyası 20 Kasım 2026'da silindi; arşiv yalnızca Firestore'dadır. Kuraldaki blok 4.2.0 kural yayınında kaldırılacak. |
 | Realtime DB `/pendingExams/<uid>` | Kullanıcı yalnızca kendi kaydını okur; yeni gönderim oluşturur, kendi `pending` gönderimini siler, var olanı değiştiremez. Yönetici hepsini okur ve yazar. Alanlar sıkı doğrulanır. |
 | Realtime DB `/users/<uid>/profile` | Sahibi (+90) yalnızca kendi profilini okur ve yazar; yönetici tüm profilleri okur (yazamaz). Alanlar sıkı doğrulanır: `gender` yalnızca `female`/`male`, `phoneNumber` token'daki numarayla aynı, `updatedAt` sunucu zaman damgası. |
 | Realtime DB diğer tüm düğümler | Kimseye açık değil (yönetici dahil). |
 | Storage `imagess/`, `pdfs/` | Tek dosya okuma: +90 kullanıcı ve yönetici. Listeleme kimseye açık değil; yalnızca yönetici yazar. |
 | Storage `pending/<uid>/<gönderim>/` | Yalnızca sahibi yeni JPEG/PDF (1 bayt – 15 MiB) yükler, üzerine yazamaz; sahibi ve yönetici okur ve siler. |
-| Storage `questionFigures/<iş>/<dosya>` *(4.2.0, henüz yayınlanmadı)* | Tek dosya okuma: +90 kullanıcı ve yönetici. Yazma hiçbir istemciye açık değil (yalnız Admin SDK, yani dönüştürme hattı). |
+| Storage `questionFigures/<iş>/<dosya>` *(4.2.0, canlıda 20 Kasım 2026)* | Tek dosya okuma: +90 kullanıcı ve yönetici. Yazma hiçbir istemciye açık değil (yalnız Admin SDK, yani dönüştürme hattı). |
 | Storage `notificationImages/<bildirimId>.jpg` | Tek dosya okuma: +90 kullanıcı ve yönetici. Yalnızca yönetici **oluşturur** (JPEG, 1 bayt – 1 MiB); güncelleme, silme ve üzerine yazma yönetici dahil hiçbir istemciye açık değil. *(30 Ekim 2026'da yayınlandı.)* |
 
 Yönetici, `admin: true` özel talebi (custom claim) taşıyan hesaptır: `setCustomUserClaims(uid, { admin: true })`.
@@ -1011,8 +1011,8 @@ yanlış alt görünümüne gömülüydü. Yeni yapı gerçek cihazda doğruland
 > yayınlandıktan sonra devreye alın.
 
 > [!NOTE]
-> **4.2.0 yapılandırılmış sınavlar henüz canlıda değil (13 Kasım 2026).** Yeni Firestore/Storage kuralları, indeksler, 13 callable, `processExamConversion`
-> kuyruğu ve Vertex AI etkinleştirmesi yayınlanmadı; 4.2.0 Android hazır olana kadar incelemeye gönderilmez. Yapay zekâ çıktısı her taslakta admin
+> **4.2.0 yapılandırılmış sınavların sunucu tarafı canlıda (20 Kasım 2026).** Yeni Firestore/Storage kuralları, indeksler, 13 callable, `processExamConversion`
+> kuyruğu ve Vertex AI etkinleştirmesi yayınlandı; istemci henüz App Store'da değil ve 4.2.0 Android hazır olana kadar incelemeye gönderilmez. Yapay zekâ çıktısı her taslakta admin
 > incelemesinden geçer ve yine de hata içerebilir; soru ekranında bu yüzden kısa bir not gösterilir. Sınav silme, yapılandırılmış verinin
 > (sorular, havuzlar, şekiller, iş) sunucuda temizliğine henüz bağlı değildir (açık iş).
 
