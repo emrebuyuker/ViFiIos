@@ -1,6 +1,12 @@
 {
   "sourceLanguage" : "tr",
   "strings" : {
+    "" : {
+
+    },
+    "“%@” adında yeni ders oluştur" : {
+
+    },
     "\"%@\" arşivden kalıcı olarak silinir; bu işlem geri alınamaz." : {
 
     },
@@ -38,7 +44,20 @@
         }
       }
     },
+    "%@ / %@" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ / %2$@"
+          }
+        }
+      }
+    },
     "%@ adresine e-posta gönderebilirsiniz." : {
+
+    },
+    "%@ dersinin konusunu değiştir" : {
 
     },
     "%@ için zamanlandı" : {
@@ -47,15 +66,28 @@
     "%@ için zamanlandı (sessiz saat)" : {
 
     },
+    "%@ ile ilerle" : {
+
+    },
     "%@ numarasına gönderilen 6 haneli kodu gir." : {
       "comment" : "Login code step; the argument is the formatted number, e.g. “+90 532 123 45 67”."
     },
-    "%@: gönderene %lld coin verildi." : {
+    "%@: gönderene %lld coin verildi. Sınav yapay zekâya gönderilecek." : {
       "localizations" : {
         "tr" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "%1$@: gönderene %2$lld coin verildi."
+            "value" : "%1$@: gönderene %2$lld coin verildi. Sınav yapay zekâya gönderilecek."
+          }
+        }
+      }
+    },
+    "%@) %@" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@) %2$@"
           }
         }
       }
@@ -118,6 +150,16 @@
     "%lld ders" : {
       "comment" : "Row subtitle of a department: its number of courses."
     },
+    "%lld ders · %lld soru" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld ders · %2$lld soru"
+          }
+        }
+      }
+    },
     "%lld fakülte" : {
       "comment" : "Row subtitle of a university: its number of faculties."
     },
@@ -153,6 +195,28 @@
     "%lld sınav" : {
       "comment" : "Row subtitle of a course: its number of exams."
     },
+    "%lld sınav kuyruğa alındı." : {
+
+    },
+    "%lld sınav, tahmini %@ ile yapay zekâya gönderilecek." : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld sınav, tahmini %2$@ ile yapay zekâya gönderilecek."
+          }
+        }
+      }
+    },
+    "%lld soru" : {
+
+    },
+    "%lld soru dikkatli bakış istiyor" : {
+
+    },
+    "%lld soru yayınlandı." : {
+
+    },
     "%lld/%lld" : {
       "localizations" : {
         "tr" : {
@@ -164,6 +228,9 @@
       }
     },
     "≈ %lld kişi" : {
+
+    },
+    "A" : {
 
     },
     "Abone Ol" : {
@@ -200,6 +267,15 @@
 
     },
     "Ad en fazla %lld karakter olabilir." : {
+
+    },
+    "Ad Soyad" : {
+
+    },
+    "Adım" : {
+
+    },
+    "Adım ekle" : {
 
     },
     "Adres (isteğe bağlı)" : {
@@ -259,6 +335,9 @@
     "Aylık" : {
 
     },
+    "Aylık yapay zekâ bütçesi doldu." : {
+
+    },
     "Bağlanacak sınavı seç." : {
 
     },
@@ -277,6 +356,15 @@
     "Başarısız" : {
 
     },
+    "Başarısız iş yok" : {
+
+    },
+    "Başarısız işler" : {
+
+    },
+    "Başka derse birleştir" : {
+
+    },
     "Başla" : {
 
     },
@@ -289,10 +377,16 @@
     "Başlık en fazla %lld karakter olabilir." : {
 
     },
+    "Baştan başla" : {
+
+    },
     "Bazı bildirimler yüklenemedi." : {
 
     },
-    "Bekleyen gönderim yok" : {
+    "Bekleyen gönderim yok. Yeni gönderimler onay için burada görünür." : {
+
+    },
+    "Bekleyen gönderimler" : {
 
     },
     "Bekleyen gönderimleri incele ve onayla" : {
@@ -367,7 +461,16 @@
     "Bildirimleri Aç" : {
 
     },
+    "Bir çözüm adımı çok uzun." : {
+
+    },
+    "Bir dersin konusunu değiştirince o dersin yayınlanmış soruları ve soru havuzları yeni konuya taşınır." : {
+
+    },
     "Bir görsel işlenemedi. Lütfen başka bir görsel dene." : {
+
+    },
+    "Bir şık çok uzun." : {
 
     },
     "Bir sorun oluştu" : {
@@ -375,6 +478,12 @@
     },
     "Bir sorun oluştu. Lütfen tekrar dene." : {
       "comment" : "Generic sign-in or account error."
+    },
+    "Birleştir" : {
+
+    },
+    "Bitir" : {
+
     },
     "Bitiş zamanı" : {
 
@@ -397,6 +506,15 @@
     "Bölümüne yeni sınav gelince ilk sen haberdar ol" : {
 
     },
+    "Bu ad zaten numaralı; sıra no boş kalmalı." : {
+
+    },
+    "Bu ayın 50 $ sınırını aşabilir; sunucu aşan işi reddeder." : {
+
+    },
+    "Bu ayın yapay zekâ harcaması" : {
+
+    },
     "Bu bildirim gönderildiği için artık iptal edilemez." : {
 
     },
@@ -405,6 +523,12 @@
     },
     "Bu bölümde henüz ders yok" : {
       "comment" : "Empty state title: a department without courses."
+    },
+    "Bu çözüm yapay zekâ ile hazırlanmış ve incelenmiştir." : {
+
+    },
+    "Bu dersin soruları arasından soru çöz" : {
+
     },
     "Bu derste henüz sınav yok" : {
       "comment" : "Empty state title: a course without exams."
@@ -433,11 +557,17 @@
     "Bu işlem için yetkin yok." : {
 
     },
+    "Bu kapsamdaki tüm soruları gördün" : {
+
+    },
     "Bu konumu seç" : {
 
     },
     "Bu seviyeye döner" : {
       "comment" : "Accessibility hint of a breadcrumb chip."
+    },
+    "Bu sınav arşivde zaten yüklü" : {
+
     },
     "Bu sınav artık arşivde bulunmuyor." : {
 
@@ -451,6 +581,9 @@
     "Bu sınavda sayfa yok" : {
       "comment" : "Empty state title: an image exam without pages."
     },
+    "Bu sınavda soru yok" : {
+
+    },
     "Bu sınavı açmak için yeterli coin yok." : {
 
     },
@@ -463,8 +596,45 @@
     "Bu yer bulunamadı. Başka bir sonuç seç." : {
 
     },
+    "Bugün kalan: %lld soru" : {
+
+    },
+    "Bugünlük ücretsiz soru hakkın bitti" : {
+
+    },
     "Buton" : {
 
+    },
+    "Cevabı Gizle" : {
+
+    },
+    "Cevabı Göster" : {
+
+    },
+    "Cevabın sesli okuma metni" : {
+
+    },
+    "Cevap" : {
+
+    },
+    "Cevap metni boş olamaz." : {
+
+    },
+    "Cevap metni çok uzun." : {
+
+    },
+    "Cevap:" : {
+
+    },
+    "Cevap: %@%@" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Cevap: %1$@%2$@"
+          }
+        }
+      }
     },
     "Cihaz doğrulanamadı. Lütfen daha sonra tekrar dene." : {
       "comment" : "Sign-in error: Firebase could not verify the app (APNs, reCAPTCHA or App Check)."
@@ -487,6 +657,18 @@
     "Çok fazla deneme yapıldı. Lütfen bir süre sonra tekrar dene." : {
       "comment" : "Sign-in error: rate limited or SMS quota exceeded."
     },
+    "Çok fazla şık ya da çözüm adımı var." : {
+
+    },
+    "Çözüm" : {
+
+    },
+    "Çözüm adımları" : {
+
+    },
+    "Çözüm:" : {
+
+    },
     "Daha Sonra" : {
       "comment" : "Update alert button that dismisses the alert."
     },
@@ -502,7 +684,37 @@
     "Ders ara" : {
 
     },
+    "Ders bulunamadı" : {
+
+    },
     "Ders Ekle" : {
+
+    },
+    "Ders eşleme" : {
+
+    },
+    "Ders eşleme servisi kullanılamıyor." : {
+
+    },
+    "Ders eşlemesi" : {
+
+    },
+    "Ders işlemleri" : {
+
+    },
+    "Ders kimliği (subjectId)" : {
+
+    },
+    "Ders kimliğini yaz ya da başka bir seçenek seç." : {
+
+    },
+    "Ders taşınsın mı?" : {
+
+    },
+    "Ders yok" : {
+
+    },
+    "Dersi yeniden adlandır" : {
 
     },
     "Dersin listede yoksa, adını yazarak ekleyebilirsin." : {
@@ -511,11 +723,26 @@
     "Dersler" : {
       "comment" : "List title: the courses of a department."
     },
+    "Dersler birleştirilsin mi?" : {
+
+    },
     "Dersler yükleniyor…" : {
 
     },
     "Derslerde ara" : {
       "comment" : "Search field prompt on a course list."
+    },
+    "Doğru seçenek: %@" : {
+
+    },
+    "Doğru seçenek: %@." : {
+
+    },
+    "Doğru şık (örn. C)" : {
+
+    },
+    "Doğru şık, şıklardan biri olmalı." : {
+
     },
     "Doğrula" : {
       "comment" : "Login button that signs in with the entered code."
@@ -528,6 +755,12 @@
     },
     "Doğrulama kodu" : {
       "comment" : "Label of the 6-digit verification code field."
+    },
+    "Dönüştürme servisi kullanılamıyor." : {
+
+    },
+    "Dönüştürülecek sınav" : {
+
     },
     "Dosya" : {
       "comment" : "Label of the picker that switches between the PDF files of an exam; also the fallback name of a saved file."
@@ -573,6 +806,9 @@
 
     },
     "Duyuru ve kampanya gönder" : {
+
+    },
+    "Düzenle" : {
 
     },
     "Eğitim" : {
@@ -659,6 +895,18 @@
     "Gönderdiğin ve zamanladığın bildirimler burada görünür." : {
 
     },
+    "Gönderen" : {
+
+    },
+    "Gönderen bilgisi yüklenemedi" : {
+
+    },
+    "Gönderen yükleniyor…" : {
+
+    },
+    "Gönderen: %@" : {
+
+    },
     "Gönderildi" : {
 
     },
@@ -671,7 +919,7 @@
     "Gönderim Geçmişi" : {
 
     },
-    "Gönderim onaylandı." : {
+    "Gönderim onaylandı. Sınav yapay zekâya gönderilecek." : {
 
     },
     "Gönderim zamanı" : {
@@ -749,6 +997,15 @@
     "Hakkında" : {
       "comment" : "Toolbar button and screen title: information about the app."
     },
+    "Hangi modelle dönüştürülsün?" : {
+
+    },
+    "Hangi modelle yeniden başlatılsın?" : {
+
+    },
+    "Hangi sınav türünden soru çözmek istersin?" : {
+
+    },
     "Harita" : {
 
     },
@@ -759,6 +1016,12 @@
 
     },
     "Hayır, teşekkürler" : {
+
+    },
+    "Hazır sınav yok" : {
+
+    },
+    "Hazır sınavlar" : {
 
     },
     "Hedef kitle" : {
@@ -776,6 +1039,12 @@
     "Her dersin tüm sınavları açık" : {
 
     },
+    "Her şıkkın harfi ve metni dolu olmalı." : {
+
+    },
+    "Her toplu işte modeli sen seçersin; varsayılan yok." : {
+
+    },
     "Hesabı Sil" : {
       "comment" : "Button that deletes the account."
     },
@@ -791,6 +1060,9 @@
     "Hesap" : {
       "comment" : "Account screen title and the home toolbar button that opens it."
     },
+    "Hesaplama hiçbir iş başlatmaz; yalnızca sınav sayısını ve tahmini maliyeti gösterir." : {
+
+    },
     "Hiçbir şeyi kaçırma" : {
 
     },
@@ -802,6 +1074,9 @@
     },
     "İçerik bulunamadı." : {
       "comment" : "Error: the requested archive entry does not exist."
+    },
+    "İkinci onayda bu sınavın soruları ve sayfaları bu gönderimle değiştirilir." : {
+
     },
     "İleri" : {
 
@@ -824,6 +1099,18 @@
     "İptal et" : {
 
     },
+    "İş başarısız oldu" : {
+
+    },
+    "İş ya da soru bulunamadı; listeyi yenile." : {
+
+    },
+    "İşleniyor%@" : {
+
+    },
+    "İşler yükleniyor…" : {
+
+    },
     "İstediğin an Hesap'tan kapat." : {
 
     },
@@ -834,6 +1121,9 @@
 
     },
     "İsteğe bağlı. Bildirimde ve bildirim sayfasında görünür; en fazla 1 MB JPEG'e küçültülür." : {
+
+    },
+    "İstersen aynı sorulara baştan başlayabilir ya da çıkabilirsin." : {
 
     },
     "Kadın" : {
@@ -862,6 +1152,9 @@
     },
     "Kapat" : {
       "comment" : "Accessibility label of the button that closes the full-screen viewer."
+    },
+    "Kapsam" : {
+
     },
     "Karta dokunulduğunda ya da butona basıldığında açılır. Bağlantı https ile başlamalı." : {
 
@@ -908,6 +1201,9 @@
     "Kodun süresi doldu. Yeni bir kod iste." : {
       "comment" : "Sign-in error: the verification code or session expired."
     },
+    "Kontrol et" : {
+
+    },
     "Konum" : {
       "comment" : "Accessibility label of the breadcrumb trail showing the current location in the archive."
     },
@@ -941,6 +1237,21 @@
     "Kullanım Koşulları" : {
 
     },
+    "Kuyruğa al" : {
+
+    },
+    "Kuyruğa alınıyor…" : {
+
+    },
+    "Kuyruğa alınsın mı?" : {
+
+    },
+    "Liste yenilenmiş olabilir." : {
+
+    },
+    "Listeden bir ad seç" : {
+
+    },
     "Listeden Kaldır" : {
       "comment" : "Context menu and accessibility action that removes one exam from “Recently Viewed”."
     },
@@ -959,10 +1270,22 @@
     "Mesaj en fazla %lld karakter olabilir." : {
 
     },
+    "Metin çok uzun." : {
+
+    },
     "Mevcut Dersler" : {
 
     },
+    "Mevcut kimlik" : {
+
+    },
     "Mevcut sınav" : {
+
+    },
+    "Model" : {
+
+    },
+    "Model ve maliyet" : {
 
     },
     "Moderasyon" : {
@@ -989,7 +1312,10 @@
     "Okunmadı" : {
 
     },
-    "Onayla ve Yayınla" : {
+    "Olası eşleşme: %@" : {
+
+    },
+    "Onayla · %@ ile ilerle" : {
 
     },
     "Onaylanan sınav yüklemelerinden coin kazanırsın." : {
@@ -1014,9 +1340,6 @@
         }
       }
     },
-    "Onaylarsan sınav arşive eklenir ve gönderene yenilik kademesine göre coin verilir." : {
-
-    },
     "Önce bir üniversite seç. Listelerde yalnızca kayıtlı kullanıcısı olanlar görünür." : {
 
     },
@@ -1024,6 +1347,18 @@
       "comment" : "About screen section header: the app’s main features."
     },
     "Önemli duyurular" : {
+
+    },
+    "Önerilen" : {
+
+    },
+    "Önerilen ders" : {
+
+    },
+    "Orijinal ad" : {
+
+    },
+    "Orijinal sayfaları göster" : {
 
     },
     "Otomatik" : {
@@ -1069,6 +1404,9 @@
 
     },
     "Profil" : {
+
+    },
+    "Profil bulunamadı (hesap silinmiş olabilir)" : {
 
     },
     "Profili Düzenle" : {
@@ -1147,6 +1485,15 @@
     "Seçilen konum: %@" : {
 
     },
+    "Şekil var." : {
+
+    },
+    "Şekil yüklenemedi" : {
+
+    },
+    "Sesli okuma metni" : {
+
+    },
     "Sessiz" : {
 
     },
@@ -1163,6 +1510,15 @@
 
     },
     "Sistem" : {
+
+    },
+    "Şık ekle" : {
+
+    },
+    "Şık metni" : {
+
+    },
+    "Şıklar" : {
 
     },
     "Sınav" : {
@@ -1192,10 +1548,25 @@
     "Sınav içeriği korumalıdır" : {
 
     },
+    "Sınav iptal edilsin mi?" : {
+
+    },
     "Sınav Seç" : {
 
     },
     "Sınav silinsin mi?" : {
+
+    },
+    "Sınav Türü" : {
+
+    },
+    "Sınav yapılandırılmayacak." : {
+
+    },
+    "Sınav yeniden üretiliyor; hazır olunca listede tekrar görünür." : {
+
+    },
+    "Sınava gir" : {
 
     },
     "Sınava Git" : {
@@ -1206,6 +1577,9 @@
     },
     "Sınavı açar" : {
       "comment" : "Accessibility hint of a recently viewed exam card."
+    },
+    "Sınavı iptal et" : {
+
     },
     "Sınavı tek bir PDF olarak ekle." : {
 
@@ -1221,6 +1595,18 @@
     },
     "Sınavlarda ara" : {
       "comment" : "Search field prompt on an exam list."
+    },
+    "Sıra no (1–99, boş bırakılabilir)" : {
+
+    },
+    "Sıra no 1–99 arasında olmalı ya da boş kalmalı." : {
+
+    },
+    "Sıradaki soru" : {
+
+    },
+    "Sıraya alındı%@" : {
+
     },
     "SMS servisinde geçici bir sorun nedeniyle kod gönderilemedi. Lütfen bir süre sonra tekrar dene; sorun sürerse bizimle iletişime geç." : {
 
@@ -1240,6 +1626,45 @@
     "Sonuç bulunamadı." : {
 
     },
+    "Soru %@" : {
+
+    },
+    "Soru %lld" : {
+
+    },
+    "Soru %lld yeniden üretiliyor; liste kendiliğinden yenilenir." : {
+
+    },
+    "Soru hangi modelle yeniden üretilsin?" : {
+
+    },
+    "Soru metni (Markdown + LaTeX)" : {
+
+    },
+    "Soru metni boş olamaz." : {
+
+    },
+    "Soru yeniden üretiliyor; birkaç saniye sonra yenile." : {
+
+    },
+    "Sorular" : {
+
+    },
+    "Sorular (%lld)" : {
+
+    },
+    "Sorular nereden gelsin?" : {
+
+    },
+    "Sorular şu anda alınamadı. Lütfen daha sonra tekrar dene." : {
+
+    },
+    "Sorular tüm kullanıcılara açılır ve sınav yeni yapıya geçer." : {
+
+    },
+    "Soruları görmek için giriş yapmış olman gerekiyor." : {
+
+    },
     "Sorulmadı" : {
 
     },
@@ -1247,6 +1672,9 @@
 
     },
     "Sunucudan beklenmeyen bir yanıt alındı." : {
+
+    },
+    "Sunucudan beklenmeyen bir yanıt geldi." : {
 
     },
     "Süresi dolan bildirim, kullanıcıların bildirim sayfasından kalkar." : {
@@ -1263,7 +1691,16 @@
         }
       }
     },
+    "Tahmin" : {
+
+    },
+    "Tahmini hesapla" : {
+
+    },
     "Tahmini kitle" : {
+
+    },
+    "Tahmini maliyet" : {
 
     },
     "Tamam" : {
@@ -1275,7 +1712,22 @@
     "Tarih" : {
 
     },
+    "Taşı" : {
+
+    },
+    "Taslak hazır; Moderasyon › Hazır sınavlar'dan incele" : {
+
+    },
+    "Taslak silinir ve sınav yapılandırılmaz. Gönderene verilen coin geri alınmaz." : {
+
+    },
+    "Taslak yükleniyor…" : {
+
+    },
     "Tek tek açmak yerine Premium'a geç" : {
+
+    },
+    "Tekrar başlat" : {
 
     },
     "Tekrar dene" : {
@@ -1317,10 +1769,22 @@
     "Test yalnızca senin cihazına gider; kitleye ulaşmaz." : {
 
     },
+    "Toplu dönüştür" : {
+
+    },
     "Tüm bölümler" : {
 
     },
+    "Tüm bölümü seç" : {
+
+    },
     "Tüm fakülteler" : {
+
+    },
+    "Tüm işler sorunsuz ilerliyor." : {
+
+    },
+    "Tüm sınav hangi modelle yeniden üretilsin?" : {
 
     },
     "Tüm sınavlar açık" : {
@@ -1332,10 +1796,19 @@
     "Tümünü Temizle" : {
       "comment" : "Destructive confirmation button that clears the recently viewed exams."
     },
+    "Tümünü yeniden üret" : {
+
+    },
     "Tür" : {
 
     },
     "Tür Kampanya'ya kilitli: konumlu bildirimler her zaman kampanya olarak gider." : {
+
+    },
+    "Türkiye geneli soru havuzunun doğruluğu bu eşlemeye bağlı; ders adı farklı yazılmış olabilir." : {
+
+    },
+    "Ücretsiz soru hakkı her gün yenilenir. Premium ile istediğin kadar soru çözebilirsin." : {
 
     },
     "Üniversite" : {
@@ -1371,6 +1844,24 @@
     "Yakınlaştırarak ayrıntılı inceleme" : {
       "comment" : "About screen feature: pages can be zoomed in."
     },
+    "Yapay zekâ bir sınavı bitirince burada incelemeye hazır görünür." : {
+
+    },
+    "Yapılandırılmış bir sınav yayınlanınca dersi burada görünür." : {
+
+    },
+    "Yapılandırılmış sınavlar" : {
+
+    },
+    "Yayınla" : {
+
+    },
+    "Yayınlandı" : {
+
+    },
+    "Yayınlansın mı?" : {
+
+    },
     "Yeni bildirimler burada görünecek." : {
 
     },
@@ -1380,10 +1871,13 @@
     "Yeni ders" : {
 
     },
-    "Yeni fakülte" : {
+    "Yeni dersin adı" : {
 
     },
-    "Yeni gönderimler onay için burada görünür." : {
+    "Yeni dersin adını yaz ya da başka bir seçenek seç." : {
+
+    },
+    "Yeni fakülte" : {
 
     },
     "Yeni içerik eklendiğinde burada görünecek." : {
@@ -1398,6 +1892,24 @@
     "Yeni üniversite" : {
 
     },
+    "Yeni yapıya geçen sınavın adı listedeki adlardan biri olur: yıl + ad + sıra no." : {
+
+    },
+    "Yeni yapıya geçir" : {
+
+    },
+    "Yeniden adlandır" : {
+
+    },
+    "Yeniden üret" : {
+
+    },
+    "Yeniden üretiliyor" : {
+
+    },
+    "Yeniden üretiliyor…" : {
+
+    },
     "Yer adı (zorunlu)" : {
 
     },
@@ -1407,10 +1919,19 @@
     "Yıl" : {
 
     },
+    "Yıl (ör. 2019, boş bırakılabilir)" : {
+
+    },
+    "Yıl 4 haneli olmalı (ör. 2019) ya da boş kalmalı." : {
+
+    },
     "Yıllık" : {
 
     },
     "Yok" : {
+
+    },
+    "Yönetici" : {
 
     },
     "Yükleniyor…" : {
