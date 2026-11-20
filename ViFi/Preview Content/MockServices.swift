@@ -116,11 +116,17 @@ extension AppEnvironment {
         arguments.contains(LaunchArgument.profileIncomplete) ? nil : .mockDefault
     }
 
-    /// A blocking required update with `-ViFiForceUpdate`, otherwise up to date.
+    /// A blocking required update with `-ViFiForceUpdate`, an optional one with `-ViFiOptionalUpdate`, otherwise
+    /// up to date.
     private static func mockUpdateStatus(arguments: [String]) -> AppUpdateStatus {
-        guard arguments.contains(LaunchArgument.forceUpdate) else { return .upToDate }
         let storeURL = URL(string: "https://apps.apple.com") ?? URL(filePath: "/")
-        return .required(AppUpdate(version: "99.0.0", storeURL: storeURL, message: nil))
+        if arguments.contains(LaunchArgument.forceUpdate) {
+            return .required(AppUpdate(version: "99.0.0", storeURL: storeURL, message: nil))
+        }
+        if arguments.contains(LaunchArgument.optionalUpdate) {
+            return .optional(AppUpdate(version: "99.0.0", storeURL: storeURL, message: nil))
+        }
+        return .upToDate
     }
 }
 

@@ -546,6 +546,7 @@ sınav gibi uç durumları içerir. SwiftUI önizlemeleri de aynı veriyi `AppEn
 | `-ViFiPhoneAuthTesting` | Canlı Firebase ile: telefon doğrulamasında uygulama doğrulamasını (APNs / reCAPTCHA) kapatır. Yalnızca Firebase konsolunda tanımlı test numaralarıyla çalışır. |
 | `-ViFiProfileIncomplete` | `-ViFiMockData` ile birlikte: profilsiz başlar, zorunlu "Profilini Tamamla" kapısından açılır. |
 | `-ViFiForceUpdate` | `-ViFiMockData` ile birlikte: kapatılamayan zorunlu güncelleme ekranından başlar. |
+| `-ViFiOptionalUpdate` | `-ViFiMockData` ile birlikte: kapatılabilir "Yeni sürüm mevcut" uyarısıyla başlar. |
 | `-ViFiAdmin` | `-ViFiMockData` ile birlikte: kullanıcı admin sayılır; Hesap'ta Moderasyon ve **Bildirim Gönder** görünür. |
 | `-ViFiNoCoins` | `-ViFiMockData` ile birlikte: coin bakiyesi 0 başlar (kilitli sınav / coin kazan istemi). |
 | `-ViFiSubscribed` | `-ViFiMockData` ile birlikte: aktif Premium abonelikle başlar (arşiv açık, coin gizli). |

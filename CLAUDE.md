@@ -408,6 +408,7 @@ cd firebase && node scripts/convert-legacy-exams.mjs --provider gemini --project
 | `-ViFiSignedOut` | `-ViFiMockData` ile birlikte: giriş ekranından başlar (örnek modda kod `111111`) |
 | `-ViFiPhoneAuthTesting` | Yalnızca Debug: Phone Auth uygulama doğrulamasını kapatır; yalnızca Console'daki test numaralarıyla çalışır |
 | `-ViFiForceUpdate` | `-ViFiMockData` ile birlikte (yalnızca Debug): kapatılamayan zorunlu güncelleme ekranından başlar (UI testi) |
+| `-ViFiOptionalUpdate` | `-ViFiMockData` ile birlikte (yalnızca Debug): kapatılabilir "Yeni sürüm mevcut" uyarısı (99.0.0) çıkar (`UpdatePromptUITests`). "Bu sürümü atla" `UserDefaults`'a yazılır; simülatörde elle denedikten sonra testler `-skippedUpdateVersion ""` ile bunu ezer |
 | `-ViFiProfileIncomplete` | `-ViFiMockData` ile birlikte (yalnızca Debug): profilsiz başlar, zorunlu "Profilini Tamamla" kapısından açılır (UI testi) |
 | `-ViFiAdmin` | `-ViFiMockData` ile birlikte (yalnızca Debug): kullanıcı admin sayılır; Hesap'ta Moderasyon ve **Bildirim Gönder** görünür |
 | `-ViFiNoCoins` | `-ViFiMockData` ile birlikte (yalnızca Debug): coin bakiyesi 0 başlar (kilitli sınav / coin kazan istemi) |
@@ -423,7 +424,7 @@ cd firebase && node scripts/convert-legacy-exams.mjs --provider gemini --project
 | `-ViFiPracticeLimitReached` | `-ViFiMockData` ile birlikte (yalnızca Debug): "Sınava gir"in ücretsiz günlük hakkı bitmiş başlar (hak bitti + paywall ekranı; `PracticeUITests`) |
 | `-ViFiSimulateCapture` | Yalnızca Debug: kayıt/yansıtma varmış gibi davranır (UI testleri). Kalkan aktifken `fallback` modda örtü çıkmaz (örtünün kararı `CaptureCoverPolicyTests`'te) |
 
-4.2.0'ın tek yeni argümanı `-ViFiPracticeLimitReached`'tir. Yapılandırılmış sınav `-ViFiMockData` ile örnek arşivde `KOCAELİ ÜNİVERSİTESİ › MÜHENDİSLİK FAKÜLTESİ › MATEMATİK BÖLÜMÜ › TOPOLOJİ 1 › 2003 FİNAL` olarak açılır (3 örnek soru, `sample-questions.json`; `StructuredExamUITests`); admin dönüştürme ekranları `-ViFiAdmin` ile görünür. Soru ekranının kalkanı için `-ViFiCaptureShieldSelfTest` aynen geçerlidir.
+4.2.0'ın yeni argümanları `-ViFiPracticeLimitReached` ve `-ViFiOptionalUpdate`'tir. Yapılandırılmış sınav `-ViFiMockData` ile örnek arşivde `KOCAELİ ÜNİVERSİTESİ › MÜHENDİSLİK FAKÜLTESİ › MATEMATİK BÖLÜMÜ › TOPOLOJİ 1 › 2003 FİNAL` olarak açılır (3 örnek soru, `sample-questions.json`; `StructuredExamUITests`); admin dönüştürme ekranları `-ViFiAdmin` ile görünür. Soru ekranının kalkanı için `-ViFiCaptureShieldSelfTest` aynen geçerlidir.
 
 ---
 

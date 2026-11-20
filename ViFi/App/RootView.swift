@@ -217,8 +217,14 @@ struct RootView: View {
         Binding(
             get: { pendingOptionalUpdate != nil },
             // Any dismissal (Update, skip, Later, tap-away) suppresses this version until relaunch; keying
-            // on the version means a later, different optional version prompts again.
-            set: { if !$0 { dismissedOptionalVersion = pendingOptionalUpdate?.version } }
+            // on the version means a later, different optional version prompts again. SwiftUI writes `false`
+            // more than once while the alert closes, and by the second write the version is already dismissed
+            // (so `pendingOptionalUpdate` is nil): only ever record a version, never clear it, or the alert
+            // would come straight back.
+            set: { isPresented in
+                guard !isPresented, let version = pendingOptionalUpdate?.version else { return }
+                dismissedOptionalVersion = version
+            }
         )
     }
 

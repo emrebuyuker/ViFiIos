@@ -269,6 +269,8 @@ enum LaunchArgument {
     static let phoneAuthTesting = "-ViFiPhoneAuthTesting"
     /// With `-ViFiMockData`: starts on the blocking required-update screen, to exercise the update gate.
     static let forceUpdate = "-ViFiForceUpdate"
+    /// With `-ViFiMockData`: reports an optional (dismissible) update, to exercise the "Yeni sürüm mevcut" alert.
+    static let optionalUpdate = "-ViFiOptionalUpdate"
     /// With `-ViFiMockData`: starts with no stored profile, on the blocking profile-completion screen.
     static let profileIncomplete = "-ViFiProfileIncomplete"
     /// With `-ViFiMockData`: reports the signed-in user as an admin, to exercise the moderation tools.
