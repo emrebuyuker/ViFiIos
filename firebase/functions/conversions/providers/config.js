@@ -2,9 +2,9 @@
 // place to change them (owner decision K6/K9: both models run on Vertex AI with the Functions service account, no API
 // keys; the admin picks the provider per action).
 //
-// TODO(Faz 2, live Vertex check): verify every value marked VERIFY against the Vertex AI Model Garden and the Vertex
-// pricing page (https://cloud.google.com/vertex-ai/generative-ai/pricing) before the first live run. They were written
-// on 13 Nov 2026 without a live call and are NOT guaranteed.
+// Verified on 20 Nov 2026 (no live model call yet) against the vifi-831a8 Model Garden pages, the Marketplace agreement
+// for Claude Opus 5.5 and the pricing page (https://cloud.google.com/model-garden/pricing, formerly
+// /vertex-ai/generative-ai/pricing). Re-check ids and prices whenever a model is changed here.
 //
 // Batch discounts: Anthropic's Message Batches API is not offered on Vertex AI, and Vertex batch prediction (Claude
 // and Gemini both have a ~50% batch price there) needs BigQuery / Cloud Storage job plumbing. Not implemented — every
@@ -13,28 +13,28 @@
 
 export const PROVIDER_CONFIG = Object.freeze({
   claude: Object.freeze({
-    // VERIFY: Vertex uses the bare first-party id for current Claude models (no @date suffix).
+    // Verified: Vertex uses the bare first-party id for current Claude models (no @date suffix).
     modelId: 'claude-opus-5-5',
-    // VERIFY: 'global' is Anthropic's recommended Vertex endpoint; a regional one (e.g. 'europe-west1') pins data
-    // residency but is priced ~10% higher and must be enabled for this model. Owner decision pending.
+    // 'global' is Anthropic's recommended Vertex endpoint (owner decision K18); a regional one (e.g. 'europe-west1')
+    // pins data residency but is priced higher and must be enabled for this model.
     location: 'global',
     // Generous: ~30 questions with worked solutions plus adaptive thinking. Streaming keeps it under HTTP timeouts.
     maxOutputTokens: 64000,
     // Opus 5.5 defaults to 'medium'; solving exam questions is correctness-sensitive.
     effort: 'high',
-    // VERIFY: USD per million tokens. Vertex list price assumed equal to the first-party price ($4 / $20) for the
-    // global endpoint.
+    // USD per million tokens on the global endpoint. Verified: $4 input / $20 output at every context size (Marketplace
+    // agreement, 20 Nov 2026).
     pricing: Object.freeze({ tiers: Object.freeze([Object.freeze({ inputPerMTok: 4, outputPerMTok: 20 })]) }),
   }),
   gemini: Object.freeze({
-    // VERIFY: the newest Gemini Pro id the installed @google/genai documents; may be GA under another id by Faz 2.
+    // Verified: still the newest Gemini Pro on Vertex (20 Nov 2026); no GA id yet. Output limit 64K tokens.
     modelId: 'gemini-3.1-pro-preview',
-    // VERIFY: preview Gemini models are often served only from 'global'.
+    // Verified: this preview model is priced and served on 'global' only.
     location: 'global',
     maxOutputTokens: 65536,
     thinkingLevel: 'HIGH',
-    // VERIFY: USD per million tokens, Gemini 3 Pro list price: prompts up to 200k tokens $2 / $12, above $4 / $18.
-    // Thinking tokens are billed as output.
+    // USD per million tokens. Verified: prompts up to 200k tokens $2 / $12, above $4 / $18; thinking tokens are billed
+    // as output ("response and reasoning").
     pricing: Object.freeze({
       tiers: Object.freeze([
         Object.freeze({ upToInputTokens: 200_000, inputPerMTok: 2, outputPerMTok: 12 }),
