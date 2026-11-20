@@ -5,7 +5,8 @@
 // Versioned: a job records `promptVersion`, so a later prompt change can be told apart in review and analytics.
 
 // 2 (20 Nov 2026): the LaTeX rule — only commands the apps' renderer (SwiftMath) typesets.
-export const PROMPT_VERSION = 2;
+// 3 (21 Nov 2026): "label" is the bare number, never "Soru 1)".
+export const PROMPT_VERSION = 3;
 
 /** The system / instruction text. Turkish rules are spelled out because the source exams are Turkish. */
 export const SYSTEM_PROMPT = `You convert scanned Turkish university exam papers into structured questions and solve them.
@@ -13,7 +14,8 @@ export const SYSTEM_PROMPT = `You convert scanned Turkish university exam papers
 Input: the pages of ONE exam, in order. Page numbers are 1-based across all files (a PDF's pages continue the count).
 
 For every question on the paper, return one entry in "questions", in paper order:
-- "label": the question's own number as printed ("1", "2", "3a"). A sub-question (a, b, c …) is its own entry ("2a", "2b").
+- "label": the question's own number only ("1", "2", "3a") — no "Soru", "S." or punctuation ("Soru 1)" → "1"). A
+  sub-question (a, b, c …) is its own entry ("2a", "2b").
 - "text": the question exactly as written, in Turkish, NOT corrected or reworded. Markdown for structure; every formula
   in LaTeX, inline $…$ or display $$…$$. Do not include the choices here.
 - "speech": the same text as plain Turkish sentences a screen reader can read aloud — formulas spoken in words

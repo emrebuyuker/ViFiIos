@@ -49,7 +49,7 @@ nonisolated enum ExamQuestionParser {
             id: id,
             examId: nonEmpty(data[Field.examId]) ?? fallbackExamId,
             order: order,
-            label: nonEmpty(data[Field.label]) ?? String(order),
+            label: nonEmpty(data[Field.label]).map(QuestionLabel.normalize) ?? String(order),
             text: text,
             speech: nonEmpty(data[Field.speech]) ?? text,
             choices: choices(from: data[Field.choices]),

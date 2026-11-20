@@ -42,6 +42,7 @@ import {
   QUESTION_SCHEMA_VERSION,
   canonicalExamTitle,
   normalizeLatex,
+  normalizeQuestionLabel,
   parseExamTitle,
   parseListTitle,
   plainSpeech,
@@ -450,7 +451,7 @@ export function publishedQuestion(draft, { examId, keys, now }) {
     schemaVersion: QUESTION_SCHEMA_VERSION,
     examId,
     order: draft.order,
-    label: text(draft.label) || String(draft.order),
+    label: normalizeQuestionLabel(text(draft.label)) || String(draft.order),
     text: textValue,
     speech: text(draft.speech) || plainSpeech(textValue),
     choices: (Array.isArray(draft.choices) ? draft.choices : [])

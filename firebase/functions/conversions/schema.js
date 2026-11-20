@@ -434,6 +434,22 @@ export function validateExamTitle(title) {
 
 // MARK: - AI output (both providers)
 
+// MARK: - Question label
+
+/**
+ * A question label as the printed number alone: "Soru 1)", "S.1", "1." and "(1)" become "1"; "Soru 2a)", "2 a" and
+ * "2-a" become "2a". The apps title a card "<label>. Soru", so a model that copies the paper's "Soru 1)" would show
+ * "Soru 1). Soru" (first live Gemini run, 21 Nov 2026). A label without a number ("Ek Soru") stays as it is (trimmed).
+ * Mirrored by iOS `QuestionLabel.normalize` (same cases); applied to model output and on publish, the apps apply it
+ * when reading, so questions written before it render too. Idempotent.
+ */
+export function normalizeQuestionLabel(label) {
+  if (typeof label !== 'string') return label;
+  const trimmed = label.trim();
+  const match = /^[([]?\s*(?:(?:soru|s)\s*(?:no|numarası)?\s*[:.\-]?\s*)?(\d+)\s*[.\-)]?\s*([a-zçğıöşü])?\s*[)\].:\-]*$/iu.exec(trimmed);
+  return match ? `${match[1]}${match[2] ?? ''}` : trimmed;
+}
+
 // MARK: - LaTeX compatibility
 
 /**
@@ -563,7 +579,7 @@ export function validateModelOutput(output, { pageCount }) {
   const seenLabels = new Set();
   const questions = output.questions.map((raw, index) => {
     const where = `question ${index + 1}`;
-    const label = requiredText(raw?.label, LIMITS.label, `${where} label`);
+    const label = normalizeQuestionLabel(requiredText(raw?.label, LIMITS.label, `${where} label`));
     if (seenLabels.has(label)) throw new ConversionSchemaError('duplicate-label', `${where}: duplicate label ${label}`);
     seenLabels.add(label);
     const text = normalizeLatex(requiredText(raw.text, LIMITS.text, `${where} text`));

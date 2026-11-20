@@ -291,7 +291,8 @@ ViFi-iOS/
   `project.yml`'de `exactVersion: 1.7.3` (yerleşim değişimi yayınlanmış tüm soruları kaydırır; güncelleme `FormulaRenderingTests` + gerçek cihazda görsel
   kontrolle). SwiftMath'in çizemediği standart komutlar (`\varnothing`, `\dfrac`, `\operatorname`, `\bigl`…) **LaTeX uyumluluk tablosuyla** yazılır:
   sunucu `normalizeLatex` (`schema.js` `LATEX_REPLACEMENTS`; yapay zekâ çıktısı, 2. onay, yayındaki düzenleme) + istemci `LatexCompatibility` (her formül çizilmeden önce);
-  tablo, prompt (sürüm 2) ve testler (`conversionSchema.test.mjs` ↔ `LatexCompatibilityTests`, `FormulaRenderingTests` tablonun asgari kaldığını denetler) birlikte güncellenir.
+  soru etiketi de aynı desenle çıplak numaraya iner (`normalizeQuestionLabel` ↔ `QuestionLabel`, okurken `ExamQuestionParser`; "Soru 1)" → "1", kart başlığı "1. Soru");
+  tablo, prompt (sürüm 3) ve testler (`conversionSchema.test.mjs` ↔ `LatexCompatibilityTests`, `FormulaRenderingTests` tablonun asgari kaldığını denetler) birlikte güncellenir.
   Satıra sığmayan formül (satır içi ya da ekran) **kelimeler gibi alt satıra geçer**, yana kaymaz: `MathLineBreaker` (saf) formülü üst düzeyde virgülden
   sonra ve ilişki/ikili işlem işaretlerinin iki yanından böler (`{…}`, `(…)`, `[…]`, `\left…\right`, ortamlar bölünmez; işaret sayısından ayrılmaz),
   `FormulaText.views(lineWidth:)` parçaları metin boşluğuyla birleştirir; bölünemeyen parça satıra sığacak kadar küçültülür (genişlik `QuestionContentView.height(fitting:)`'ten). Metin `MathTextTokenizer` ile ayrılır (Pandoc `$` kuralı: `\$` düz dolar, kapanışı olmayan `$` metin, `$5 ve $6` metin); bozuk LaTeX çökmez,

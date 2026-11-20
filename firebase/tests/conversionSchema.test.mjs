@@ -14,6 +14,7 @@ import {
   conversionJobId,
   figureStoragePath,
   normalizeLatex,
+  normalizeQuestionLabel,
   parseExamTitle,
   plainSpeech,
   publishedQuestionId,
@@ -225,6 +226,32 @@ describe('conversion schema — list title validation (same cases as ExamTitlePa
   test('rejects a non-string', () => fails(() => validateExamTitle(null), 'invalid-exam-title'));
 });
 
+// Same cases as QuestionLabelTests.swift.
+const LABEL_CASES = [
+  ['Soru 1)', '1'], ['1', '1'], ['1.', '1'], ['1)', '1'], ['(3)', '3'], ['S1', '1'], ['S.1', '1'], ['soru 5', '5'],
+  ['SORU 12:', '12'], ['Soru No: 4', '4'], ['Soru 2a)', '2a'], ['2a)', '2a'], ['2 a', '2a'], ['2-b', '2b'], ['2.c', '2c'],
+  ['3A', '3A'], ['  7  ', '7'], ['Ek Soru', 'Ek Soru'], ['Bonus', 'Bonus'],
+];
+
+describe('conversion schema — question label (same cases as QuestionLabelTests.swift)', () => {
+  for (const [input, expected] of LABEL_CASES) {
+    test(`normalizes "${input}"`, () => assert.equal(normalizeQuestionLabel(input), expected));
+  }
+
+  test('is idempotent and model output labels are normalized', () => {
+    for (const [input] of LABEL_CASES) {
+      assert.equal(normalizeQuestionLabel(normalizeQuestionLabel(input)), normalizeQuestionLabel(input));
+    }
+    const { questions } = validateModelOutput({
+      questions: [
+        { label: 'Soru 1)', text: 'a', answer: { text: 'b' }, confidence: 0.9 },
+        { label: 'Soru 2)', text: 'c', answer: { text: 'd' }, confidence: 0.9 },
+      ],
+    }, { pageCount: 1 });
+    assert.deepEqual(questions.map((question) => question.label), ['1', '2']);
+  });
+});
+
 // Same cases as LatexCompatibilityTests.swift.
 const LATEX_CASES = [
   ['$\\Im_1 = \\{\\varnothing, X\\}$', '$\\Im_1 = \\{\\emptyset, X\\}$'],
@@ -363,7 +390,7 @@ describe('conversion schema — shared pieces', () => {
   });
 
   test('the prompt is versioned and mentions every schema field', () => {
-    assert.equal(PROMPT_VERSION, 2);
+    assert.equal(PROMPT_VERSION, 3);
     for (const field of ['label', 'text', 'speech', 'choices', 'figures', 'answer', 'solution', 'topics', 'difficulty', 'confidence', 'unreadable']) {
       assert.ok(SYSTEM_PROMPT.includes(`"${field}"`), field);
     }
