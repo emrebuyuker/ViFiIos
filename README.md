@@ -123,7 +123,7 @@ flowchart LR
 
   | Protokol | Canlı implementasyon | Örnek (DEBUG) implementasyon |
   |---|---|---|
-  | `ArchiveRepository` | `FirestoreArchiveRepository` (rollback: `FirebaseArchiveRepository` / RTDB) | `MockArchiveRepository` |
+  | `ArchiveRepository` | `FirestoreArchiveRepository` | `MockArchiveRepository` |
   | `RemoteFileLoading` | `RemoteFileLoader` | `RemoteFileLoader` (paket içi örnek dosyalar) |
   | `AppUpdateChecking` | `RemoteAppUpdateChecker` (kaynak: `FirebaseRemoteConfigReader`) | `StubUpdateChecker` |
   | `AppConfigReading` | `FirebaseRemoteConfigReader` | — (test double) |
@@ -159,8 +159,8 @@ flowchart LR
   (`browse`, `exam`) tüm hedefleri tanımlar; breadcrumb'a dokunmak `popTo(_:)`, son görüntülenen bir sınavı açmak
   ise `openExam(at:kind:)` ile tüm üst seviyeleri yığına yerleştirir, böylece Geri tuşu arşivde yukarı yürür.
 - **Arşiv ayrıştırıcıları.** Canlı yolda `FirestoreArchiveParser`, Firestore dokümanı sözlüklerini
-  (`DocumentSnapshot.data()`) modellere çevirir; dosya URL'leri `storagePath`→`StorageURL`. Rollback RTDB yolunda
-  `ArchiveParser` ham değerleri çevirir (isim yer tutucularını `uniname`/`fakname`… atlar, dizileri normalize eder).
+  (`DocumentSnapshot.data()`) modellere çevirir; dosya URL'leri `storagePath`→`StorageURL`. Örnek veri modunda
+  `ArchiveParser` paket içi ham ağacı çevirir (isim yer tutucularını `uniname`/`fakname`… atlar, dizileri normalize eder).
   İkisi de Firebase'e bağımlı olmayan saf katmanlardır; listeler Türkçe harf sıralaması ile sayı farkındalıklı
   sıralanır (sınavlar en yeniden eskiye).
 - **Çevrimdışı önbellek.** `RemoteFileLoader` dosyaları geniş bir `URLCache` ve `Caches/ExamFiles` altındaki disk
@@ -215,7 +215,7 @@ Bir seviye `catalogNodes` içinde `where(parentId == <üst id>, status == publis
 içinde `where(courseId == <ders id>, status == published)` ile listelenir; her ikisi de istemcide Türkçe sıralanır.
 Kanonik id'ler slug'dır (profil `*Id`'leri ve FCM topic'leriyle aynı üretilir). Eski RTDB arşivi
 (`Universitiess/<üniv>/…/<JPG|PDF>/<pushId>/downloadURL`, her düğüm adını `uniname`/`fakname`… yaprağında tutar)
-rollback için duruyor. Ayrıntı: [FIRESTORE-MIGRATION.md](FIRESTORE-MIGRATION.md).
+20 Kasım 2026'da silindi. Ayrıntı: [FIRESTORE-MIGRATION.md](FIRESTORE-MIGRATION.md).
 
 Kullanıcı profili `users/<uid>/profile` altında tutulur: `gender` yalnızca `female`/`male`, `phoneNumber` auth
 token'ındaki doğrulanmış numarayla aynı olmak zorunda, `updatedAt` her yazımda sunucu zaman damgası. Sahibi (+90)
@@ -607,7 +607,7 @@ Varsayılan her şey kapalıdır; aşağıdaki izinler dışında kimse hiçbir 
 | Firestore `users/<uid>/settings/inbox` | Sahibi okur; yalnızca `{readAt}` (sunucu zamanı) yazar; silinemez. |
 | Firestore `questions`, `questionPools`, `subjects` *(4.2.0, henüz yayınlanmadı)* | +90 telefonla girişli kullanıcılar ve yöneticiler okur; kimse yazamaz (yalnız Cloud Functions, Admin SDK). Sınav dosyaları (`exams.files`) bu sürümde de aynen korunur. |
 | Firestore `examConversions` (+ `questions` alt koleksiyonu), `aiUsage` *(4.2.0, henüz yayınlanmadı)* | Yalnızca yönetici okur. İstemci yazamaz; tek istisna yöneticinin taslak sorunun içerik alanlarını (`text`, `speech`, `choices`, `answer`, `solution`, `needsReview`) + `editedBy`/`editedAt` (sunucu zamanı) güncellemesidir; sıra, şekil ve işin kendisi değiştirilemez. |
-| Realtime DB `/Universitiess` (rollback) | +90 telefonla girişli kullanıcılar ve yöneticiler okur; yalnızca yönetici yazar. Arşiv Firestore'a taşındı; bu kopya rollback için duruyor. |
+| Realtime DB `/Universitiess` (silindi) | Eski arşiv kopyası 20 Kasım 2026'da silindi; arşiv yalnızca Firestore'dadır. Kuraldaki blok 4.2.0 kural yayınında kaldırılacak. |
 | Realtime DB `/pendingExams/<uid>` | Kullanıcı yalnızca kendi kaydını okur; yeni gönderim oluşturur, kendi `pending` gönderimini siler, var olanı değiştiremez. Yönetici hepsini okur ve yazar. Alanlar sıkı doğrulanır. |
 | Realtime DB `/users/<uid>/profile` | Sahibi (+90) yalnızca kendi profilini okur ve yazar; yönetici tüm profilleri okur (yazamaz). Alanlar sıkı doğrulanır: `gender` yalnızca `female`/`male`, `phoneNumber` token'daki numarayla aynı, `updatedAt` sunucu zaman damgası. |
 | Realtime DB diğer tüm düğümler | Kimseye açık değil (yönetici dahil). |
