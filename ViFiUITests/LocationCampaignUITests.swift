@@ -164,8 +164,7 @@ nonisolated final class LocationCampaignUITests: XCTestCase {
     private func compose(title: String, body: String, in app: XCUIApplication) {
         let bodyField = element("notificationComposer.body", in: app)
         XCTAssertTrue(bodyField.waitForExistence(timeout: Timeout.transition))
-        bodyField.tap()
-        bodyField.typeText(body)
+        bodyField.focusAndType(body, in: app)
 
         let titleField = element("notificationComposer.title", in: app)
         titleField.tap()
