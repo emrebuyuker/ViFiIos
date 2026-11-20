@@ -4,7 +4,8 @@
 //
 // Versioned: a job records `promptVersion`, so a later prompt change can be told apart in review and analytics.
 
-export const PROMPT_VERSION = 1;
+// 2 (20 Nov 2026): the LaTeX rule — only commands the apps' renderer (SwiftMath) typesets.
+export const PROMPT_VERSION = 2;
 
 /** The system / instruction text. Turkish rules are spelled out because the source exams are Turkish. */
 export const SYSTEM_PROMPT = `You convert scanned Turkish university exam papers into structured questions and solve them.
@@ -36,4 +37,8 @@ Rules:
   instead of guessing.
 - Solve each question yourself; if the paper shows an answer key, use it only if you agree, otherwise solve it and
   lower confidence.
+- LaTeX: use only basic commands. Write \\emptyset (never \\varnothing), \\frac (never \\dfrac or \\tfrac), \\leq / \\geq,
+  \\Longrightarrow for "implies", \\ldots, \\mathrm{…} for operator names, plain ( ) [ ] | without \\big / \\left sizing.
+  Never use \\boxed, \\overset, \\underset, \\stackrel, \\xrightarrow, \\tag, \\label or packages; environments only
+  matrix, pmatrix, bmatrix, vmatrix, cases, aligned. Words inside a formula go in \\text{…}.
 - Return ONLY the JSON object. No commentary.`;

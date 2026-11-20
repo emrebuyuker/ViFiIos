@@ -802,6 +802,24 @@ describe('discard, edit and regenerate published questions, delete', () => {
     await assert.rejects(admin.discardExamConversionHandler(deps, asAdmin({ jobId: 'exam-missing' })), { code: 'not-found' });
   });
 
+  test('LaTeX the renderer cannot draw is normalized on publish (direct draft edits) and on edit', async () => {
+    await seedCatalog({ course: false });
+    const { examId, jobId } = await seedReadySubmission('s19');
+    await job(jobId).collection('questions').doc('001').update({ text: '$A = \\varnothing$', solution: ['$\\dfrac{1}{2}$'] });
+    await admin.publishExamConversionHandler(depsWith(), asAdmin({ jobId }));
+    const questionId = `${examId}-001`;
+    const published = await getData(db.collection('questions').doc(questionId));
+    assert.equal(published.text, '$A = \\emptyset$');
+    assert.deepEqual(published.solution, ['$\\frac{1}{2}$']);
+
+    await admin.updatePublishedQuestionHandler(depsWith({ now: new Date(DAY.getTime() + 60_000) }), asAdmin({
+      questionId, answer: { text: '$\\bigl(x\\bigr)$', choice: 'B' }, solution: ['$\\lvert x \\rvert$'],
+    }));
+    const edited = await getData(db.collection('questions').doc(questionId));
+    assert.deepEqual(edited.answer, { text: '$(x)$', choice: 'B' });
+    assert.deepEqual(edited.solution, ['$| x |$']);
+  });
+
   test('a published question is edited in place (draft mirrored) and regenerated under the same id', async () => {
     await seedCatalog({ course: false });
     const { examId, jobId } = await seedReadySubmission('s5');

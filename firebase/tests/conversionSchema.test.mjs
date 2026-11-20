@@ -10,8 +10,10 @@ import {
   PRACTICE_EXAM_TYPES,
   PROVIDERS,
   canonicalExamTitle,
+  LATEX_REPLACEMENTS,
   conversionJobId,
   figureStoragePath,
+  normalizeLatex,
   parseExamTitle,
   plainSpeech,
   publishedQuestionId,
@@ -223,6 +225,57 @@ describe('conversion schema — list title validation (same cases as ExamTitlePa
   test('rejects a non-string', () => fails(() => validateExamTitle(null), 'invalid-exam-title'));
 });
 
+// Same cases as LatexCompatibilityTests.swift.
+const LATEX_CASES = [
+  ['$\\Im_1 = \\{\\varnothing, X\\}$', '$\\Im_1 = \\{\\emptyset, X\\}$'],
+  ['$x_n := \\dfrac{(-1)^n}{n}$ ve $\\tfrac{1}{2}$', '$x_n := \\frac{(-1)^n}{n}$ ve $\\frac{1}{2}$'],
+  ['$\\dbinom{n}{k}$', '$\\binom{n}{k}$'],
+  ['$a \\leqslant b \\geqslant c$', '$a \\leq b \\geq c$'],
+  ['$p \\implies q$', '$p \\Longrightarrow q$'],
+  ['$1, 2, \\dots, n$', '$1, 2, \\ldots, n$'],
+  ['$\\lvert x \\rvert + \\lVert v \\rVert$', '$| x | + \\Vert v \\Vert$'],
+  ['$\\operatorname{rank} A$', '$\\mathrm{rank} A$'],
+  ['$\\bigl( a \\bigr) \\Big[ b \\Big]$', '$( a ) [ b ]$'],
+  ['$\\bigcup_i A_i \\cap \\bigcap_j B_j$', '$\\bigcup_i A_i \\cap \\bigcap_j B_j$'],
+  ['$\\varnothingx$', '$\\varnothingx$'],
+  ['satır\\\\dots', 'satır\\\\dots'],
+  ['Formülsüz metin.', 'Formülsüz metin.'],
+];
+
+describe('conversion schema — LaTeX compatibility (same cases as LatexCompatibilityTests.swift)', () => {
+  for (const [input, expected] of LATEX_CASES) {
+    test(`normalizes ${input}`, () => assert.equal(normalizeLatex(input), expected));
+  }
+
+  test('is idempotent and passes non-strings through', () => {
+    for (const [input] of LATEX_CASES) assert.equal(normalizeLatex(normalizeLatex(input)), normalizeLatex(input));
+    assert.equal(normalizeLatex(undefined), undefined);
+    assert.equal(normalizeLatex(null), null);
+  });
+
+  test('every replacement target is itself left alone', () => {
+    for (const [, replacement] of LATEX_REPLACEMENTS) assert.equal(normalizeLatex(replacement), replacement);
+  });
+
+  test('model output is normalized in text, choices, answer and solution', () => {
+    const { questions: [draft] } = validateModelOutput({
+      questions: [{
+        label: '1',
+        text: '$A = \\varnothing$ ise',
+        choices: [{ label: 'A', text: '$\\dfrac{1}{2}$' }, { label: 'B', text: '$1$' }],
+        figures: [],
+        answer: { text: '$\\dfrac{1}{2}$', choice: 'A' },
+        solution: ['$\\bigl(1\\bigr)$'],
+        confidence: 0.9,
+      }],
+    }, { pageCount: 1 });
+    assert.equal(draft.text, '$A = \\emptyset$ ise');
+    assert.equal(draft.choices[0].text, '$\\frac{1}{2}$');
+    assert.equal(draft.answer.text, '$\\frac{1}{2}$');
+    assert.deepEqual(draft.solution, ['$(1)$']);
+  });
+});
+
 describe('conversion schema — model output validation', () => {
   const question = (overrides = {}) => ({
     label: '1',
@@ -310,7 +363,7 @@ describe('conversion schema — shared pieces', () => {
   });
 
   test('the prompt is versioned and mentions every schema field', () => {
-    assert.equal(PROMPT_VERSION, 1);
+    assert.equal(PROMPT_VERSION, 2);
     for (const field of ['label', 'text', 'speech', 'choices', 'figures', 'answer', 'solution', 'topics', 'difficulty', 'confidence', 'unreadable']) {
       assert.ok(SYSTEM_PROMPT.includes(`"${field}"`), field);
     }

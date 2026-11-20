@@ -434,6 +434,63 @@ export function validateExamTitle(title) {
 
 // MARK: - AI output (both providers)
 
+// MARK: - LaTeX compatibility
+
+/**
+ * Standard LaTeX commands the apps' formula renderer (iOS SwiftMath 1.7.3, `exactVersion`) cannot typeset, each with a
+ * renderer-safe equivalent ('' drops a sizing / numbering command). Without this a formula holding one of them shows
+ * as its raw source (`\varnothing`, `\dfrac` came out of the first live Gemini run, 20 Nov 2026). Mirrored by iOS
+ * `LatexCompatibility.replacements` (same order, same pairs) and the Android contract (STRUCTURED-EXAMS.md); the
+ * server applies it to everything it writes, the apps to every formula before drawing it, so older documents render
+ * too. Only exact command names match (`\big` never touches `\bigcup`); a command after an escaped backslash
+ * (`\\dots` = line break + "dots") is left alone.
+ */
+export const LATEX_REPLACEMENTS = Object.freeze([
+  ['varnothing', '\\emptyset'],
+  ['dfrac', '\\frac'],
+  ['tfrac', '\\frac'],
+  ['dbinom', '\\binom'],
+  ['tbinom', '\\binom'],
+  ['leqslant', '\\leq'],
+  ['geqslant', '\\geq'],
+  ['implies', '\\Longrightarrow'],
+  ['impliedby', '\\Longleftarrow'],
+  ['dots', '\\ldots'],
+  ['lvert', '|'],
+  ['rvert', '|'],
+  ['lVert', '\\Vert'],
+  ['rVert', '\\Vert'],
+  ['operatorname', '\\mathrm'],
+  ['coloneqq', ':='],
+  ['bigl', ''],
+  ['bigr', ''],
+  ['Bigl', ''],
+  ['Bigr', ''],
+  ['biggl', ''],
+  ['biggr', ''],
+  ['Biggl', ''],
+  ['Biggr', ''],
+  ['big', ''],
+  ['Big', ''],
+  ['bigg', ''],
+  ['Bigg', ''],
+  ['nonumber', ''],
+].map((pair) => Object.freeze(pair)));
+
+const LATEX_REPLACEMENT_MAP = new Map(LATEX_REPLACEMENTS);
+// An escaped backslash (`\\`, kept so `\\dots` stays a line break + "dots") or a whole command name; same as iOS.
+const LATEX_COMMAND_PATTERN = /\\\\|\\([A-Za-z]+)/g;
+
+/**
+ * `text` with every `LATEX_REPLACEMENTS` command swapped for its renderer-safe equivalent; idempotent, and a string
+ * without one of them comes back unchanged. Non-strings pass through.
+ */
+export function normalizeLatex(text) {
+  if (typeof text !== 'string' || !text.includes('\\')) return text;
+  return text.replace(LATEX_COMMAND_PATTERN, (match, name) =>
+    (name !== undefined && LATEX_REPLACEMENT_MAP.has(name) ? LATEX_REPLACEMENT_MAP.get(name) : match));
+}
+
 /**
  * The JSON schema both models are asked to fill (TODO-4.2.0 Ek B). Boxes are normalised to 0…1000 with a top-left
  * origin; `page` is 1-based over the exam's files in order (a PDF's pages continue the count).
@@ -509,10 +566,10 @@ export function validateModelOutput(output, { pageCount }) {
     const label = requiredText(raw?.label, LIMITS.label, `${where} label`);
     if (seenLabels.has(label)) throw new ConversionSchemaError('duplicate-label', `${where}: duplicate label ${label}`);
     seenLabels.add(label);
-    const text = requiredText(raw.text, LIMITS.text, `${where} text`);
+    const text = normalizeLatex(requiredText(raw.text, LIMITS.text, `${where} text`));
     const choices = list(raw.choices, LIMITS.choices, `${where} choices`).map((choice, k) => ({
       label: requiredText(choice?.label, LIMITS.choiceLabel, `${where} choice ${k + 1} label`),
-      text: requiredText(choice?.text, LIMITS.choiceText, `${where} choice ${k + 1} text`),
+      text: normalizeLatex(requiredText(choice?.text, LIMITS.choiceText, `${where} choice ${k + 1} text`)),
     }));
     const figureBoxes = list(raw.figures, LIMITS.figuresPerQuestion, `${where} figures`).map((figure, k) =>
       figureBox(figure, pageCount, `${where} figure ${k + 1}`));
@@ -529,13 +586,13 @@ export function validateModelOutput(output, { pageCount }) {
       figureBoxes,
       hasFigure: figureBoxes.length > 0,
       answer: {
-        text: requiredText(raw.answer?.text, LIMITS.answerText, `${where} answer`),
+        text: normalizeLatex(requiredText(raw.answer?.text, LIMITS.answerText, `${where} answer`)),
         ...(answerChoice ? { choice: answerChoice } : {}),
         ...(optionalText(raw.answer?.speech, LIMITS.speech) ? { speech: optionalText(raw.answer.speech, LIMITS.speech) } : {}),
       },
       // Over-long solutions / topic lists are cut, not rejected: they never make the draft unusable.
       solution: lenient(raw.solution)
-        .map((step) => optionalText(step, LIMITS.solutionStep))
+        .map((step) => normalizeLatex(optionalText(step, LIMITS.solutionStep)))
         .filter(Boolean)
         .slice(0, LIMITS.solutionSteps),
       topics: [...new Set(lenient(raw.topics)

@@ -31,7 +31,7 @@ const gemini = await import('../functions/conversions/providers/gemini.js');
 const providers = await import('../functions/conversions/providers/index.js');
 const pdf = await import('../functions/conversions/pdf.js');
 const { MODEL_OUTPUT_SCHEMA } = await import('../functions/conversions/schema.js');
-const { SYSTEM_PROMPT } = await import('../functions/conversions/prompt.js');
+const { PROMPT_VERSION, SYSTEM_PROMPT } = await import('../functions/conversions/prompt.js');
 
 // --- Pure parts ---------------------------------------------------------------------------------------------------
 
@@ -429,7 +429,7 @@ describe('processExamConversion — happy path', () => {
     assert.equal(job.readyAt.toDate().toISOString(), NOW.toISOString());
     assert.equal(job.attempts, 1);
     assert.deepEqual(job.model, { provider: 'gemini', id: 'fake-gemini-model' });
-    assert.equal(job.promptVersion, 1);
+    assert.equal(job.promptVersion, PROMPT_VERSION);
     assert.equal(job.questionCount, 2);
     assert.equal(job.needsReviewCount, 1);
     assert.equal(job.pageCount, 2);

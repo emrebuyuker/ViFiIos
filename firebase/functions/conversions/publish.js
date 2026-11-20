@@ -41,6 +41,7 @@ import {
   PRACTICE_EXAM_TYPES,
   QUESTION_SCHEMA_VERSION,
   canonicalExamTitle,
+  normalizeLatex,
   parseExamTitle,
   parseListTitle,
   plainSpeech,
@@ -443,7 +444,8 @@ export function publishedQuestion(draft, { examId, keys, now }) {
       width: Number.isInteger(width) ? width : null,
       height: Number.isInteger(height) ? height : null,
     }));
-  const textValue = text(draft.text);
+  // Normalised again here: the admin edits drafts directly in Firestore (rules check only the shape).
+  const textValue = normalizeLatex(text(draft.text));
   return {
     schemaVersion: QUESTION_SCHEMA_VERSION,
     examId,
@@ -453,10 +455,10 @@ export function publishedQuestion(draft, { examId, keys, now }) {
     speech: text(draft.speech) || plainSpeech(textValue),
     choices: (Array.isArray(draft.choices) ? draft.choices : [])
       .filter((choice) => text(choice?.label) && text(choice?.text))
-      .map((choice) => ({ label: text(choice.label), text: text(choice.text) })),
+      .map((choice) => ({ label: text(choice.label), text: normalizeLatex(text(choice.text)) })),
     figures,
     answer: answerOf(draft.answer),
-    solution: (Array.isArray(draft.solution) ? draft.solution : []).map(text).filter(Boolean),
+    solution: (Array.isArray(draft.solution) ? draft.solution : []).map((step) => normalizeLatex(text(step))).filter(Boolean),
     topics: (Array.isArray(draft.topics) ? draft.topics : []).filter((topic) => typeof topic === 'string' && topic),
     difficulty: Number.isInteger(draft.difficulty) ? Math.min(3, Math.max(1, draft.difficulty)) : 2,
     hasFigure: figures.length > 0,
@@ -473,7 +475,7 @@ export function publishedQuestion(draft, { examId, keys, now }) {
 
 function answerOf(answer) {
   return {
-    text: text(answer?.text),
+    text: normalizeLatex(text(answer?.text)),
     ...(text(answer?.choice) ? { choice: text(answer.choice) } : {}),
     ...(text(answer?.speech) ? { speech: text(answer.speech) } : {}),
   };
@@ -807,13 +809,13 @@ async function draftRefOf(transaction, db, question) {
 /** The admin's edit, validated with the draft rules' limits; at least one field. */
 function validEdit(data) {
   const changes = {};
-  if (data?.text !== undefined) changes.text = limitedText(data.text, LIMITS.text, 'Soru metni', true);
+  if (data?.text !== undefined) changes.text = normalizeLatex(limitedText(data.text, LIMITS.text, 'Soru metni', true));
   if (data?.speech !== undefined) changes.speech = limitedText(data.speech, LIMITS.speech, 'Sesli okuma metni', false);
   if (data?.choices !== undefined) {
     if (!Array.isArray(data.choices) || data.choices.length > LIMITS.choices) throw invalid('Şıklar geçersiz.');
     changes.choices = data.choices.map((choice) => ({
       label: limitedText(choice?.label, LIMITS.choiceLabel, 'Şık etiketi', true),
-      text: limitedText(choice?.text, LIMITS.choiceText, 'Şık metni', true),
+      text: normalizeLatex(limitedText(choice?.text, LIMITS.choiceText, 'Şık metni', true)),
     }));
     if (new Set(changes.choices.map(({ label }) => label)).size !== changes.choices.length) throw invalid('Şık etiketleri tekrar ediyor.');
   }
@@ -823,7 +825,7 @@ function validEdit(data) {
       throw invalid('Cevap geçersiz.');
     }
     changes.answer = {
-      text: limitedText(answer.text, LIMITS.answerText, 'Cevap', true),
+      text: normalizeLatex(limitedText(answer.text, LIMITS.answerText, 'Cevap', true)),
       ...(answer.choice !== undefined && answer.choice !== null && answer.choice !== ''
         ? { choice: limitedText(answer.choice, LIMITS.choiceLabel, 'Cevap şıkkı', true) } : {}),
       ...(answer.speech ? { speech: limitedText(answer.speech, LIMITS.speech, 'Cevabın sesli okuması', false) } : {}),
@@ -831,7 +833,7 @@ function validEdit(data) {
   }
   if (data?.solution !== undefined) {
     if (!Array.isArray(data.solution) || data.solution.length > LIMITS.solutionSteps) throw invalid('Çözüm geçersiz.');
-    changes.solution = data.solution.map((step) => limitedText(step, LIMITS.solutionStep, 'Çözüm adımı', true));
+    changes.solution = data.solution.map((step) => normalizeLatex(limitedText(step, LIMITS.solutionStep, 'Çözüm adımı', true)));
   }
   if (Object.keys(changes).length === 0) throw invalid(`Değiştirilecek alan yok (${EDITABLE_FIELDS.join(', ')}).`);
   return changes;
