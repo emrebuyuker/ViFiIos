@@ -5,7 +5,8 @@ import UIKit
 /// the words as text attachments) and display formulas as their own horizontally scrollable `MTMathUILabel`.
 ///
 /// Everything here draws exam content, so the views it returns must live inside a `CaptureShieldedView`
-/// (`QuestionContentView` is that content). Malformed LaTeX never crashes: the formula's source is shown as text.
+/// (`QuestionContentView` is that content). Commands SwiftMath lacks are rewritten first (`LatexCompatibility`);
+/// malformed LaTeX never crashes: the formula's source is shown as text.
 enum FormulaText {
     /// The text style of a block of question text.
     struct Style {
@@ -28,14 +29,18 @@ enum FormulaText {
         }
     }
 
-    /// The views for `text`: paragraphs (text with inline formulas) and display formulas, in order.
-    static func views(for text: String, style: Style) -> [UIView] {
+    /// The views for `text`: paragraphs (text with inline formulas) and display formulas, in order. A formula wider
+    /// than `lineWidth` wraps onto the next line like words (`MathLineBreaker` pieces); nothing scrolls sideways.
+    static func views(for text: String, style: Style, lineWidth: CGFloat = .greatestFiniteMagnitude) -> [UIView] {
         var views: [UIView] = []
         var paragraph = NSMutableAttributedString()
 
         func flushParagraph() {
             let trimmed = trimmedTrailingNewlines(paragraph)
-            if trimmed.length > 0 { views.append(label(for: trimmed)) }
+            // Spaces left between two display formulas are not a paragraph (an inline formula is an attachment
+            // character, so a paragraph holding one is never blank).
+            let isBlank = trimmed.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            if !isBlank { views.append(label(for: trimmed)) }
             paragraph = NSMutableAttributedString()
         }
 
@@ -44,10 +49,10 @@ enum FormulaText {
             case let .text(string):
                 paragraph.append(markdown(string, style: style))
             case let .inlineMath(latex):
-                paragraph.append(inlineMath(latex, style: style))
+                paragraph.append(inlineMath(latex, style: style, lineWidth: lineWidth))
             case let .displayMath(latex):
                 flushParagraph()
-                views.append(displayMath(latex, style: style))
+                views.append(displayMath(latex, style: style, lineWidth: lineWidth))
             }
         }
         flushParagraph()
@@ -115,35 +120,74 @@ enum FormulaText {
 
     // MARK: - Formulas
 
-    /// A formula as a text attachment sitting on the baseline; the formula's source when it cannot be typeset.
-    private static func inlineMath(_ latex: String, style: Style) -> NSAttributedString {
-        let fallback = NSAttributedString(
-            string: "$\(latex)$", attributes: [.font: style.font, .foregroundColor: style.color]
-        )
-        let probe = MTMathUILabel()
-        probe.labelMode = .text
-        probe.fontSize = style.mathFontSize
-        probe.latex = latex
-        guard probe.error == nil else { return fallback }
-        probe.frame = CGRect(origin: .zero, size: probe.intrinsicContentSize)
-        probe.layoutIfNeeded()
-        guard let descent = probe.displayList?.descent else { return fallback }
+    /// A typeset formula as a text attachment sitting on the baseline.
+    private struct Typeset {
+        let image: UIImage
+        let descent: CGFloat
+        var width: CGFloat { image.size.width }
 
-        let renderer = MTMathImage(
-            latex: latex, fontSize: style.mathFontSize, textColor: style.color, labelMode: .text, textAlignment: .left
-        )
-        let (error, image) = renderer.asImage()
-        guard error == nil, let image else { return fallback }
-        let attachment = NSTextAttachment()
-        attachment.image = image
-        attachment.bounds = CGRect(x: 0, y: -descent, width: image.size.width, height: image.size.height)
-        return NSAttributedString(attachment: attachment)
+        /// The attachment, shrunk to `maxWidth` when wider (the last resort for a piece that cannot break).
+        func attachment(maxWidth: CGFloat) -> NSAttributedString {
+            let scale = width > maxWidth && maxWidth > 0 ? maxWidth / width : 1
+            let attachment = NSTextAttachment()
+            attachment.image = image
+            attachment.bounds = CGRect(
+                x: 0, y: -descent * scale, width: image.size.width * scale, height: image.size.height * scale
+            )
+            return NSAttributedString(attachment: attachment)
+        }
     }
 
-    private static func displayMath(_ latex: String, style: Style) -> UIView {
+    private static func typeset(_ latex: String, mode: MTMathUILabelMode, fontSize: CGFloat, color: UIColor) -> Typeset? {
+        let probe = MTMathUILabel()
+        probe.labelMode = mode
+        probe.fontSize = fontSize
+        probe.latex = latex
+        guard probe.error == nil else { return nil }
+        probe.frame = CGRect(origin: .zero, size: probe.intrinsicContentSize)
+        probe.layoutIfNeeded()
+        guard let descent = probe.displayList?.descent else { return nil }
+        let renderer = MTMathImage(latex: latex, fontSize: fontSize, textColor: color, labelMode: mode, textAlignment: .left)
+        let (error, image) = renderer.asImage()
+        guard error == nil, let image else { return nil }
+        return Typeset(image: image, descent: descent)
+    }
+
+    /// `latex` as attachments that fit `lineWidth`: whole when it fits, otherwise its `MathLineBreaker` pieces joined by
+    /// a text space at `fontSize` (the line-break opportunity, and the comma's / operator's spacing the piece images lose
+    /// at their edges), a piece that still does not fit shrunk to the line. `nil` when it cannot be typeset.
+    private static func wrappingMath(
+        _ latex: String, mode: MTMathUILabelMode, fontSize: CGFloat, style: Style, lineWidth: CGFloat
+    ) -> NSAttributedString? {
+        let color = style.color
+        let spaceFont = style.font.withSize(fontSize)
+        guard let whole = typeset(latex, mode: mode, fontSize: fontSize, color: color) else { return nil }
+        guard whole.width > lineWidth else { return whole.attachment(maxWidth: lineWidth) }
+        let pieces = MathLineBreaker.pieces(latex)
+        let typesetPieces = pieces.compactMap { typeset($0, mode: mode, fontSize: fontSize, color: color) }
+        guard pieces.count > 1, typesetPieces.count == pieces.count else { return whole.attachment(maxWidth: lineWidth) }
+        let result = NSMutableAttributedString()
+        for (index, piece) in typesetPieces.enumerated() {
+            if index > 0 { result.append(NSAttributedString(string: " ", attributes: [.font: spaceFont])) }
+            result.append(piece.attachment(maxWidth: lineWidth))
+        }
+        return result
+    }
+
+    /// An inline formula flowing with the words; the formula's source when it cannot be typeset.
+    private static func inlineMath(_ source: String, style: Style, lineWidth: CGFloat) -> NSAttributedString {
+        let latex = LatexCompatibility.normalize(source)
+        return wrappingMath(latex, mode: .text, fontSize: style.mathFontSize, style: style, lineWidth: lineWidth)
+            ?? NSAttributedString(string: "$\(latex)$", attributes: [.font: style.font, .foregroundColor: style.color])
+    }
+
+    /// A display formula on its own line, centered; one wider than the line wraps (centered lines of pieces).
+    private static func displayMath(_ source: String, style: Style, lineWidth: CGFloat) -> UIView {
+        let latex = LatexCompatibility.normalize(source)
+        let fontSize = style.mathFontSize * 1.1
         let label = MTMathUILabel()
         label.labelMode = .display
-        label.fontSize = style.mathFontSize * 1.1
+        label.fontSize = fontSize
         label.textColor = style.color
         label.latex = latex
         guard label.error == nil else {
@@ -151,11 +195,18 @@ enum FormulaText {
                 string: "$$\(latex)$$", attributes: [.font: style.font, .foregroundColor: style.color]
             ))
         }
-        return DisplayMathView(label: label)
+        guard label.intrinsicContentSize.width > lineWidth,
+              let wrapped = wrappingMath(latex, mode: .display, fontSize: fontSize, style: style, lineWidth: lineWidth)
+        else { return DisplayMathView(label: label) }
+        let centered = NSMutableAttributedString(attributedString: wrapped)
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        centered.addAttribute(.paragraphStyle, value: paragraph, range: NSRange(location: 0, length: centered.length))
+        return Self.label(for: centered)
     }
 }
 
-/// A display formula, centered when it fits and scrolling sideways when it is wider than the card.
+/// A display formula that fits its line, centered (a wider one is wrapped by `FormulaText.displayMath` instead).
 final class DisplayMathView: UIScrollView {
     private let formula: MTMathUILabel
 

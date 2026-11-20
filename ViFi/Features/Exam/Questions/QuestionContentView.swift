@@ -27,10 +27,16 @@ final class QuestionContentView: UIView {
         let input: Input
         let sizeCategory: UIContentSizeCategory
         let userInterfaceStyle: UIUserInterfaceStyle
+        /// The width the content was laid out for: a formula wider than its column wraps onto the next line.
+        let width: CGFloat
     }
 
     private var applied: Applied?
     private var loader: (any RemoteFileLoading)?
+    /// The card width from the last `height(fitting:)`; 0 until SwiftUI has proposed one (no formula is moved then).
+    private var layoutWidth: CGFloat = 0
+    /// `root`'s horizontal layout margins.
+    private static let horizontalMargin: CGFloat = 16
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -41,7 +47,9 @@ final class QuestionContentView: UIView {
         root.axis = .vertical
         root.spacing = 16
         root.isLayoutMarginsRelativeArrangement = true
-        root.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 4, leading: 16, bottom: 16, trailing: 16)
+        root.directionalLayoutMargins = NSDirectionalEdgeInsets(
+            top: 4, leading: Self.horizontalMargin, bottom: 16, trailing: Self.horizontalMargin
+        )
         root.translatesAutoresizingMaskIntoConstraints = false
         addSubview(root)
         NSLayoutConstraint.activate([
@@ -92,12 +100,14 @@ final class QuestionContentView: UIView {
         let current = Applied(
             input: pending,
             sizeCategory: traitCollection.preferredContentSizeCategory,
-            userInterfaceStyle: traitCollection.userInterfaceStyle
+            userInterfaceStyle: traitCollection.userInterfaceStyle,
+            width: layoutWidth
         )
         guard current != applied else { return }
         applied = current
 
         let style = FormulaText.Style.body(traits: traitCollection)
+        textWidth = layoutWidth > 0 ? layoutWidth - 2 * Self.horizontalMargin : .greatestFiniteMagnitude
         let views = questionViews(
             for: pending.question, style: style, loader: loader, figureURLs: pending.figureURLs, revealed: pending.isAnswerRevealed
         )
@@ -132,7 +142,7 @@ final class QuestionContentView: UIView {
         for question: ExamQuestion, style: FormulaText.Style, loader: any RemoteFileLoading,
         figureURLs: [URL?], revealed: Bool
     ) -> [UIView] {
-        var views = FormulaText.views(for: question.text, style: style)
+        var views = FormulaText.views(for: question.text, style: style, lineWidth: textWidth)
         for (index, figure) in question.figures.enumerated() {
             let url = index < figureURLs.count ? figureURLs[index] : nil
             views.append(QuestionFigureView(figure: figure, url: url, loader: loader))
@@ -153,7 +163,7 @@ final class QuestionContentView: UIView {
             let text = String(localized: "Doğru seçenek: \(choice)")
             views.append(FormulaText.label(for: FormulaText.markdown(text, style: style.with(font: boldFont(style.font)))))
         }
-        views.append(contentsOf: FormulaText.views(for: question.answer.text, style: style))
+        views.append(contentsOf: FormulaText.views(for: question.answer.text, style: style, lineWidth: textWidth))
         if !question.solution.isEmpty {
             views.append(heading(String(localized: "Çözüm"), style: style))
             for (index, step) in question.solution.enumerated() {
@@ -167,6 +177,11 @@ final class QuestionContentView: UIView {
         return views
     }
 
+    /// The width a text block may use (`layoutWidth` minus the margins), set at the start of each rebuild.
+    private var textWidth: CGFloat = .greatestFiniteMagnitude
+    /// The gap between a row's marker and its blocks.
+    private static let rowSpacing: CGFloat = 10
+
     /// K10: the short, plain note under every revealed answer.
     static var aiNote: String { String(localized: "Bu çözüm yapay zekâ ile hazırlanmış ve incelenmiştir.") }
 
@@ -178,13 +193,16 @@ final class QuestionContentView: UIView {
         markerLabel.numberOfLines = 1
         markerLabel.setContentHuggingPriority(.required, for: .horizontal)
         markerLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
-        let blocks = UIStackView(arrangedSubviews: FormulaText.views(for: text, style: style))
+        let markerWidth = max(markerLabel.intrinsicContentSize.width, style.font.pointSize * 1.6)
+        let blocks = UIStackView(arrangedSubviews: FormulaText.views(
+            for: text, style: style, lineWidth: textWidth - markerWidth - Self.rowSpacing
+        ))
         blocks.axis = .vertical
         blocks.spacing = 8
         let row = UIStackView(arrangedSubviews: [markerLabel, blocks])
         row.axis = .horizontal
         row.alignment = .firstBaseline
-        row.spacing = 10
+        row.spacing = Self.rowSpacing
         // The marker column keeps a minimum width so choices line up.
         markerLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: style.font.pointSize * 1.6).isActive = true
         return row
@@ -239,6 +257,11 @@ final class QuestionContentView: UIView {
 
     /// The height this content needs at `width`.
     func height(fitting width: CGFloat) -> CGFloat {
+        // The content depends on the width (wide inline formulas move to their own line), so build for it first.
+        if abs(width - layoutWidth) >= 1 {
+            layoutWidth = width
+            rebuild()
+        }
         let target = CGSize(width: width, height: UIView.layoutFittingCompressedSize.height)
         return ceil(systemLayoutSizeFitting(
             target, withHorizontalFittingPriority: .required, verticalFittingPriority: .fittingSizeLevel
