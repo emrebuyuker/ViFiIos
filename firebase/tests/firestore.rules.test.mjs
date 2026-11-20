@@ -600,7 +600,8 @@ describe('Firestore rules — structured exams (4.2.0: questions, pools, subject
     await assertFails(ref.update(edit({ answer: { text: '1', extra: true } })));
     await assertFails(ref.update(edit({ solution: Array(31).fill('a') })));
     await assertFails(ref.update(edit({ editedBy: 'someone-else' })));
-    await assertFails(ref.update(edit({ editedAt: new Date() })));
+    // A client clock can equal request.time to the millisecond in the emulator; a minute ago never does.
+    await assertFails(ref.update(edit({ editedAt: new Date(Date.now() - 60_000) })));
     await assertFails(ref.delete());
     await assertFails(db(users.admin).collection('examConversions').doc('exam-e1').collection('questions').doc('099').set(draft));
     for (const user of [users.alice, users.fakeAdmin]) {
