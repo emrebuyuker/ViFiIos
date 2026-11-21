@@ -287,6 +287,8 @@ ViFi-iOS/
   `QuestionContentRepresentable`'da bir kez kurulur, `configure` içeriği yerinde günceller. `QuestionCardView`'da yalnız başlık ve
   "Cevabı Göster" düğmesi SwiftUI'dir. Soru için SwiftUI `Text`/`Image`, `.drawingGroup()`, `ImageRenderer`, paylaş/kopyala/sürükle yok
   (*Ekran koruması* yasakları aynen). Yeni bir soru yüzeyi → aynı kap + `CaptureShieldUITests` kapsamı.
+  **Bilinçli istisna (sahip kararı, 21 Kasım 2026):** yalnız adminlerin açtığı taslak inceleme sayfası (`ConversionReviewView`, Moderasyon › Hazır sınavlar)
+  taslak metnini kalkansız, ham LaTeX olarak gösterir; kullanıcıya görünen yeni yüzeylerde bu istisna yoktur.
 - **SwiftMath yalnızca kalkanın içinde ve sabit sürümde.** `MTMathUILabel` / `MTMathImage` yalnız `FormulaText` → `QuestionContentView` yoluyla kullanılır;
   `project.yml`'de `exactVersion: 1.7.3` (yerleşim değişimi yayınlanmış tüm soruları kaydırır; güncelleme `FormulaRenderingTests` + gerçek cihazda görsel
   kontrolle). SwiftMath'in çizemediği standart komutlar (`\varnothing`, `\dfrac`, `\operatorname`, `\bigl`…) **LaTeX uyumluluk tablosuyla** yazılır:
