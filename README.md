@@ -864,7 +864,8 @@ commit'lenmez; depo herkese açıktır.
 
 Sınavlar artık soru soru açılabiliyor.
 
-> Bu sürüm geliştirme aşamasındadır; backend ve Android sürümü hazır olmadan yayınlanmaz. Aşağıdaki notlar yayın metni taslağıdır.
+> **4.2.0 (13)**: sunucu tarafı 20 Kasım 2026'da canlıya alındı; iOS, Android 4.2.0 hazır olunca onunla aynı anda incelemeye gönderilir (K16).
+> Aşağıdaki notlar yayın metni taslağıdır; App Store "Yenilikler" metni bölümün sonunda.
 
 **Yeni**
 
@@ -874,20 +875,39 @@ Sınavlar artık soru soru açılabiliyor.
   belirten bir not yer alır; yapay zekâ hata yapabilir.
 - Sınavın kilit kuralı (coin / Premium) değişmedi: soru ekranı da sınavı açabildiğin sürece açılır.
 - Yazı boyutuna (Dynamic Type) uyum ve VoiceOver desteği; formüller sesli okunacak düz metinle okunur.
+- **Sınava gir:** soru soru hazırlanmış derslerde sınav türü ve kapsam (bu ders / üniversitem / Türkiye geneli) seçip rastgele sorularla çalış.
+  Ücretsiz kullanıcıya günde 5 soru, Premium'da sınırsız.
+- Satıra sığmayan uzun formüller kelimeler gibi alt satıra geçer.
 - Soru içeriği de sınav içeriği korumasının kapsamındadır (ekran görüntüsü / kayıtta sayfa yerine koruma kartı); bu en iyi çaba korumasıdır.
+  Gerçek cihazda ekran görüntüsü, ekran kaydı ve uygulama değiştiricide doğrulandı (21 Kasım 2026).
 - Henüz soru soru hazırlanmamış sınavlar bugünkü gibi sayfa görünümüyle açılmaya devam eder.
+- Son görüntülenenler kartı soru soru açılan sınavı "Sorular" rozetiyle gösterir.
 
 **Yönetici araçları**
 
 - Gönderimleri onaylarken yapay zekâ modelini (Claude ya da Gemini) seç; hazır taslağı orijinal sayfayla yan yana incele, düzenle, soruyu yeniden ürettir ve yayınla.
 - Eski sınavları "Yeni yapıya geçir" ile ya da ders/bölüm için toplu olarak soru soru yapıya aktar; bu ayın yapay zekâ harcamasını (aylık 50 $ sınır) gör.
+- "Ders eşleme": derslerin ülke geneli ders kimliğini ("Sınava gir" havuzları) yönet.
 - Yayındaki bir sorudaki hatayı doğrudan düzelt ya da soruyu yeniden ürettir.
 
 **Değişen**
 
 - Aynı sınavı yeniden yükleyen bir gönderim, sınavı ikinci kopya eklemek yerine yenisiyle değiştirir.
+- Gönderimden oluşturulan yeni üniversite/fakülte/bölüm/ders adları arşivin geri kalanı gibi büyük harfle yazılır.
+- Güncelleme önerisi uyarısı "Daha Sonra" ile kapatıldığında artık yeniden açılmıyor.
+- Eski Realtime Database arşivi ve ona ait kod/kural kaldırıldı (arşiv yalnızca Firestore'da).
 - Yeni bağımlılık: SwiftMath 1.7.3 (formül gösterimi). Sunucuda yapay zekâ hattı Vertex AI üzerinden çalışır (üçüncü taraf işleyici olarak gizlilik
   politikasında belirtilir).
+
+**App Store "Yenilikler" metni (taslak)**
+
+```
+• Sınavları soru soru incele: bazı sınavlar artık sayfa görseli yerine tek tek sorular hâlinde açılıyor; formüller matematik gösterimiyle.
+• Cevabı Göster: istediğin soruda cevabı ve adım adım çözümü aç. Çözümler yapay zekâ ile hazırlanıp incelenmiştir; hata içerebilir.
+• Sınava gir: soru soru hazırlanmış derslerde rastgele sorularla çalış (ücretsiz günde 5 soru, Premium'da sınırsız).
+• Soru içeriği de sınav içeriği korumasının kapsamında.
+• Hata düzeltmeleri ve iyileştirmeler.
+```
 
 ### 4.1.0
 
