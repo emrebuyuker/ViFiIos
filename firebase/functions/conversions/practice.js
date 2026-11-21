@@ -23,6 +23,7 @@ import {
   questionPoolId,
 } from './schema.js';
 import { SUBSCRIPTION_PRODUCT_IDS } from '../appStore.js';
+import { PREMIUM_SUBSCRIPTION_PRODUCT_ID } from '../googlePlay.js';
 import { requirePhoneUser } from '../notifications/stats.js';
 
 /** Ids remembered per day so a re-delivered question is not counted twice (contract: ≤ 50). */
@@ -102,12 +103,20 @@ export function pickQuestions({ candidates, count, remaining = null, seenToday =
   return picked;
 }
 
+/** The Premium subscription products per store: the App Store's two products, Google Play's one (base plans inside). */
+const SUBSCRIPTION_PRODUCTS_BY_PLATFORM = Object.freeze({
+  ios: SUBSCRIPTION_PRODUCT_IDS,
+  android: Object.freeze([PREMIUM_SUBSCRIPTION_PRODUCT_ID]),
+});
+
 /**
  * The cached-subscription record of a verified store transaction, or `null` when it does not grant Premium now: not a
- * subscription product, revoked, no original transaction id or `expiresDate` not after `now`.
+ * subscription product of that platform's store, revoked, no original transaction id or `expiresDate` not after `now`.
+ * Google Play's verified subscription (googlePlay.js `verifyPremiumSubscription`) comes in the same payload shape.
  */
 export function subscriptionFromTransaction(payload, now, platform = 'ios') {
-  if (!payload || !SUBSCRIPTION_PRODUCT_IDS.includes(payload.productId)) return null;
+  const products = SUBSCRIPTION_PRODUCTS_BY_PLATFORM[platform] ?? [];
+  if (!payload || !products.includes(payload.productId)) return null;
   if (payload.revocationDate !== undefined && payload.revocationDate !== null) return null;
   const expiresMs = Number(payload.expiresDate);
   if (!Number.isFinite(expiresMs) || expiresMs <= now.getTime()) return null;
@@ -129,6 +138,22 @@ export function validProof(proof) {
   return null;
 }
 
+/**
+ * The `verifySubscriptionProof` dependency: routes a valid proof to its store's verifier — `{ platform: 'ios', jws }` to
+ * the App Store (`verifyAppStore(jws)`), `{ platform: 'android', purchaseToken, productId }` to Google Play
+ * (`verifyGooglePlay({ purchaseToken, productId, uid })`, the caller's uid for the purchase's account binding). Both
+ * resolve to the App Store payload shape (`subscriptionFromTransaction`) or throw; any other platform is `null`.
+ */
+export function storeProofVerifier({ verifyAppStore, verifyGooglePlay }) {
+  return async (proof, { uid } = {}) => {
+    if (proof.platform === 'ios') return verifyAppStore(proof.jws);
+    if (proof.platform === 'android') {
+      return verifyGooglePlay({ purchaseToken: proof.purchaseToken, productId: proof.productId, uid });
+    }
+    return null;
+  };
+}
+
 // MARK: - nextPracticeQuestions
 
 /**
@@ -136,7 +161,7 @@ export function validProof(proof) {
  * → `{ questions, poolSize, remainingToday, limitReached }` (contract: schema.js PRACTICE MODE).
  *
  * @param {{ db: import('firebase-admin/firestore').Firestore, now?: () => Date, random?: () => number,
- *   verifySubscriptionProof: (proof: object) => Promise<object|null> }} deps
+ *   verifySubscriptionProof: (proof: object, context: { uid: string }) => Promise<object|null> }} deps
  */
 export async function nextPracticeQuestionsHandler(deps, request) {
   const uid = requirePhoneUser(request);
@@ -204,8 +229,11 @@ export function subscriptionOwnerId(platform, originalTransactionId) {
  * One subscription serves one account (owner decision): the first account that proves it owns it
  * (`subscriptionOwners/<platform>-<originalTransactionId>` = `{ uid, platform, originalTransactionId, boundAt }`); a
  * proof of a subscription bound to another account is the free rules. Account deletion releases the binding.
- * Known limit: the proof is checked locally (signature, product, expiry, revocation inside the payload) — a refund is
- * seen when the store stops handing the client the entitlement, so within 24 hours for an honest client.
+ * On Google Play `originalTransactionId` is the subscription's base order id (stable across renewals).
+ * Known limit (iOS): the proof is checked locally (signature, product, expiry, revocation inside the payload) — a refund
+ * is seen when the store stops handing the client the entitlement, so within 24 hours for an honest client. Android
+ * proofs are looked up live with Google Play (state, product, expiry, account), so a refund is seen at the next
+ * re-verification.
  */
 async function isPremium(deps, uid, rawProof, now) {
   const ref = deps.db.collection('subscriptions').doc(uid);
@@ -216,7 +244,7 @@ async function isPremium(deps, uid, rawProof, now) {
   if (!proof || typeof deps.verifySubscriptionProof !== 'function') return false;
   let payload;
   try {
-    payload = await deps.verifySubscriptionProof(proof);
+    payload = await deps.verifySubscriptionProof(proof, { uid });
   } catch (error) {
     logger.warn('Practice: subscription proof rejected', { uid, platform: proof.platform, error: error?.message ?? String(error) });
     return false;

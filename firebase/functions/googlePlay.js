@@ -10,6 +10,9 @@
 // Access: the Google Play Android Developer API must be enabled on the project, and the function's runtime service
 // account must be invited in Play Console with permission to view financial data. Until then (or while a new grant
 // propagates, which can take hours) the API answers 401/403 and verification fails as `misconfigured`.
+//
+// Since 4.2.0 it also verifies the ViFi Premium subscription (`vifi_premium`) for the practice mode's Premium proof
+// (`verifyPremiumSubscription`, `purchases.subscriptionsv2.get`); the same access covers it.
 
 import { createHash } from 'node:crypto';
 import { GoogleAuth } from 'google-auth-library';
@@ -99,19 +102,23 @@ export function transactionIdFor(purchase, purchaseToken) {
 // One auth client per instance, built lazily and reused across invocations.
 let googleAuth;
 
+/** The authorized Play Developer API client, or a `misconfigured` error when the runtime has no credentials. */
+async function playApiClient() {
+  try {
+    googleAuth ??= new GoogleAuth({ scopes: [ANDROID_PUBLISHER_SCOPE] });
+    return await googleAuth.getClient();
+  } catch (error) {
+    throw new PlayVerificationError('misconfigured', 'No credentials for the Play Developer API', { cause: error });
+  }
+}
+
 /**
  * Looks a one-time product purchase up with the Play Developer API (`purchases.products.get`).
  *
  * @returns {Promise<object>} The `ProductPurchase` resource.
  */
 export async function fetchProductPurchase({ packageName, productId, purchaseToken }) {
-  let client;
-  try {
-    googleAuth ??= new GoogleAuth({ scopes: [ANDROID_PUBLISHER_SCOPE] });
-    client = await googleAuth.getClient();
-  } catch (error) {
-    throw new PlayVerificationError('misconfigured', 'No credentials for the Play Developer API', { cause: error });
-  }
+  const client = await playApiClient();
   const url =
     `${API_BASE_URL}/applications/${encodeURIComponent(packageName)}` +
     `/purchases/products/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(purchaseToken)}`;
@@ -165,4 +172,134 @@ export async function verifyExamUnlockPurchase({ purchaseToken, productId, examI
     throw rejected('purchase was bought for another exam');
   }
   return { transactionId: transactionIdFor(purchase, purchaseToken) };
+}
+
+// --- ViFi Premium subscription (practice mode's Premium proof, 4.2.0) ----------------------------------------------
+
+/** The Premium subscription product (base plans `monthly` / `yearly`; `StoreProductIds.PREMIUM` in the app). */
+export const PREMIUM_SUBSCRIPTION_PRODUCT_ID = 'vifi_premium';
+
+/**
+ * `SubscriptionPurchaseV2.subscriptionState` values that still grant Premium, as long as the line item's `expiryTime` is
+ * after now (the caller checks it against its own clock, like the App Store `expiresDate`):
+ * - ACTIVE: paid and renewing.
+ * - IN_GRACE_PERIOD: a renewal payment failed but Google keeps the entitlement (`expiryTime` covers the grace period);
+ *   the app's `queryPurchases` still reports it as purchased.
+ * - CANCELED: auto-renew turned off; entitled until `expiryTime` (as an App Store subscription that will not renew).
+ * Everything else — PENDING, ON_HOLD (account hold), PAUSED, EXPIRED (also refunded / revoked), PENDING_PURCHASE_CANCELED,
+ * UNSPECIFIED — is not Premium.
+ */
+export const ENTITLED_SUBSCRIPTION_STATES = Object.freeze([
+  'SUBSCRIPTION_STATE_ACTIVE',
+  'SUBSCRIPTION_STATE_IN_GRACE_PERIOD',
+  'SUBSCRIPTION_STATE_CANCELED',
+]);
+
+// A renewal's order id is the first order's id plus `..<n>` ("GPA.1234-5678-9012-34567..3").
+const RENEWAL_SUFFIX_PATTERN = /\.\.\d+$/;
+
+/**
+ * How a purchase names its account to Google Play: `obfuscatedAccountId` = the SHA-256 hex digest of the Firebase uid
+ * (the Android client's `PlayBillingExamPurchaseService.obfuscatedAccountId`).
+ *
+ * @param {string} uid
+ * @returns {string}
+ */
+export function accountBindingFor(uid) {
+  return createHash('sha256').update(uid).digest('hex');
+}
+
+/**
+ * The stable id of a subscription across renewals: the base order id (renewal suffix `..<n>` removed), or — when the
+ * purchase has no usable order id — a hash of the purchase token (which also stays the same across renewals).
+ *
+ * @param {string|undefined} orderId The latest order id (`lineItems[].latestSuccessfulOrderId` / `latestOrderId`).
+ * @param {string} purchaseToken
+ * @returns {string}
+ */
+export function subscriptionIdFor(orderId, purchaseToken) {
+  const base = typeof orderId === 'string' ? orderId.trim().replace(RENEWAL_SUFFIX_PATTERN, '') : '';
+  return transactionIdFor({ orderId: base }, purchaseToken);
+}
+
+/**
+ * Looks a subscription purchase up with the Play Developer API (`purchases.subscriptionsv2.get`).
+ *
+ * @returns {Promise<object>} The `SubscriptionPurchaseV2` resource.
+ */
+export async function fetchSubscriptionPurchaseV2({ packageName, purchaseToken }) {
+  const client = await playApiClient();
+  const url =
+    `${API_BASE_URL}/applications/${encodeURIComponent(packageName)}` +
+    `/purchases/subscriptionsv2/tokens/${encodeURIComponent(purchaseToken)}`;
+  const response = await client.request({
+    url,
+    method: 'GET',
+    timeout: REQUEST_TIMEOUT_MS,
+    retryConfig: { retry: 2 },
+  });
+  return response.data;
+}
+
+/**
+ * Verifies the practice mode's Android Premium proof (`{ platform: 'android', purchaseToken, productId }`, contract:
+ * conversions/schema.js PRACTICE MODE) with Google Play and returns it in the shape the App Store verifier's payload
+ * has, so `subscriptionFromTransaction` (conversions/practice.js) treats both platforms alike:
+ * `{ productId, originalTransactionId, expiresDate }` — `originalTransactionId` is the base order id
+ * (`subscriptionIdFor`), the key of the one-account binding (`subscriptionOwners/android-<id>`); `expiresDate` is the
+ * line item's `expiryTime` in epoch ms. Expiry against now is the caller's check.
+ *
+ * Throws a {@link PlayVerificationError} — which the caller treats as "not Premium", never as a failure — when the input
+ * is malformed (checked before Google Play is called), Google Play does not know the token or cannot be reached, the
+ * subscription is not in an entitled state, has no `vifi_premium` line item with an expiry, or was bought by another
+ * account (`obfuscatedExternalAccountId` set and not the SHA-256 of `uid`; purchases made before the client set it carry
+ * none, and the `subscriptionOwners` binding still applies to them).
+ *
+ * @param {{purchaseToken: unknown, productId: unknown, uid: unknown}} input
+ * @param {typeof fetchSubscriptionPurchaseV2} [fetchSubscription] The Play lookup; replaced in tests.
+ * @returns {Promise<{productId: string, originalTransactionId: string, expiresDate: number}>}
+ */
+export async function verifyPremiumSubscription({ purchaseToken, productId, uid }, fetchSubscription = fetchSubscriptionPurchaseV2) {
+  if (typeof purchaseToken !== 'string' || !purchaseToken || purchaseToken.length > MAX_PURCHASE_TOKEN_LENGTH) {
+    throw rejected('invalid purchase token');
+  }
+  if (productId !== PREMIUM_SUBSCRIPTION_PRODUCT_ID) {
+    throw rejected(`unexpected product id ${productId}`);
+  }
+  if (typeof uid !== 'string' || !uid) {
+    throw rejected('no account to bind the subscription to');
+  }
+
+  let purchase;
+  try {
+    purchase = await fetchSubscription({ packageName: PACKAGE_NAME, purchaseToken });
+  } catch (error) {
+    throw classifyPlayApiError(error);
+  }
+
+  if (!purchase || typeof purchase !== 'object') {
+    throw rejected('empty subscription purchase');
+  }
+  if (!ENTITLED_SUBSCRIPTION_STATES.includes(purchase.subscriptionState)) {
+    throw rejected(`subscription is not entitled (state ${purchase.subscriptionState})`);
+  }
+  const lineItem = Array.isArray(purchase.lineItems)
+    ? purchase.lineItems.find((item) => item?.productId === PREMIUM_SUBSCRIPTION_PRODUCT_ID)
+    : undefined;
+  if (!lineItem) {
+    throw rejected('subscription has no Premium line item');
+  }
+  const expiresDate = typeof lineItem.expiryTime === 'string' ? Date.parse(lineItem.expiryTime) : NaN;
+  if (!Number.isFinite(expiresDate)) {
+    throw rejected('subscription has no expiry time');
+  }
+  const boundAccount = purchase.externalAccountIdentifiers?.obfuscatedExternalAccountId;
+  if (typeof boundAccount === 'string' && boundAccount !== '' && boundAccount !== accountBindingFor(uid)) {
+    throw rejected('subscription was bought by another account');
+  }
+  return {
+    productId: PREMIUM_SUBSCRIPTION_PRODUCT_ID,
+    originalTransactionId: subscriptionIdFor(lineItem.latestSuccessfulOrderId ?? purchase.latestOrderId, purchaseToken),
+    expiresDate,
+  };
 }

@@ -2,11 +2,14 @@
 // against the Firestore emulator — the free daily allowance (5 a day, Istanbul midnight, re-delivery not counted),
 // Premium through a verified (fake) store proof and its `subscriptions/<uid>` cache, `exclude` and exhausted pools,
 // the three scopes, multi-part pools, input validation and the enrichment (exam title, university name) — plus the
-// pure helpers. The store verifier is a fake; nothing reaches Apple, Google or a real project.
+// pure helpers. The store verifier is a fake; nothing reaches Apple, Google or a real project. The Android Premium
+// tests run the real Google Play verifier (`googlePlay.js` `verifyPremiumSubscription`, routed by `storeProofVerifier`
+// as in index.js) with only the Play Developer API lookup replaced.
 
 import { test, before, after, beforeEach, describe, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import { assertLocalEmulators, PROJECT_ID } from './helpers.mjs';
 
 const requireFromFunctions = createRequire(new URL('../functions/package.json', import.meta.url));
@@ -24,6 +27,7 @@ let db;
 let fns;
 let practice;
 let schema;
+let googlePlay;
 
 before(async () => {
   assertLocalEmulators('FIRESTORE_EMULATOR_HOST');
@@ -32,6 +36,7 @@ before(async () => {
   fns = await import('../functions/index.js');
   practice = await import('../functions/conversions/practice.js');
   schema = await import('../functions/conversions/schema.js');
+  googlePlay = await import('../functions/googlePlay.js');
   db = getFirestore('vifi');
 });
 
@@ -88,9 +93,9 @@ function deps({ now = NOON, verify = async () => null } = {}) {
     db,
     now: () => now,
     random,
-    verifySubscriptionProof: async (proof) => {
+    verifySubscriptionProof: async (proof, context) => {
       calls.push(proof);
-      return verify(proof);
+      return verify(proof, context);
     },
   };
 }
@@ -280,7 +285,7 @@ describe('Premium: a verified subscription proof', () => {
       ['revoked', async () => validPayload(NOON, { revocationDate: NOON.getTime() - 1000 })],
       ['exam unlock product', async () => validPayload(NOON, { productId: 'com.BuyukerYazilim.ViFi2.exam.unlock' })],
       ['bad signature', async () => { throw new Error('signature'); }],
-      ['android (not verified yet)', async () => null],
+      ['android (no payload from the store)', async () => null],
     ];
     for (const [label, verify] of cases) {
       await dailyRef().delete();
@@ -300,6 +305,223 @@ describe('Premium: a verified subscription proof', () => {
       assert.notEqual(result.remainingToday, null);
     }
     assert.equal(d.calls.length, 0);
+  });
+});
+
+// --- Premium on Android: Google Play subscription (SRV-01) ----------------------------------------------------------
+
+describe('Premium on Android: a Google Play subscription proof', () => {
+  const ORDER = 'GPA.3311-2222-3333-44444';
+  const TOKEN = 'play-purchase-token.AO-J1Oz';
+  const ANDROID_PROOF = { platform: 'android', purchaseToken: TOKEN, productId: 'vifi_premium' };
+  const sha256 = (value) => createHash('sha256').update(value).digest('hex');
+  const ownerRef = (orderId = ORDER) => db.collection('subscriptionOwners').doc(practice.subscriptionOwnerId('android', orderId));
+  const cacheRef = (uid = USER.uid) => db.collection('subscriptions').doc(uid);
+
+  /** A `purchases.subscriptionsv2.get` resource: active `vifi_premium`, 30 days left at NOON, bought by USER. */
+  function playSubscription(overrides = {}, lineItem = {}) {
+    return {
+      kind: 'androidpublisher#subscriptionPurchaseV2',
+      subscriptionState: 'SUBSCRIPTION_STATE_ACTIVE',
+      latestOrderId: `${ORDER}..2`,
+      externalAccountIdentifiers: { obfuscatedExternalAccountId: sha256(USER.uid) },
+      lineItems: [{
+        productId: 'vifi_premium',
+        expiryTime: new Date(NOON.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        offerDetails: { basePlanId: 'yearly' },
+        latestSuccessfulOrderId: `${ORDER}..2`,
+        ...lineItem,
+      }],
+      ...overrides,
+    };
+  }
+
+  /**
+   * The deps with the live proof routing (`storeProofVerifier`) and the real Play verifier; only the Play Developer API
+   * lookup is fake. `answer` is the resource it returns, or an Error it throws.
+   */
+  function playDeps({ now = NOON, answer = playSubscription() } = {}) {
+    const playCalls = [];
+    const fetchSubscription = async (args) => {
+      playCalls.push(args);
+      if (answer instanceof Error) throw answer;
+      return answer;
+    };
+    const route = practice.storeProofVerifier({
+      verifyAppStore: async () => { throw new Error('the App Store must not be asked for an Android proof'); },
+      verifyGooglePlay: (input) => googlePlay.verifyPremiumSubscription(input, fetchSubscription),
+    });
+    const d = deps({ now, verify: route });
+    return { d, playCalls };
+  }
+
+  async function assertFree(result, label) {
+    assert.equal(result.questions.length, 5, label);
+    assert.equal(result.remainingToday, 0, label);
+    assert.equal(result.limitReached, true, label);
+  }
+
+  test('an active subscription is unlimited, binds the base order id and caches it in the iOS shape', async () => {
+    await seedQuestions('A1', 12);
+    const { d, playCalls } = playDeps();
+    const result = await call(d, request({ count: 10, subscriptionProof: ANDROID_PROOF }));
+    assert.equal(result.questions.length, 10);
+    assert.equal(result.remainingToday, null);
+    assert.equal(result.limitReached, false);
+    assert.deepEqual(playCalls, [{ packageName: 'com.salticusteam.vifi', purchaseToken: TOKEN }]);
+    assert.equal((await dailyRef().get()).exists, false);
+
+    const cached = (await cacheRef().get()).data();
+    assert.deepEqual(Object.keys(cached).sort(), ['expiresAt', 'originalTransactionId', 'platform', 'productId', 'verifiedAt']);
+    assert.equal(cached.platform, 'android');
+    assert.equal(cached.productId, 'vifi_premium');
+    assert.equal(cached.originalTransactionId, ORDER, 'the renewal suffix ..2 is dropped');
+    assert.equal(cached.expiresAt.toMillis(), Date.parse(playSubscription().lineItems[0].expiryTime));
+    assert.equal(cached.verifiedAt.toMillis(), NOON.getTime());
+
+    const owner = (await ownerRef().get()).data();
+    assert.equal(owner.uid, USER.uid);
+    assert.equal(owner.platform, 'android');
+    assert.equal(owner.originalTransactionId, ORDER);
+    assert.equal(owner.boundAt.toMillis(), NOON.getTime());
+  });
+
+  test('grace period and a cancelled subscription before its expiry are Premium', async () => {
+    await seedQuestions('A2', 12);
+    for (const subscriptionState of ['SUBSCRIPTION_STATE_IN_GRACE_PERIOD', 'SUBSCRIPTION_STATE_CANCELED']) {
+      await cacheRef().delete();
+      const { d } = playDeps({ answer: playSubscription({ subscriptionState }) });
+      const result = await call(d, request({ count: 8, subscriptionProof: ANDROID_PROOF }));
+      assert.equal(result.remainingToday, null, subscriptionState);
+    }
+  });
+
+  test('an expired, held, paused or pending subscription — or one past its expiry time — is the free rules', async () => {
+    await seedQuestions('A3', 12);
+    const answers = [
+      ['expired', playSubscription({ subscriptionState: 'SUBSCRIPTION_STATE_EXPIRED' })],
+      ['on hold', playSubscription({ subscriptionState: 'SUBSCRIPTION_STATE_ON_HOLD' })],
+      ['paused', playSubscription({ subscriptionState: 'SUBSCRIPTION_STATE_PAUSED' })],
+      ['pending', playSubscription({ subscriptionState: 'SUBSCRIPTION_STATE_PENDING' })],
+      ['active but expiry passed', playSubscription({}, { expiryTime: new Date(NOON.getTime() - 1).toISOString() })],
+      ['cancelled and expiry passed', playSubscription(
+        { subscriptionState: 'SUBSCRIPTION_STATE_CANCELED' }, { expiryTime: new Date(NOON.getTime() - 1000).toISOString() },
+      )],
+    ];
+    for (const [label, answer] of answers) {
+      await dailyRef().delete();
+      const { d, playCalls } = playDeps({ answer });
+      await assertFree(await call(d, request({ count: 10, subscriptionProof: ANDROID_PROOF })), label);
+      assert.equal(playCalls.length, 1, label);
+      assert.equal((await cacheRef().get()).exists, false, label);
+      assert.equal((await ownerRef().get()).exists, false, label);
+    }
+  });
+
+  test('a subscription bound to another account is the free rules', async () => {
+    await seedQuestions('A4', 12);
+    const other = { uid: 'mehmet', token: { phone_number: '+905554443322' } };
+
+    // Bought with another account's obfuscatedAccountId: refused by Google Play's own account binding.
+    const foreign = playDeps({ answer: playSubscription({ externalAccountIdentifiers: { obfuscatedExternalAccountId: sha256('mehmet') } }) });
+    await assertFree(await call(foreign.d, request({ count: 10, subscriptionProof: ANDROID_PROOF })), 'foreign account id');
+    assert.equal((await ownerRef().get()).exists, false);
+
+    // No account id (bought before the app set it): the first account to prove it owns it; the next one is refused.
+    await dailyRef().delete();
+    const unbound = playSubscription({ externalAccountIdentifiers: undefined });
+    assert.equal((await call(playDeps({ answer: unbound }).d, request({ count: 3, subscriptionProof: ANDROID_PROOF }))).remainingToday, null);
+    assert.equal((await ownerRef().get()).get('uid'), USER.uid);
+
+    const second = await call(playDeps({ answer: unbound }).d, request({ count: 10, subscriptionProof: ANDROID_PROOF }), other);
+    await assertFree(second, 'bound to ayse');
+    assert.equal((await cacheRef('mehmet').get()).exists, false);
+    assert.equal((await ownerRef().get()).get('uid'), USER.uid, 'the binding does not move');
+
+    // A renewal (new order suffix) is the same subscription: still bound to its owner.
+    const renewed = playSubscription({ externalAccountIdentifiers: undefined, latestOrderId: `${ORDER}..3` }, { latestSuccessfulOrderId: `${ORDER}..3` });
+    await dailyRef('mehmet').delete();
+    await assertFree(await call(playDeps({ answer: renewed }).d, request({ count: 10, subscriptionProof: ANDROID_PROOF }), other), 'renewal');
+    const later = new Date(NOON.getTime() + practice.SUBSCRIPTION_REVERIFY_MS + 1);
+    assert.equal((await call(playDeps({ now: later, answer: renewed }).d, request({ count: 1, subscriptionProof: ANDROID_PROOF }))).remainingToday, null);
+  });
+
+  test('another product in the proof or the purchase is the free rules; the proof is checked before Google Play', async () => {
+    await seedQuestions('A5', 12);
+    for (const productId of ['exam_unlock', 'com.BuyukerYazilim.ViFi2.premium.monthly', 'monthly']) {
+      await dailyRef().delete();
+      const { d, playCalls } = playDeps();
+      await assertFree(await call(d, request({ count: 10, subscriptionProof: { ...ANDROID_PROOF, productId } })), productId);
+      assert.equal(playCalls.length, 0, productId);
+    }
+    await dailyRef().delete();
+    const otherLineItem = playDeps({ answer: playSubscription({}, { productId: 'another_subscription' }) });
+    await assertFree(await call(otherLineItem.d, request({ count: 10, subscriptionProof: ANDROID_PROOF })), 'other line item');
+    assert.equal((await cacheRef().get()).exists, false);
+  });
+
+  test('within the 24-hour window the cache answers without calling Google Play', async () => {
+    await seedQuestions('A6', 12);
+    const first = playDeps();
+    assert.equal((await call(first.d, request({ count: 2, subscriptionProof: ANDROID_PROOF }))).remainingToday, null);
+    assert.equal(first.playCalls.length, 1);
+
+    const withinDay = new Date(NOON.getTime() + practice.SUBSCRIPTION_REVERIFY_MS - 1);
+    const cachedRun = playDeps({ now: withinDay, answer: new Error('must not be called') });
+    const result = await call(cachedRun.d, request({ count: 8, subscriptionProof: ANDROID_PROOF }));
+    assert.equal(result.remainingToday, null);
+    assert.equal(cachedRun.playCalls.length, 0);
+
+    // After 24 hours Google Play is asked again; a subscription that has since expired (e.g. refunded) is free.
+    const dayLater = new Date(NOON.getTime() + practice.SUBSCRIPTION_REVERIFY_MS);
+    const recheck = playDeps({ now: dayLater, answer: playSubscription({ subscriptionState: 'SUBSCRIPTION_STATE_EXPIRED' }) });
+    await assertFree(await call(recheck.d, request({ count: 10, subscriptionProof: ANDROID_PROOF })), 'expired on recheck');
+    assert.equal(recheck.playCalls.length, 1);
+  });
+
+  test('a Google Play API failure is the free rules, never an error', async () => {
+    await seedQuestions('A7', 12);
+    const http = (status) => Object.assign(new Error(`HTTP ${status}`), { response: { status } });
+    const failures = [
+      ['no access (403)', http(403)],
+      ['unknown token (404)', http(404)],
+      ['token gone (410)', http(410)],
+      ['overloaded (503)', http(503)],
+      ['network', new Error('ETIMEDOUT')],
+      ['empty answer', null],
+    ];
+    for (const [label, answer] of failures) {
+      await dailyRef().delete();
+      const { d, playCalls } = playDeps({ answer });
+      await assertFree(await call(d, request({ count: 10, subscriptionProof: ANDROID_PROOF })), label);
+      assert.equal(playCalls.length, 1, label);
+      assert.equal((await cacheRef().get()).exists, false, label);
+    }
+  });
+
+  test('storeProofVerifier routes each platform to its own store and passes the uid to Google Play only', async () => {
+    const seen = [];
+    const route = practice.storeProofVerifier({
+      verifyAppStore: async (jws) => { seen.push(['ios', jws]); return 'apple'; },
+      verifyGooglePlay: async (input) => { seen.push(['android', input]); return 'google'; },
+    });
+    assert.equal(await route(IOS_PROOF, { uid: 'ayse' }), 'apple');
+    assert.equal(await route(ANDROID_PROOF, { uid: 'ayse' }), 'google');
+    assert.equal(await route({ platform: 'web' }, { uid: 'ayse' }), null);
+    assert.deepEqual(seen, [
+      ['ios', IOS_PROOF.jws],
+      ['android', { purchaseToken: TOKEN, productId: 'vifi_premium', uid: 'ayse' }],
+    ]);
+  });
+
+  test('subscriptionFromTransaction accepts each store only with its own products', () => {
+    const payload = { productId: 'vifi_premium', originalTransactionId: ORDER, expiresDate: NOON.getTime() + 1000 };
+    assert.deepEqual(practice.subscriptionFromTransaction(payload, NOON, 'android'), {
+      platform: 'android', productId: 'vifi_premium', originalTransactionId: ORDER, expiresAt: new Date(NOON.getTime() + 1000),
+    });
+    assert.equal(practice.subscriptionFromTransaction(payload, NOON, 'ios'), null);
+    assert.equal(practice.subscriptionFromTransaction(validPayload(), NOON, 'android'), null);
+    assert.equal(practice.subscriptionFromTransaction(payload, NOON, 'web'), null);
   });
 });
 

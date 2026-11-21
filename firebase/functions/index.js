@@ -471,17 +471,21 @@ export const regeneratePublishedQuestion = onCall({ region: 'europe-west1' }, (r
 
 // --- Practice mode ("Sınava gir", 4.2.0; contract: conversions/schema.js PRACTICE MODE) ------------------------------
 
-import { nextPracticeQuestionsHandler } from './conversions/practice.js';
+import { nextPracticeQuestionsHandler, storeProofVerifier } from './conversions/practice.js';
 import { verifySubscriptionTransaction } from './appStore.js';
+import { verifyPremiumSubscription } from './googlePlay.js';
 
 // Live dependencies of the practice callable. The Premium proof: iOS sends the current StoreKit 2 entitlement's
-// signed transaction (verified with Apple's chain, appStore.js). Android (`{ platform: 'android', purchaseToken,
-// productId }`) is not verified yet — googlePlay.js has no subscription lookup — so it counts as "not Premium".
-// TODO(Android practice): verify Play subscriptions (purchases.subscriptionsv2.get) and return the same payload shape.
+// signed transaction (verified with Apple's chain, appStore.js). Android sends `{ platform: 'android', purchaseToken,
+// productId }`, looked up with Google Play (`purchases.subscriptionsv2.get`, googlePlay.js) and returned in the same
+// payload shape; the caller's uid is checked against the purchase's `obfuscatedExternalAccountId` when it has one.
 const practiceDeps = {
   db,
   now: () => new Date(),
-  verifySubscriptionProof: async (proof) => (proof.platform === 'ios' ? verifySubscriptionTransaction(proof.jws) : null),
+  verifySubscriptionProof: storeProofVerifier({
+    verifyAppStore: verifySubscriptionTransaction,
+    verifyGooglePlay: verifyPremiumSubscription,
+  }),
 };
 
 // Signed-in +90 users: random practice questions from a pool; free users get PRACTICE_FREE_DAILY_LIMIT a day.

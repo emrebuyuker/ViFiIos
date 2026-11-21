@@ -210,10 +210,12 @@ export const CALLABLES = Object.freeze([
  *   `limitReached` = `remainingToday === 0` (no NEW question today → the app shows the paywall when it needs more).
  *   Premium: no counter. Unlimited session length (P2); no right/wrong tracking (P3).
  * - Premium proof: the subscription lives in StoreKit / Play, so the client sends `subscriptionProof`
- *   (`{ platform: 'ios', jws }` = the current StoreKit 2 entitlement's signed transaction; Android later
- *   `{ platform: 'android', purchaseToken, productId }`). The server verifies it (appStore.js
- *   `verifySubscriptionTransaction`; Android is not verified yet and counts as free), checks product ∈ subscription
- *   products, not revoked, `expiresDate` > now, and caches the result in `subscriptions/<uid>` = `{ platform,
+ *   (`{ platform: 'ios', jws }` = the current StoreKit 2 entitlement's signed transaction; Android
+ *   `{ platform: 'android', purchaseToken, productId: 'vifi_premium' }`). The server verifies it (appStore.js
+ *   `verifySubscriptionTransaction`; googlePlay.js `verifyPremiumSubscription` = `purchases.subscriptionsv2.get`:
+ *   state ACTIVE / IN_GRACE_PERIOD / CANCELED, the `vifi_premium` line item, `obfuscatedExternalAccountId` = SHA-256 of
+ *   the uid when set; `originalTransactionId` = the base order id without the `..<n>` renewal suffix), checks product ∈
+ *   that platform's subscription products, not revoked, `expiresDate` > now, and caches the result in `subscriptions/<uid>` = `{ platform,
  *   productId, originalTransactionId, expiresAt, verifiedAt }` so later calls skip re-verification for at most 24 hours
  *   (and never past `expiresAt`); then a fresh proof is needed. One subscription serves ONE account: the first account
  *   that proves it is bound in `subscriptionOwners/<platform>-<originalTransactionId>` = `{ uid, platform,
