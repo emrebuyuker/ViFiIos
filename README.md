@@ -608,7 +608,7 @@ Varsayılan her şey kapalıdır; aşağıdaki izinler dışında kimse hiçbir 
 | Firestore `users/<uid>/settings/inbox` | Sahibi okur; yalnızca `{readAt}` (sunucu zamanı) yazar; silinemez. |
 | Firestore `questions`, `questionPools`, `subjects` *(4.2.0, canlıda 20 Kasım 2026)* | +90 telefonla girişli kullanıcılar ve yöneticiler okur; kimse yazamaz (yalnız Cloud Functions, Admin SDK). Sınav dosyaları (`exams.files`) bu sürümde de aynen korunur. |
 | Firestore `examConversions` (+ `questions` alt koleksiyonu), `aiUsage` *(4.2.0, canlıda 20 Kasım 2026)* | Yalnızca yönetici okur. İstemci yazamaz; tek istisna yöneticinin taslak sorunun içerik alanlarını (`text`, `speech`, `choices`, `answer`, `solution`, `needsReview`) + `editedBy`/`editedAt` (sunucu zamanı) güncellemesidir; sıra, şekil ve işin kendisi değiştirilemez. |
-| Realtime DB `/Universitiess` (silindi) | Eski arşiv kopyası 20 Kasım 2026'da silindi; arşiv yalnızca Firestore'dadır. Kuraldaki blok 4.2.0 kural yayınında kaldırılacak. |
+| Realtime DB `/Universitiess` (silindi) | Eski arşiv kopyası 20 Kasım 2026'da silindi, kuralı 21 Kasım 2026'da kaldırıldı; yol artık herkese kapalı. Arşiv yalnızca Firestore'dadır. |
 | Realtime DB `/pendingExams/<uid>` | Kullanıcı yalnızca kendi kaydını okur; yeni gönderim oluşturur, kendi `pending` gönderimini siler, var olanı değiştiremez. Yönetici hepsini okur ve yazar. Alanlar sıkı doğrulanır. |
 | Realtime DB `/users/<uid>/profile` | Sahibi (+90) yalnızca kendi profilini okur ve yazar; yönetici tüm profilleri okur (yazamaz). Alanlar sıkı doğrulanır: `gender` yalnızca `female`/`male`, `phoneNumber` token'daki numarayla aynı, `updatedAt` sunucu zaman damgası. |
 | Realtime DB diğer tüm düğümler | Kimseye açık değil (yönetici dahil). |

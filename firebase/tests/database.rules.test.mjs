@@ -112,11 +112,12 @@ describe('unauthenticated', () => {
 });
 
 describe('Turkish phone user', () => {
-  test('can read the archive, deep nodes and leaves', async () => {
-    await assertSucceeds(db(users.alice).ref('Universitiess').get());
-    await assertSucceeds(db(users.alice).ref('Universitiess/ODTU/Muhendislik').get());
-    await assertSucceeds(db(users.alice).ref(DEEP_EXAM_PATH).get());
-    await assertSucceeds(db(users.alice).ref(`${DEEP_EXAM_PATH}/downloadURL`).get());
+  // The old RTDB archive was deleted on 20 Nov 2026 and its rule removed: the path is closed like any other.
+  test('cannot read the removed archive path', async () => {
+    await assertFails(db(users.alice).ref('Universitiess').get());
+    await assertFails(db(users.alice).ref('Universitiess/ODTU/Muhendislik').get());
+    await assertFails(db(users.alice).ref(DEEP_EXAM_PATH).get());
+    await assertFails(db(users.alice).ref(`${DEEP_EXAM_PATH}/downloadURL`).get());
   });
 
   test('cannot read the root or junk nodes', async () => {
@@ -181,13 +182,12 @@ describe('users without a Turkish phone number', () => {
 });
 
 describe('admin', () => {
-  test('can read and write the archive', async () => {
+  test('cannot read or write the removed archive path either (the archive lives in Firestore)', async () => {
     const admin = db(users.admin);
-    await assertSucceeds(admin.ref('Universitiess').get());
-    await assertSucceeds(admin.ref('Universitiess/ITU').set({ uniname: 'uniname' }));
-    await assertSucceeds(admin.ref('Universitiess/ODTU').update({ uniname: 'renamed' }));
-    await assertSucceeds(admin.ref(`${DEEP_EXAM_PATH}/downloadURL`).set('https://example.invalid/new'));
-    await assertSucceeds(admin.ref(DEEP_EXAM_PATH).remove());
+    await assertFails(admin.ref('Universitiess').get());
+    await assertFails(admin.ref('Universitiess/ITU').set({ uniname: 'uniname' }));
+    await assertFails(admin.ref('Universitiess/ODTU').update({ uniname: 'renamed' }));
+    await assertFails(admin.ref(`${DEEP_EXAM_PATH}/downloadURL`).set('https://example.invalid/new'));
   });
 
   test('still cannot read the root or junk nodes', async () => {

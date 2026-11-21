@@ -182,8 +182,7 @@ final class AppEnvironment {
             appCheck: AppCheck.appCheck(),
             storageBucket: bucket
         )
-        // Cutover: the archive is read from Cloud Firestore (named `vifi` database). The Realtime Database
-        // `FirebaseArchiveRepository(auth:)` is kept available for rollback.
+        // The archive is read from Cloud Firestore (named `vifi` database); the old Realtime Database archive is gone.
         let repository = FirestoreArchiveRepository(bucket: bucket ?? "")
         let rewardsConfig = FirebaseRewardsConfigReader()
         let captureShield = CaptureShieldSwitch()

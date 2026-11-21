@@ -45,10 +45,6 @@
         }
       }
     },
-    "Universitiess": {
-      ".read": "auth != null && (auth.token.admin === true || (auth.token.phone_number != null && auth.token.phone_number.matches(/^\\+90[0-9]{10}$/)))",
-      ".write": "auth != null && auth.token.admin === true"
-    },
     "pendingExams": {
       ".read": "auth != null && auth.token.admin === true",
       ".write": "auth != null && auth.token.admin === true",
