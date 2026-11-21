@@ -11,6 +11,7 @@
 // Handlers take their dependencies (`db`, `now`, `random`, `verifySubscriptionProof`) as the first argument, like the
 // notification handlers, so the tests run them against the Firestore emulator with a fake store verifier.
 
+import { createHash } from 'node:crypto';
 import { Timestamp } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import * as logger from 'firebase-functions/logger';
@@ -125,14 +126,17 @@ export function subscriptionFromTransaction(payload, now, platform = 'ios') {
   return { platform, productId: payload.productId, originalTransactionId, expiresAt: new Date(expiresMs) };
 }
 
-/** A usable `subscriptionProof` (`{ platform: 'ios', jws }` or `{ platform: 'android', purchaseToken, productId }`). */
+/**
+ * A usable `subscriptionProof` (`{ platform: 'ios', jws }` or `{ platform: 'android', purchaseToken, productId:
+ * 'vifi_premium' }`); anything else is never sent to a store.
+ */
 export function validProof(proof) {
   if (proof === null || typeof proof !== 'object' || Array.isArray(proof)) return null;
   if (proof.platform === 'ios' && typeof proof.jws === 'string' && proof.jws.length > 0 && proof.jws.length <= MAX_JWS_LENGTH) {
     return { platform: 'ios', jws: proof.jws };
   }
   if (proof.platform === 'android' && typeof proof.purchaseToken === 'string' && proof.purchaseToken.length > 0
-    && proof.purchaseToken.length <= 4096 && typeof proof.productId === 'string') {
+    && proof.purchaseToken.length <= 4096 && proof.productId === PREMIUM_SUBSCRIPTION_PRODUCT_ID) {
     return { platform: 'android', purchaseToken: proof.purchaseToken, productId: proof.productId };
   }
   return null;
@@ -141,14 +145,14 @@ export function validProof(proof) {
 /**
  * The `verifySubscriptionProof` dependency: routes a valid proof to its store's verifier — `{ platform: 'ios', jws }` to
  * the App Store (`verifyAppStore(jws)`), `{ platform: 'android', purchaseToken, productId }` to Google Play
- * (`verifyGooglePlay({ purchaseToken, productId, uid })`, the caller's uid for the purchase's account binding). Both
- * resolve to the App Store payload shape (`subscriptionFromTransaction`) or throw; any other platform is `null`.
+ * (`verifyGooglePlay({ purchaseToken, productId })`). Both resolve to the App Store payload shape
+ * (`subscriptionFromTransaction`) or throw; any other platform is `null`.
  */
 export function storeProofVerifier({ verifyAppStore, verifyGooglePlay }) {
-  return async (proof, { uid } = {}) => {
+  return async (proof) => {
     if (proof.platform === 'ios') return verifyAppStore(proof.jws);
     if (proof.platform === 'android') {
-      return verifyGooglePlay({ purchaseToken: proof.purchaseToken, productId: proof.productId, uid });
+      return verifyGooglePlay({ purchaseToken: proof.purchaseToken, productId: proof.productId });
     }
     return null;
   };
@@ -161,7 +165,7 @@ export function storeProofVerifier({ verifyAppStore, verifyGooglePlay }) {
  * → `{ questions, poolSize, remainingToday, limitReached }` (contract: schema.js PRACTICE MODE).
  *
  * @param {{ db: import('firebase-admin/firestore').Firestore, now?: () => Date, random?: () => number,
- *   verifySubscriptionProof: (proof: object, context: { uid: string }) => Promise<object|null> }} deps
+ *   verifySubscriptionProof: (proof: object) => Promise<object|null> }} deps
  */
 export async function nextPracticeQuestionsHandler(deps, request) {
   const uid = requirePhoneUser(request);
@@ -216,6 +220,15 @@ export async function nextPracticeQuestionsHandler(deps, request) {
 /** A cached subscription is trusted for at most this long, then re-verified from a fresh proof (owner decision). */
 export const SUBSCRIPTION_REVERIFY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * While Google Play cannot be reached (or the server lacks access), a cached Android subscription proven by the same
+ * purchase token keeps counting for at most this long after its last verification — never past `expiresAt`.
+ */
+export const SUBSCRIPTION_OUTAGE_GRACE_MS = 72 * 60 * 60 * 1000;
+
+/** A purchase token Google Play rejected for an account is not looked up again for this long (API quota). */
+export const SUBSCRIPTION_REJECTION_TTL_MS = 10 * 60 * 1000;
+
 /** The owner document id of a store subscription: `<platform>-<originalTransactionId>` (`/` cannot appear in it). */
 export function subscriptionOwnerId(platform, originalTransactionId) {
   return `${platform}-${String(originalTransactionId).replace(/\//g, '_')}`;
@@ -230,10 +243,17 @@ export function subscriptionOwnerId(platform, originalTransactionId) {
  * (`subscriptionOwners/<platform>-<originalTransactionId>` = `{ uid, platform, originalTransactionId, boundAt }`); a
  * proof of a subscription bound to another account is the free rules. Account deletion releases the binding.
  * On Google Play `originalTransactionId` is the subscription's base order id (stable across renewals).
+ *
+ * Android only (Google Play is asked live, so its availability and quota matter):
+ * - The cache also keeps `purchaseTokenHash` (SHA-256 of the proven token). When Google Play is unavailable or refuses
+ *   the server access (`unavailable` / `misconfigured`), a stale cache of the same token keeps counting for up to
+ *   72 hours after `verifiedAt`, never past `expiresAt`. A `rejected` proof is always the free rules.
+ * - A rejected token (also an expired or another account's subscription) is remembered on the cache document
+ *   (`rejectedTokenHash`, `rejectedAt`) and not looked up again for 10 minutes.
+ *
  * Known limit (iOS): the proof is checked locally (signature, product, expiry, revocation inside the payload) — a refund
  * is seen when the store stops handing the client the entitlement, so within 24 hours for an honest client. Android
- * proofs are looked up live with Google Play (state, product, expiry, account), so a refund is seen at the next
- * re-verification.
+ * proofs are looked up live with Google Play (state, product, expiry), so a refund is seen at the next re-verification.
  */
 async function isPremium(deps, uid, rawProof, now) {
   const ref = deps.db.collection('subscriptions').doc(uid);
@@ -242,15 +262,28 @@ async function isPremium(deps, uid, rawProof, now) {
 
   const proof = validProof(rawProof);
   if (!proof || typeof deps.verifySubscriptionProof !== 'function') return false;
+  const tokenHash = proof.platform === 'android' ? sha256Hex(proof.purchaseToken) : null;
+  if (tokenHash && cached.exists && isRecentlyRejected(cached, tokenHash, now)) return false;
+
   let payload;
   try {
-    payload = await deps.verifySubscriptionProof(proof, { uid });
+    payload = await deps.verifySubscriptionProof(proof);
   } catch (error) {
-    logger.warn('Practice: subscription proof rejected', { uid, platform: proof.platform, error: error?.message ?? String(error) });
+    const reason = error?.reason;
+    // Store messages may quote the proof; only Apple's (from a signed payload) are logged.
+    logger.warn('Practice: subscription proof not verified', {
+      uid, platform: proof.platform, reason: reason ?? null, error: proof.platform === 'ios' ? error?.message ?? String(error) : undefined,
+    });
+    if (!tokenHash) return false;
+    if (reason === 'unavailable' || reason === 'misconfigured') return isOutageGrace(cached, tokenHash, now);
+    await rememberRejection(ref, tokenHash, now);
     return false;
   }
   const subscription = subscriptionFromTransaction(payload, now, proof.platform);
-  if (!subscription) return false;
+  if (!subscription) {
+    if (tokenHash) await rememberRejection(ref, tokenHash, now);
+    return false;
+  }
 
   const ownerRef = deps.db.collection('subscriptionOwners')
     .doc(subscriptionOwnerId(subscription.platform, subscription.originalTransactionId));
@@ -259,6 +292,7 @@ async function isPremium(deps, uid, rawProof, now) {
     const ownerUid = owner.exists ? owner.get('uid') : null;
     if (ownerUid && ownerUid !== uid) {
       logger.warn('Practice: subscription bound to another account', { uid, platform: subscription.platform });
+      if (tokenHash) transaction.set(ref, rejection(tokenHash, now), { merge: true });
       return false;
     }
     if (!ownerUid) {
@@ -275,6 +309,7 @@ async function isPremium(deps, uid, rawProof, now) {
       originalTransactionId: subscription.originalTransactionId,
       expiresAt: Timestamp.fromDate(subscription.expiresAt),
       verifiedAt: Timestamp.fromDate(now),
+      ...(tokenHash ? { purchaseTokenHash: tokenHash } : {}),
     });
     return true;
   });
@@ -285,6 +320,46 @@ function isFreshCache(snapshot, now) {
   const verifiedAt = snapshot.get('verifiedAt');
   if (typeof expiresAt?.toMillis !== 'function' || typeof verifiedAt?.toMillis !== 'function') return false;
   return expiresAt.toMillis() > now.getTime() && now.getTime() - verifiedAt.toMillis() < SUBSCRIPTION_REVERIFY_MS;
+}
+
+/** Google Play is down: the cache of the same Android token still counts within 72 hours of `verifiedAt`. */
+function isOutageGrace(snapshot, tokenHash, now) {
+  if (!snapshot.exists || snapshot.get('platform') !== 'android' || snapshot.get('purchaseTokenHash') !== tokenHash) {
+    return false;
+  }
+  const expiresAt = snapshot.get('expiresAt');
+  const verifiedAt = snapshot.get('verifiedAt');
+  if (typeof expiresAt?.toMillis !== 'function' || typeof verifiedAt?.toMillis !== 'function') return false;
+  // Google Play rejected this token after it was last verified (e.g. refunded): no grace for it.
+  const rejectedAt = snapshot.get('rejectedAt');
+  if (snapshot.get('rejectedTokenHash') === tokenHash && typeof rejectedAt?.toMillis === 'function'
+    && rejectedAt.toMillis() >= verifiedAt.toMillis()) {
+    return false;
+  }
+  return expiresAt.toMillis() > now.getTime() && now.getTime() - verifiedAt.toMillis() < SUBSCRIPTION_OUTAGE_GRACE_MS;
+}
+
+function isRecentlyRejected(snapshot, tokenHash, now) {
+  const rejectedAt = snapshot.get('rejectedAt');
+  return snapshot.get('rejectedTokenHash') === tokenHash && typeof rejectedAt?.toMillis === 'function'
+    && now.getTime() - rejectedAt.toMillis() < SUBSCRIPTION_REJECTION_TTL_MS;
+}
+
+function rejection(tokenHash, now) {
+  return { rejectedTokenHash: tokenHash, rejectedAt: Timestamp.fromDate(now) };
+}
+
+/** Best effort: failing to remember a rejection only costs another lookup. */
+async function rememberRejection(ref, tokenHash, now) {
+  try {
+    await ref.set(rejection(tokenHash, now), { merge: true });
+  } catch (error) {
+    logger.warn('Practice: could not remember a rejected subscription proof', { error: error?.message ?? String(error) });
+  }
+}
+
+function sha256Hex(value) {
+  return createHash('sha256').update(value).digest('hex');
 }
 
 /** Every id of the pool (all `__pN` parts, in order); `[]` when the pool does not exist. */

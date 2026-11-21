@@ -195,19 +195,10 @@ export const ENTITLED_SUBSCRIPTION_STATES = Object.freeze([
   'SUBSCRIPTION_STATE_CANCELED',
 ]);
 
+const SUBSCRIPTION_REQUEST_TIMEOUT_MS = 5_000;
+
 // A renewal's order id is the first order's id plus `..<n>` ("GPA.1234-5678-9012-34567..3").
 const RENEWAL_SUFFIX_PATTERN = /\.\.\d+$/;
-
-/**
- * How a purchase names its account to Google Play: `obfuscatedAccountId` = the SHA-256 hex digest of the Firebase uid
- * (the Android client's `PlayBillingExamPurchaseService.obfuscatedAccountId`).
- *
- * @param {string} uid
- * @returns {string}
- */
-export function accountBindingFor(uid) {
-  return createHash('sha256').update(uid).digest('hex');
-}
 
 /**
  * The stable id of a subscription across renewals: the base order id (renewal suffix `..<n>` removed), or — when the
@@ -232,11 +223,13 @@ export async function fetchSubscriptionPurchaseV2({ packageName, purchaseToken }
   const url =
     `${API_BASE_URL}/applications/${encodeURIComponent(packageName)}` +
     `/purchases/subscriptionsv2/tokens/${encodeURIComponent(purchaseToken)}`;
+  // Shorter than the exam unlock's lookup: this runs on every un-cached practice call, and a Play outage falls back to
+  // the cached subscription (conversions/practice.js) instead of keeping the user waiting.
   const response = await client.request({
     url,
     method: 'GET',
-    timeout: REQUEST_TIMEOUT_MS,
-    retryConfig: { retry: 2 },
+    timeout: SUBSCRIPTION_REQUEST_TIMEOUT_MS,
+    retryConfig: { retry: 1 },
   });
   return response.data;
 }
@@ -247,27 +240,26 @@ export async function fetchSubscriptionPurchaseV2({ packageName, purchaseToken }
  * has, so `subscriptionFromTransaction` (conversions/practice.js) treats both platforms alike:
  * `{ productId, originalTransactionId, expiresDate }` — `originalTransactionId` is the base order id
  * (`subscriptionIdFor`), the key of the one-account binding (`subscriptionOwners/android-<id>`); `expiresDate` is the
- * line item's `expiryTime` in epoch ms. Expiry against now is the caller's check.
+ * latest `expiryTime` of the `vifi_premium` line items in epoch ms. Expiry against now is the caller's check.
+ *
+ * Which app account may use the subscription is decided only by that binding (as on iOS), not by the purchase's
+ * `obfuscatedExternalAccountId`: an account deleted and registered again has a new uid but must keep its subscription.
  *
  * Throws a {@link PlayVerificationError} — which the caller treats as "not Premium", never as a failure — when the input
  * is malformed (checked before Google Play is called), Google Play does not know the token or cannot be reached, the
- * subscription is not in an entitled state, has no `vifi_premium` line item with an expiry, or was bought by another
- * account (`obfuscatedExternalAccountId` set and not the SHA-256 of `uid`; purchases made before the client set it carry
- * none, and the `subscriptionOwners` binding still applies to them).
+ * subscription is not in an entitled state or has no `vifi_premium` line item with an expiry. Messages never carry what
+ * the client sent.
  *
- * @param {{purchaseToken: unknown, productId: unknown, uid: unknown}} input
+ * @param {{purchaseToken: unknown, productId: unknown}} input
  * @param {typeof fetchSubscriptionPurchaseV2} [fetchSubscription] The Play lookup; replaced in tests.
  * @returns {Promise<{productId: string, originalTransactionId: string, expiresDate: number}>}
  */
-export async function verifyPremiumSubscription({ purchaseToken, productId, uid }, fetchSubscription = fetchSubscriptionPurchaseV2) {
+export async function verifyPremiumSubscription({ purchaseToken, productId }, fetchSubscription = fetchSubscriptionPurchaseV2) {
   if (typeof purchaseToken !== 'string' || !purchaseToken || purchaseToken.length > MAX_PURCHASE_TOKEN_LENGTH) {
     throw rejected('invalid purchase token');
   }
   if (productId !== PREMIUM_SUBSCRIPTION_PRODUCT_ID) {
-    throw rejected(`unexpected product id ${productId}`);
-  }
-  if (typeof uid !== 'string' || !uid) {
-    throw rejected('no account to bind the subscription to');
+    throw rejected('unexpected product id');
   }
 
   let purchase;
@@ -281,25 +273,21 @@ export async function verifyPremiumSubscription({ purchaseToken, productId, uid 
     throw rejected('empty subscription purchase');
   }
   if (!ENTITLED_SUBSCRIPTION_STATES.includes(purchase.subscriptionState)) {
-    throw rejected(`subscription is not entitled (state ${purchase.subscriptionState})`);
+    throw rejected(`subscription is not entitled (state ${String(purchase.subscriptionState).slice(0, 64)})`);
   }
-  const lineItem = Array.isArray(purchase.lineItems)
-    ? purchase.lineItems.find((item) => item?.productId === PREMIUM_SUBSCRIPTION_PRODUCT_ID)
-    : undefined;
-  if (!lineItem) {
-    throw rejected('subscription has no Premium line item');
+  // Several line items of the same product are possible (e.g. around a plan change): the latest expiry counts.
+  let latest;
+  for (const item of Array.isArray(purchase.lineItems) ? purchase.lineItems : []) {
+    if (item?.productId !== PREMIUM_SUBSCRIPTION_PRODUCT_ID) continue;
+    const expiresDate = typeof item.expiryTime === 'string' ? Date.parse(item.expiryTime) : NaN;
+    if (Number.isFinite(expiresDate) && (!latest || expiresDate > latest.expiresDate)) latest = { item, expiresDate };
   }
-  const expiresDate = typeof lineItem.expiryTime === 'string' ? Date.parse(lineItem.expiryTime) : NaN;
-  if (!Number.isFinite(expiresDate)) {
-    throw rejected('subscription has no expiry time');
-  }
-  const boundAccount = purchase.externalAccountIdentifiers?.obfuscatedExternalAccountId;
-  if (typeof boundAccount === 'string' && boundAccount !== '' && boundAccount !== accountBindingFor(uid)) {
-    throw rejected('subscription was bought by another account');
+  if (!latest) {
+    throw rejected('subscription has no Premium line item with an expiry time');
   }
   return {
     productId: PREMIUM_SUBSCRIPTION_PRODUCT_ID,
-    originalTransactionId: subscriptionIdFor(lineItem.latestSuccessfulOrderId ?? purchase.latestOrderId, purchaseToken),
-    expiresDate,
+    originalTransactionId: subscriptionIdFor(latest.item.latestSuccessfulOrderId ?? purchase.latestOrderId, purchaseToken),
+    expiresDate: latest.expiresDate,
   };
 }

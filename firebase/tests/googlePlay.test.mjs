@@ -2,7 +2,7 @@
 // these cover every accept/reject decision without network: input guards (checked before Google Play is called),
 // purchase state, product, the exam the purchase was bought for, the replay key, and how API failures are classified —
 // and, since 4.2.0, the Premium subscription proof (`verifyPremiumSubscription`): subscription state, product line
-// item, expiry, the account binding and the renewal-stable subscription id.
+// item (the latest expiry wins), expiry, the ignored account id and the renewal-stable subscription id.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,7 +13,6 @@ import {
   PACKAGE_NAME,
   PREMIUM_SUBSCRIPTION_PRODUCT_ID,
   PlayVerificationError,
-  accountBindingFor,
   classifyPlayApiError,
   examBindingFor,
   subscriptionIdFor,
@@ -211,14 +210,13 @@ function activeSubscription(overrides = {}, lineItemOverrides = {}) {
   };
 }
 
-const subRequest = (overrides = {}) => ({ purchaseToken: TOKEN, productId: PREMIUM_SUBSCRIPTION_PRODUCT_ID, uid: UID, ...overrides });
+const subRequest = (overrides = {}) => ({ purchaseToken: TOKEN, productId: PREMIUM_SUBSCRIPTION_PRODUCT_ID, ...overrides });
 
 test('exposes the Premium subscription product and the entitled states', () => {
   assert.equal(PREMIUM_SUBSCRIPTION_PRODUCT_ID, 'vifi_premium');
   assert.deepEqual([...ENTITLED_SUBSCRIPTION_STATES].sort(), [
     'SUBSCRIPTION_STATE_ACTIVE', 'SUBSCRIPTION_STATE_CANCELED', 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD',
   ]);
-  assert.equal(accountBindingFor(UID), sha256(UID));
 });
 
 test('Premium: accepts an active subscription in the App Store payload shape, keyed by the base order id', async () => {
@@ -261,11 +259,11 @@ test('Premium: the renewal suffix is dropped so every renewal maps to one subscr
   assert.equal(subscriptionIdFor(' GPA.1-2..3 ', TOKEN), 'GPA.1-2');
 });
 
-test('Premium: rejects a malformed token, another product or no account without calling Google Play', async () => {
+test('Premium: rejects a malformed token or another product without calling Google Play', async () => {
   const cases = [
     ...['', null, undefined, 42, 'x'.repeat(4097)].map((purchaseToken) => subRequest({ purchaseToken })),
     ...[EXAM_UNLOCK_PRODUCT_ID, 'com.BuyukerYazilim.ViFi2.premium.monthly', 'monthly', '', undefined].map((productId) => subRequest({ productId })),
-    ...['', undefined, null, 7].map((uid) => subRequest({ uid })),
+    subRequest({ productId: 'vifi_premium'.padEnd(5000, 'x') }),
   ];
   for (const input of cases) {
     const { lookup, calls } = fakeLookup(activeSubscription());
@@ -289,15 +287,35 @@ test('Premium: rejects a subscription without a Premium line item or expiry', as
   }
 });
 
-test('Premium: rejects a subscription bought by another account; one without an account id is accepted', async () => {
-  for (const obfuscatedExternalAccountId of [sha256('mehmet'), UID, 'x']) {
-    const { lookup } = fakeLookup(activeSubscription({ externalAccountIdentifiers: { obfuscatedExternalAccountId } }));
-    await assertRejected(verifyPremiumSubscription(subRequest(), lookup));
-  }
-  // Purchases made before the app set obfuscatedAccountId carry none: the one-account binding still guards them.
-  for (const externalAccountIdentifiers of [undefined, {}, { obfuscatedExternalAccountId: '' }]) {
+test('Premium: the purchase account id is ignored (the subscriptionOwners binding is the account rule)', async () => {
+  for (const externalAccountIdentifiers of [
+    { obfuscatedExternalAccountId: sha256('mehmet') }, { obfuscatedExternalAccountId: 'x' }, undefined, {},
+  ]) {
     const { lookup } = fakeLookup(activeSubscription({ externalAccountIdentifiers }));
     assert.equal((await verifyPremiumSubscription(subRequest(), lookup)).originalTransactionId, SUB_ORDER);
+  }
+});
+
+test('Premium: with several Premium line items the latest expiry and its order id count', async () => {
+  const lineItems = [
+    { productId: PREMIUM_SUBSCRIPTION_PRODUCT_ID, expiryTime: '2026-11-20T00:00:00.000Z', latestSuccessfulOrderId: 'GPA.1111-0000-0000-00000..5' },
+    { productId: 'another_subscription', expiryTime: '2027-06-01T00:00:00.000Z', latestSuccessfulOrderId: 'GPA.9999-0000-0000-00000' },
+    { productId: PREMIUM_SUBSCRIPTION_PRODUCT_ID, expiryTime: '2027-01-14T00:00:00.000Z', latestSuccessfulOrderId: `${SUB_ORDER}..0` },
+    { productId: PREMIUM_SUBSCRIPTION_PRODUCT_ID, expiryTime: 'garbage', latestSuccessfulOrderId: 'GPA.2222-0000-0000-00000' },
+  ];
+  const { lookup } = fakeLookup(activeSubscription({ lineItems }));
+  assert.deepEqual(await verifyPremiumSubscription(subRequest(), lookup), {
+    productId: PREMIUM_SUBSCRIPTION_PRODUCT_ID, originalTransactionId: SUB_ORDER, expiresDate: Date.parse('2027-01-14T00:00:00.000Z'),
+  });
+});
+
+test('Premium: rejection messages never quote the client input', async () => {
+  const secret = 'client-controlled-value';
+  for (const input of [subRequest({ productId: secret }), subRequest({ purchaseToken: secret.repeat(400) })]) {
+    await assert.rejects(verifyPremiumSubscription(input, fakeLookup(activeSubscription()).lookup), (error) => {
+      assert.ok(!error.message.includes(secret), error.message);
+      return true;
+    });
   }
 });
 

@@ -213,14 +213,22 @@ export const CALLABLES = Object.freeze([
  *   (`{ platform: 'ios', jws }` = the current StoreKit 2 entitlement's signed transaction; Android
  *   `{ platform: 'android', purchaseToken, productId: 'vifi_premium' }`). The server verifies it (appStore.js
  *   `verifySubscriptionTransaction`; googlePlay.js `verifyPremiumSubscription` = `purchases.subscriptionsv2.get`:
- *   state ACTIVE / IN_GRACE_PERIOD / CANCELED, the `vifi_premium` line item, `obfuscatedExternalAccountId` = SHA-256 of
- *   the uid when set; `originalTransactionId` = the base order id without the `..<n>` renewal suffix), checks product ∈
- *   that platform's subscription products, not revoked, `expiresDate` > now, and caches the result in `subscriptions/<uid>` = `{ platform,
+ *   state ACTIVE / IN_GRACE_PERIOD / CANCELED, the latest-expiring `vifi_premium` line item; `originalTransactionId` =
+ *   the base order id without the `..<n>` renewal suffix; the purchase's `obfuscatedExternalAccountId` is not used — the
+ *   binding below is the only account rule, as on iOS), checks product ∈ that platform's subscription products, not
+ *   revoked, `expiresDate` > now, and caches the result in `subscriptions/<uid>` = `{ platform,
  *   productId, originalTransactionId, expiresAt, verifiedAt }` so later calls skip re-verification for at most 24 hours
  *   (and never past `expiresAt`); then a fresh proof is needed. One subscription serves ONE account: the first account
  *   that proves it is bound in `subscriptionOwners/<platform>-<originalTransactionId>` = `{ uid, platform,
  *   originalTransactionId, boundAt }` (server-only, no client access); another account's proof of it gets the free
  *   rules. No proof / invalid proof / store error → free rules (never an error).
+ *   Android extras (Google Play is asked live): the cache also holds `purchaseTokenHash`; while Google Play is
+ *   unavailable (or refuses the server access) a stale cache of the same token counts for up to 72 h after
+ *   `verifiedAt` (never past `expiresAt`); a token Google Play rejected is remembered on the same document
+ *   (`rejectedTokenHash`, `rejectedAt`) and not looked up again for 10 minutes. Known limits: a plan change gives a new
+ *   purchase token and order id (`linkedPurchaseToken` is not followed), so the new purchase binds anew and the old
+ *   account's cache lives on for at most 24 hours; an unacknowledged purchase (`acknowledgementState` pending — the app
+ *   acknowledges it, Google refunds it after three days otherwise) counts as Premium until then.
  * Account deletion removes `users/<uid>/practice/*` (with `users/<uid>`), `subscriptions/<uid>` and the account's
  * `subscriptionOwners` bindings (the subscription can then serve a new account).
  */
