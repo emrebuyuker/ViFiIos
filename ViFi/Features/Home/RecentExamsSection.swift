@@ -90,9 +90,9 @@ private struct RecentExamCard: View {
         } label: {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top) {
-                    IconBadge(systemName: exam.kind.symbolName, size: 36)
+                    IconBadge(systemName: exam.isStructured == true ? "list.number" : exam.kind.symbolName, size: 36)
                     Spacer(minLength: 8)
-                    ExamKindBadge(kind: exam.kind)
+                    ExamKindBadge(text: badgeText)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -129,6 +129,11 @@ private struct RecentExamCard: View {
         .accessibilityIdentifier("recent.\(exam.title)")
     }
 
+    /// "Sorular" for an exam opened on the question screen, else its file kind ("Görsel" / "PDF"), as in Browse.
+    private var badgeText: String {
+        exam.isStructured == true ? String(localized: "Sorular") : exam.kind.badge
+    }
+
     private var openedText: String {
         exam.openedAt.formatted(.relative(presentation: .named))
     }
@@ -137,7 +142,7 @@ private struct RecentExamCard: View {
     private var accessibilityDescription: String {
         let names = exam.path.displayNames
         let location = [names.first, names.dropLast().last].compactMap(\.self)
-        return ([exam.title, exam.kind.badge] + location + [openedText]).joined(separator: ", ")
+        return ([exam.title, badgeText] + location + [openedText]).joined(separator: ", ")
     }
 }
 

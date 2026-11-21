@@ -7,6 +7,9 @@ nonisolated struct RecentExam: Codable, Hashable, Identifiable, Sendable {
     let path: ArchivePath
     let kind: ExamKind
     let openedAt: Date
+    /// 4.2.0: opened on the question screen (`format == structured`). Optional so entries saved by older builds
+    /// still decode (as `nil` = a file exam); refreshed every time the exam is opened.
+    var isStructured: Bool?
 
     var id: ArchivePath { path }
     var title: String { path.displayName ?? "" }
@@ -39,9 +42,10 @@ final class RecentExamsStore {
     }
 
     /// Moves the exam to the top of the list.
-    func record(path: ArchivePath, kind: ExamKind, at date: Date = .now) {
+    func record(path: ArchivePath, kind: ExamKind, isStructured: Bool = false, at date: Date = .now) {
         var updated = exams.filter { $0.path != path }
-        updated.insert(RecentExam(path: path, kind: kind, openedAt: date), at: 0)
+        // A file exam stores `nil`, as entries from older builds do.
+        updated.insert(RecentExam(path: path, kind: kind, openedAt: date, isStructured: isStructured ? true : nil), at: 0)
         exams = Array(updated.prefix(Self.maxCount))
         save()
     }

@@ -103,7 +103,7 @@ final class StructuredExamViewModel {
     private func recordVisitIfNeeded(questionCount: Int) {
         guard !hasRecordedVisit, questionCount > 0 else { return }
         hasRecordedVisit = true
-        recents.record(path: path, kind: kind)
+        recents.record(path: path, kind: kind, isStructured: true)
         analytics.track(.structuredExamOpened(questionCount: questionCount))
     }
 
