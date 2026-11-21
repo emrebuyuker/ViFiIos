@@ -434,6 +434,20 @@ export function validateExamTitle(title) {
 
 // MARK: - AI output (both providers)
 
+// MARK: - Catalog names
+
+/**
+ * The display name of a catalog node created from a submission: whitespace collapsed and Turkish upper case
+ * ("Güç elektroniği devreleri" → "GÜÇ ELEKTRONİĞİ DEVRELERİ", i → İ, ı → I), like the rest of the archive. The form
+ * gives the university / faculty / department from the app's mixed-case list and the course as free text, so new
+ * nodes stood out in the lists (21 Nov 2026). Ids (slugs) are unaffected. Mirrored by iOS `CatalogName.display`
+ * (same cases). Idempotent; non-strings pass through.
+ */
+export function catalogDisplayName(name) {
+  if (typeof name !== 'string') return name;
+  return name.trim().replace(/\s+/g, ' ').toLocaleUpperCase('tr-TR');
+}
+
 // MARK: - Question label
 
 /**

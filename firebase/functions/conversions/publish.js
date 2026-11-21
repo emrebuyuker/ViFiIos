@@ -41,6 +41,7 @@ import {
   PRACTICE_EXAM_TYPES,
   QUESTION_SCHEMA_VERSION,
   canonicalExamTitle,
+  catalogDisplayName,
   normalizeLatex,
   normalizeQuestionLabel,
   parseExamTitle,
@@ -375,20 +376,25 @@ function writeCatalogAndExam(transaction, db, target, { now, questionCount, jobI
     .map(({ id, ...fields }) => [id, fields]));
   const parents = { university: '', faculty: target.ids.university, department: target.ids.faculty, course: target.ids.department };
 
+  // The exam's denormalized names follow the nodes: an existing node keeps its name, a new one gets the archive's
+  // upper-case form (`catalogDisplayName`).
+  const nodeNames = {};
   let childIsNew = true; // the exam itself
   for (let index = CATALOG_LEVELS.length - 1; index >= 0; index -= 1) {
     const level = CATALOG_LEVELS[index];
     const id = target.ids[level];
     const ref = db.collection('catalogNodes').doc(id);
     if (!target.nodes[index].exists) {
+      const sourceName = planned.get(id)?.name ?? target.names[level];
+      nodeNames[level] = catalogDisplayName(sourceName);
       transaction.create(ref, {
         ...(planned.get(id) ?? {}),
         level,
-        name: planned.get(id)?.name ?? target.names[level],
+        name: nodeNames[level],
         parentId: parents[level],
         status: 'published',
         childCount: 1,
-        slug: slug(planned.get(id)?.name ?? target.names[level]),
+        slug: slug(sourceName),
         source: 'submission',
         ...(level === 'course' && subjectId ? { subjectId } : {}),
       });
@@ -400,6 +406,7 @@ function writeCatalogAndExam(transaction, db, target, { now, questionCount, jobI
         ...(level === 'course' && subjectId && target.nodes[index].get('subjectId') !== subjectId ? { subjectId } : {}),
       };
       if (Object.keys(update).length > 0) transaction.update(ref, update);
+      nodeNames[level] = text(target.nodes[index].get('name')) || catalogDisplayName(target.names[level]);
       childIsNew = false;
     }
   }
@@ -408,6 +415,10 @@ function writeCatalogAndExam(transaction, db, target, { now, questionCount, jobI
     ...target.plan.exam,
     title: examTitle,
     sortKey: examTitle,
+    universityName: nodeNames.university,
+    facultyName: nodeNames.faculty,
+    departmentName: nodeNames.department,
+    courseName: nodeNames.course,
     universityId: target.ids.university,
     facultyId: target.ids.faculty,
     departmentId: target.ids.department,

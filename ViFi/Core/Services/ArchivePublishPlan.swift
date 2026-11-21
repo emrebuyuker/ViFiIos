@@ -64,22 +64,24 @@ nonisolated struct ArchivePublishPlan: Equatable, Sendable {
             // Each level is either created (its only child is the one in this chain, so childCount is 1) or, when
             // it already exists and its child is newly created, bumped by one.
             if createCourse {
-                nodes.append(.init(id: courseId, level: "course", name: record.lesson, parentId: departmentId, childCount: 1))
+                nodes.append(.init(id: courseId, level: "course", name: CatalogName.display(record.lesson), parentId: departmentId, childCount: 1))
             } else {
                 increments.append(courseId)
             }
             if createDepartment {
-                nodes.append(.init(id: departmentId, level: "department", name: record.department, parentId: facultyId, childCount: 1))
+                nodes.append(.init(
+                    id: departmentId, level: "department", name: CatalogName.display(record.department), parentId: facultyId, childCount: 1
+                ))
             } else if createCourse {
                 increments.append(departmentId)
             }
             if createFaculty {
-                nodes.append(.init(id: facultyId, level: "faculty", name: record.faculty, parentId: universityId, childCount: 1))
+                nodes.append(.init(id: facultyId, level: "faculty", name: CatalogName.display(record.faculty), parentId: universityId, childCount: 1))
             } else if createDepartment {
                 increments.append(facultyId)
             }
             if createUniversity {
-                nodes.append(.init(id: universityId, level: "university", name: record.university, parentId: "", childCount: 1))
+                nodes.append(.init(id: universityId, level: "university", name: CatalogName.display(record.university), parentId: "", childCount: 1))
             } else if createFaculty {
                 increments.append(universityId)
             }

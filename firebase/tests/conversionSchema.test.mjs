@@ -11,6 +11,7 @@ import {
   PROVIDERS,
   canonicalExamTitle,
   LATEX_REPLACEMENTS,
+  catalogDisplayName,
   conversionJobId,
   figureStoragePath,
   normalizeLatex,
@@ -224,6 +225,25 @@ describe('conversion schema — list title validation (same cases as ExamTitlePa
     test(`rejects "${title}"`, () => fails(() => validateExamTitle(title), 'invalid-exam-title'));
   }
   test('rejects a non-string', () => fails(() => validateExamTitle(null), 'invalid-exam-title'));
+});
+
+// Same cases as CatalogNameTests.swift.
+const CATALOG_NAME_CASES = [
+  ['Güç elektroniği devreleri', 'GÜÇ ELEKTRONİĞİ DEVRELERİ'],
+  ['Eskişehir Teknik Üniversitesi', 'ESKİŞEHİR TEKNİK ÜNİVERSİTESİ'],
+  ['ılık işlem', 'ILIK İŞLEM'],
+  ['  Fen   Edebiyat Fakültesi ', 'FEN EDEBİYAT FAKÜLTESİ'],
+  ['MATEMATİK BÖLÜMÜ', 'MATEMATİK BÖLÜMÜ'],
+  ['Fizik 2', 'FİZİK 2'],
+];
+
+describe('conversion schema — catalog display name (same cases as CatalogNameTests.swift)', () => {
+  for (const [input, expected] of CATALOG_NAME_CASES) {
+    test(`"${input}"`, () => assert.equal(catalogDisplayName(input), expected));
+  }
+  test('is idempotent', () => {
+    for (const [input] of CATALOG_NAME_CASES) assert.equal(catalogDisplayName(catalogDisplayName(input)), catalogDisplayName(input));
+  });
 });
 
 // Same cases as QuestionLabelTests.swift.

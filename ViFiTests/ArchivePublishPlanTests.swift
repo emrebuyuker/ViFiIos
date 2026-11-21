@@ -25,7 +25,7 @@ struct ArchivePublishPlanTests {
         let university = plan.nodesToCreate.first { $0.level == "university" }
         #expect(university?.id == expectedUniversityId)
         #expect(university?.parentId.isEmpty == true)
-        #expect(university?.name == "Boğaziçi Üniversitesi")
+        #expect(university?.name == "BOĞAZİÇİ ÜNİVERSİTESİ")
         #expect(plan.nodesToCreate.map(\.level).sorted() == ["course", "department", "faculty", "university"])
     }
 

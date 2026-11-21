@@ -402,8 +402,14 @@ describe('publishExamConversion: submission (second approval)', () => {
     // Catalog: the new course is created under the existing department, whose childCount grows by one.
     const course = await getData(db.collection('catalogNodes').doc(COURSE));
     assert.equal(course.level, 'course');
-    assert.equal(course.name, NAMES.course);
+    // A new node gets the archive's Turkish upper case; the exam's names follow the nodes (existing ones as they are).
+    assert.equal(course.name, 'ALGORİTMALAR');
+    assert.equal(course.slug, 'algoritmalar');
     assert.equal(course.parentId, DEPARTMENT);
+    const examNames = await getData(db.collection('exams').doc(examId));
+    assert.equal(examNames.courseName, 'ALGORİTMALAR');
+    assert.equal(examNames.universityName, NAMES.university);
+    assert.equal(examNames.departmentName, NAMES.department);
     assert.equal(course.childCount, 1);
     assert.equal(course.subjectId, 'algoritmalar');
     assert.equal((await getData(db.collection('catalogNodes').doc(DEPARTMENT))).childCount, 3);
